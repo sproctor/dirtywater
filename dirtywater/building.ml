@@ -22,16 +22,9 @@
 open Types
 open Tangible
 
-class building (a : string list) (n : string) (sd : string) (ld : string) =
+class building (i : int) (a : string list) (n : string) (sd : string)
+    (ld : string) =
   object (self)
-    inherit tangible a n sd ld []
+    inherit tangible i a n sd ld []
     method can_be_gotten looker = false
   end
-
-let make_building_in_room ?(adjs = []) ~name ?short_desc ?long_desc room =
-  let sd = (match short_desc with Some x -> x
-    | None -> String.concat " " (adjs@[name])) in
-  let ld = (match long_desc with Some x -> x | None -> sd) in
-  let thing = new building adjs name sd ld in
-  thing#move_to [((room :> iContainer), Anywhere)];
-  thing

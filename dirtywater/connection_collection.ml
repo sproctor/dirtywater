@@ -18,11 +18,16 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
+(*
+   connection_collection.ml: this file contains the class to store all of the
+   connections. any methods that need to affect all connections should be
+   added here. do_input processes one line of input for each connection
+*)
+
 open Types
 
 class connection_collection =
   object
-    inherit iConnection_collection
     val mutable connections : iConnection list = []
     method get_descriptors = List.map (fun x -> x#get_descriptor) connections
     method add c = connections <- c::connections

@@ -1,3 +1,4 @@
+(*pp camlp4o *)
 (*
  Copyright 2003 Sean Proctor, Mike MacHenry
 
@@ -19,6 +20,10 @@
 
  helpers.ml : various non-game related functions that are needed by the game
    code for simple tasks *)
+
+(* identity funciton *)
+let identity (x : 'a) : 'a =
+  x
 
 (* turn a string into a list of chars *)
 let rec explode (str : string) : char list =
@@ -118,3 +123,33 @@ let get_opt_default (a : 'a option) (b : 'a) : 'a =
   match a with
     | None -> b
     | Some x -> x
+
+let rec map_some (f : 'a -> 'b option) (l : 'a list) : 'b list =
+  match l with
+      x::xs -> (match f x with
+        | Some a -> a::(map_some f xs)
+        | None   -> map_some f xs)
+    | []    -> []
+
+let rec find_some (l : 'a option list) : 'a =
+  match l with
+    | [] -> raise Not_found
+    | x::xs -> (match x with
+        | None -> find_some xs
+        | Some a -> a)
+
+let rec map_to_stream (f : 'a -> 'b Stream.t) (l : 'a list) : 'b Stream.t =
+  match l with
+    | x::xs -> [< f x; map_to_stream f xs >]
+    | []    -> [< >]
+
+let rec list_to_stream (l : 'a list) : 'a Stream.t =
+  match l with
+    | x::xs -> [< 'x; list_to_stream xs >]
+    | []    -> [< >]
+
+let rec stream_nth (n : int) (s : 'a Stream.t) : 'a =
+  match n with
+    | 1 -> Stream.next s
+    | n when n > 1 -> Stream.next s; stream_nth (n - 1) s
+    | n when n < 1 -> assert false

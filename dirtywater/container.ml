@@ -1,3 +1,4 @@
+(*pp camlp4o *)
 (*
  Copyright 2003 Sean Proctor, Mike MacHenry
 
@@ -19,6 +20,13 @@
 
  *)
 
+(*
+   container.ml: this file contains the basic container class. it provides
+   the basic implementation of a container. any object that needs to store
+   things in a general way should be derived from this or should implement
+   iContainer
+*)
+
 open Types
 open Helpers
 open Base
@@ -27,55 +35,69 @@ open Debug
 (* an object that can contain things *)
 class virtual container =
   object (self)
+
     inherit iContainer
     inherit mud_object
+
     val mutable contents : (preposition * iTangible) list = []
+
     method can_add (prep : preposition) (thing : iTangible) =
       not (List.exists ((==) thing) (self#get prep))
+
     method add (prep : preposition) (thing : iTangible) : unit =
       if List.exists ((==) thing) (self#get prep) then
         raise (Failure "container#add")
       else contents <- (prep, thing)::contents
+
     method can_remove (thing : iTangible) = true
+
     method remove (thing : iTangible) : unit =
       let len = List.length contents in
       contents <- List.filter (function (_, t) -> t != thing) contents;
       if len - 1 <> List.length contents then raise (Failure "container#remove")
+
     method get (prep : preposition) : iTangible list =
       List.map (function (_, t) -> t)
         (List.filter self#preposition_matches contents)
+
     method contains (prep : preposition) (thing : iTangible) : bool =
       List.exists ((==) thing) (self#get prep)
+
     method private preposition_matches
       ((prep : preposition), (thing : iTangible)) : bool =
       try
         let (p, _) = List.find (function (_, t) -> t == thing) contents in
         prep = p
       with Not_found -> false
-    method find looker (desc : object_desc) (count : int) =
-      let rec find_in_list ((ord, adjs, noun) as nd) count things =
-        match things with
-            x::xs ->
-              if (x#can_be_found looker)
-                  && (x#matches_description adjs noun) then (
-                match ord with
-                  | Some num -> if num - count = 1 then x
-                      else find_in_list nd (count + 1) xs
-                  | None -> x
-              ) else find_in_list nd count xs
-          | [] -> raise (Object_not_found ((ObjectDescBase nd), count))
-      in
-      let rec search_in_list (l : iTangible list) (count : int) =
-        match l with
-          | x::xs -> (try x#find looker desc count
-              with Object_not_found (desc, num) -> search_in_list xs num)
-          | [] -> raise (Object_not_found (desc, count))
-      in
-      match desc with
-          ObjectDescBase nd -> (try find_in_list nd count (self#get Anywhere)
-              with Object_not_found (_, n) -> search_in_list (self#get Anywhere)
-                n)
-        (* next condition shouldn't happen with non-locations *)
-        | ObjectDescRelative (od, p) -> search_in_list (self#get p) count
-        | ObjectDesc _ -> search_in_list (self#get Anywhere) count
-   end
+
+    method get_contents (looker : iCreature) (prep : preposition)
+        : iTangible list =
+      map_some (function (p, o) -> if (prep = Anywhere || p = prep)
+            then Some o else None) contents
+  end
+
+let rec get_full_contents (looker : iCreature) (prep : preposition)
+    (lookee : iContainer) : iTangible Stream.t =
+  let contents = lookee#get_contents looker prep in
+  [< (list_to_stream contents);
+    map_to_stream (function t -> get_full_contents looker prep
+          (t :> iContainer)) contents >]
+
+let rec filter_contents (adjs : string list) (name : string)
+    : iTangible Stream.t -> iTangible Stream.t = parser
+  [< 'n; s >] -> if n#matches_description adjs name
+      then [< 'n; filter_contents adjs name s >]
+      else [< filter_contents adjs name s >]
+
+let rec find (looker : iCreature) (lookee : iContainer) (prep : preposition)
+    (desc : object_desc) : iTangible =
+  let items = get_full_contents looker prep lookee in
+  match desc with
+    | ObjectDesc (od, p, (n, adjs, name)) ->
+        let item = stream_nth (get_opt_default n 1)
+            (filter_contents adjs name items) in
+        find looker (item :> iContainer) p od
+    | ObjectDescRelative (od, p) ->
+        find looker lookee prep od
+    | ObjectDescBase (n, adjs, name) ->
+        stream_nth (get_opt_default n 1) (filter_contents adjs name items)

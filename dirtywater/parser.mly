@@ -19,6 +19,14 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 *)
 
+(* parser.mly: this file takes lexed input from a player and produces a
+   a data structure that is an interim command data structure. that data
+   structure will later be turned into a true command data structure by the
+   player class (we cannot create a true command data structure here because we
+   do not deal with the state of the game. a command data structure needs
+   real references to existing objects
+*)
+
 open Types
 open Helpers
 
@@ -27,55 +35,81 @@ open Helpers
 %token ARTICLE WITH AND EOF
 %token <int> NUMBER
 %token <string> WORD
+%token <char> LETTER
 %token <int> ORDINAL
+
 /* prepositions */
 %token UNDER ON IN FROM OF BETWEEN NEAR
-/* commands */
-%token QUIT WAIT ATTACK GO LOOK TAKE INVENTORY DROP
-%token NORTH SOUTH EAST WEST NORTHEAST NORTHWEST SOUTHEAST SOUTHWEST UP DOWN
 
+%token <Types.emote> EMOTE
+%token <string> TARGET
 
-%start main
-%type <Types.player_command> main
+%start attack north east west south northeast northwest southeast southwest down up go drop take inventory look quit wait say
+%type <Types.player_command> attack north east west south northeast northwest southeast southwest down up go drop take inventory look quit wait say
 
 %%
 
-main:
-    command EOF                  { $1 }
+attack:
+    EOF                          { Player_attack (None, None)           }
+  | obj_phrase EOF               { Player_attack (Some $1, None)        }
+  | obj_phrase WITH obj_phrase EOF       { Player_attack (Some $1, Some $3)     }
+  | WITH obj_phrase EOF          { Player_attack (None, Some $2)        }
 ;
-command:
-  | ATTACK                              { Player_attack (None, None)           }
-  | ATTACK obj_phrase			{ Player_attack (Some $2, None)        }
-  | ATTACK obj_phrase WITH obj_phrase	{ Player_attack (Some $2, Some $4)     }
-  | ATTACK WITH obj_phrase		{ Player_attack (None, Some $3)        }
-
-  | NORTH				{ Player_move (ExitDescDir North)      }
-  | SOUTH				{ Player_move (ExitDescDir South)      }
-  | EAST				{ Player_move (ExitDescDir East)       }
-  | WEST				{ Player_move (ExitDescDir West)       }
-  | NORTHEAST				{ Player_move (ExitDescDir NorthEast)  }
-  | NORTHWEST				{ Player_move (ExitDescDir NorthWest)  }
-  | SOUTHEAST				{ Player_move (ExitDescDir SouthEast)  }
-  | SOUTHWEST				{ Player_move (ExitDescDir SouthWest)  }
-  | UP					{ Player_move (ExitDescDir Up)         }
-  | DOWN				{ Player_move (ExitDescDir Down)       }
-
-  | GO obj_phrase			{ Player_move (ExitDescObj $2)         }
-
-  | INVENTORY                           { Player_inventory                     }
-
-  | TAKE obj_phrase			{ Player_take $2                       }
-
-  | DROP obj_phrase                     { Player_drop $2                       }
-
-  | LOOK				{ Player_look None                     }
-  | LOOK obj_phrase			{ Player_look (Some (None, $2))        }
-  | LOOK preposition obj_phrase		{ Player_look (Some (Some $2, $3))     }
-
-  | QUIT                                { Player_quit                          }
-
-  | WAIT                                { Player_wait None                     }
-  | WAIT NUMBER                         { Player_wait (Some $2)                }
+north:
+    EOF           { Player_move (ExitDescDir North)      }
+;
+east:
+    EOF            { Player_move (ExitDescDir East)       }
+;
+south:
+    EOF           { Player_move (ExitDescDir South)      }
+;
+west:
+    EOF            { Player_move (ExitDescDir West)       }
+northeast:
+    EOF       { Player_move (ExitDescDir NorthEast)  }
+;
+northwest:
+    EOF       { Player_move (ExitDescDir NorthWest)  }
+;
+southeast:
+    EOF       { Player_move (ExitDescDir SouthEast)  }
+;
+southwest:
+    EOF       { Player_move (ExitDescDir SouthWest)  }
+;
+up:
+    EOF              { Player_move (ExitDescDir Up)         }
+;
+down:
+    EOF            { Player_move (ExitDescDir Down)       }
+;
+go:
+    obj_phrase EOF   { Player_move (ExitDescObj $1)         }
+;
+inventory:
+    EOF       { Player_inventory                     }
+;
+say:
+    say_attributes WORD EOF     { let (es, ts) = $1 in Player_say (es, ts, $2) }
+;
+take:
+    obj_phrase EOF { Player_take $1                       }
+;
+drop:
+    obj_phrase EOF { Player_drop $1                       }
+;
+look:
+    EOF            { Player_look None                     }
+  | obj_phrase EOF { Player_look (Some (None, $1))        }
+  | preposition obj_phrase EOF     { Player_look (Some (Some $1, $2))     }
+;
+quit:
+    EOF            { Player_quit                          }
+;
+wait:
+    EOF            { Player_wait None                     }
+  | NUMBER EOF     { Player_wait (Some $1)                }
 ;
 obj_phrase:
     obj_phrase preposition noun_phrase	{ ObjectDesc ($1, $2, $3) }
@@ -107,4 +141,9 @@ preposition:
 location:
     BETWEEN noun_phrase AND noun_phrase	{ Between ($2, $4) }
   | NEAR noun_phrase			{ Near $2 }
+;
+say_attributes:
+    /* empty */                 { ([], []) }
+  | EMOTE say_attributes        { let (es, ts) = $2 in ($1::es, ts) }
+  | TARGET say_attributes       { let (es, ts) = $2 in (es, $1::ts) }
 ;

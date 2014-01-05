@@ -18,10 +18,11 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
-(* server.ml : This file is responcible for providing a server that runs on its
-   own thread accepting connections to a given port. When connections are
-   found, they are given their own thread and logged in. Successful logins
-   get controllers and are set to controll characters in the game. *)
+(* server.ml : This file is responcible for providing a server 
+   that accepts connections to a given port. When connections are
+   found, a connection object is created and added to the global list, then
+   the login sequence is initiated. Successful logins
+   get controllers and are set to control a character in the game. *)
 
 open Types
 open Connection
@@ -36,8 +37,7 @@ let max_pending = 3
 let establish_connection ((sock : Unix.file_descr), (caller : Unix.sockaddr)) =
   ignore (new connection sock)
 
-(* start up the server to accept connections in its own thread.
-   spawns a thread for each connection that comes in *)
+(* start up the server to accept connections *)
 let start_server port =
   let sockaddr = (Unix.ADDR_INET(Unix.inet_addr_any, port)) in
   let sock = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
@@ -49,6 +49,8 @@ let start_server port =
   dlog 0 ("Starting connection server on port " ^ string_of_int port);
   sock
 
+(* checks which connections have input, then creates new connections for the
+   ones on sock, and processes the appropriate input *)
 let iterate_server sock delay =
   let (in_descriptors, _, _) =
     Unix.select (sock::connections#get_descriptors) [] [] delay in
@@ -58,6 +60,7 @@ let iterate_server sock delay =
   end;
   connections#do_input in_descriptors
 
+(* disconnects all connections and stops new connections *)
 let disconnect sock =
   connections#disconnect_all ();
   Unix.close sock;

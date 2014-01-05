@@ -1,2 +1,1 @@
-doesn't unbind from port if a character is logged in when we shutdown or if
-a character has quit with the quit command
+none that we know of and aren't intentional.

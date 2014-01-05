@@ -1,0 +1,8 @@
+<!ELEMENT race (body-part)>
+<!ATTLIST race
+	id CDATA #REQUIRED>
+	name CDATA #REQUIRED>
+<!ELEMENT body-part (body-part*)>
+<!ATTLIST body-part
+	type CDATA #REQUIRED
+	side CDATA #IMPLIED>

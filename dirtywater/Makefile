@@ -1,43 +1,53 @@
-OCAMLMAKEFILE := OCamlMakefile
-
-VERSION = 0.1.0
-
-include Makefile.debug
+VERSION = 0.1.1pre3
 
 SOURCES := helpers.ml \
            debug.ml \
 	   types.ml \
+	   mud_string.ml \
 	   base.ml \
 	   container.ml \
-	   tangible.ml \
-	   building.ml \
-           creature.ml \
 	   time.ml \
 	   events.ml \
 	   parser.mly \
 	   lexer.mll \
+	   tangible_collection.ml \
 	   player_collection.ml \
 	   character_collection.ml \
 	   location_collection.ml \
 	   connection_collection.ml \
+	   template_collection.ml \
+	   race_collection.ml \
 	   state.ml \
+	   tangible.ml \
+           creature.ml \
 	   character.ml \
 	   location.ml \
+	   template.ml \
+	   race.ml \
 	   ai.ml \
-	   make_world.ml \
 	   player.ml \
+	   load.ml \
+	   load_templates.ml \
+	   load_tangibles.ml \
+	   load_locations.ml \
+	   load_races.ml \
 	   connection.ml \
 	   scheduler.ml \
 	   server.ml \
 	   main.ml
-RESULT := mud
-LIBS = unix str
-THREADS = 1
+RESULT = mud
+LIBS = unix str stream
 OCAMLBCFLAGS := -g
+YFLAGS := -v
+PACKS = pxp
+USE_CAMLP4 := yes
 
-all: set-perms make-dep-dir bc
+include OCamlMakefile
 
-include $(OCAMLMAKEFILE)
+what:
+	echo $(DINCFLAGS)
+
+all: set-perms make-dep-dir nc
 
 lines:
 	wc $(SOURCES) $(INTERFACES) $(OTHERSOURCES)

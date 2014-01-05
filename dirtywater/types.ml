@@ -16,37 +16,32 @@
  You should have received a copy of the GNU General Public License
  along with Dirty Water; if not, write to the Free Software
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
 
- types.ml : this file is responcible for providing all of the data types
- used by the mud
- *)
+(* types.ml : this file is responsible for providing all of the data types
+   used by the mud
+*)
 
-type noun = string
+type noun_desc = (int option * string list * string)
 
-type adjective = string
+type preposition =
+  | Under
+  | On
+  | In
+  | From
+  | Of
+  | Between of (noun_desc * noun_desc)
+  | Near of noun_desc
+  | Anywhere
 
-type noun_desc = (int option * adjective list * noun)
-
-type preposition = Under
-                 | On
-                 | In
-                 | From
-                 | Of
-                 | Between of (noun_desc * noun_desc)
-                 | Near of noun_desc
-                 | Anywhere
-
-type object_desc = ObjectDesc of (object_desc * preposition * noun_desc)
-                 | ObjectDescRelative of (object_desc * preposition)
-                 | ObjectDescBase of noun_desc
-
-class virtual iMud_object =
-  object
-  end
+type object_desc =
+  | ObjectDesc of (object_desc * preposition * noun_desc)
+  | ObjectDescRelative of (object_desc * preposition)
+  | ObjectDescBase of noun_desc
 
 (* the ways to get out of a room *)
 type direction =
-    North
+  | North
   | NorthEast
   | East
   | SouthEast
@@ -65,46 +60,21 @@ type exit_desc =
     ExitDescDir of direction
   | ExitDescObj of object_desc
 
-let direction_list = [
-  (Down, "down");
-  (East, "east");
-  (North, "north");
-  (NorthEast, "northeast");
-  (NorthWest, "northwest");
-  (South, "south");
-  (SouthEast, "southeast");
-  (SouthWest, "southwest");
-  (Up, "up");
-  (West, "west")]
-
-let direction_lookup_list = [
-  ("down", Down);
-  ("east", East);
-  ("north", North);
-  ("northeast", NorthEast);
-  ("ne", NorthEast);
-  ("northwest", NorthWest);
-  ("nw", NorthWest);
-  ("south", South);
-  ("southeast", SouthEast);
-  ("se", SouthEast);
-  ("southwest", SouthWest);
-  ("sw", SouthWest);
-  ("up", Up);
-  ("west", West)]
-
-type ('iContainer, 'iTangible, 'iCreature, 'iCharacter, 'iBodypart, 'iLocation,
-    'iPortal) object_type' =
-  | MudObject of iMud_object
+type ('iMud_object, 'iContainer, 'iTangible, 'iCreature, 'iCharacter,
+    'iLocation, 'iPortal) object_type' =
+  | MudObject of 'iMud_object
   | ContainerObject of 'iContainer
   | TangibleObject of 'iTangible
   | CreatureObject of 'iCreature
   | CharacterObject of 'iCharacter
-  | BodypartObject of 'iBodypart
   | LocationObject of 'iLocation
   | PortalObject of 'iPortal
-  | PrepositionObject of (preposition * ('iContainer, 'iTangible, 'iCreature,
-        'iCharacter, 'iBodypart, 'iLocation, 'iPortal) object_type')
+  | PrepositionObject of (preposition * ('iMud_object, 'iContainer, 'iTangible,
+      'iCreature, 'iCharacter, 'iLocation, 'iPortal) object_type')
+
+type emote =
+  | EmoteQuietly
+  | EmoteLoudly
 
 (* player wait is the result of parsing the input string a player sends,
    it needs to be turned into a real command before being sent to the
@@ -119,33 +89,70 @@ type player_command =
   | Player_take of object_desc
   | Player_drop of object_desc
   | Player_inventory
+  | Player_say of (emote list * string list* string)
 
 (* command is the structure sent to the controller *)
-type ('iContainer, 'iTangible, 'iCreature, 'iCharacter, 'iBodypart, 'iLocation,
-      'iPortal) command' =
+type ('iMud_object, 'iContainer, 'iTangible, 'iCreature, 'iCharacter,
+    'iLocation, 'iPortal) command' =
   | Cmd_wait of int
   | Cmd_attack of ('iTangible * 'iTangible)
   | Cmd_move of 'iPortal
-  | Cmd_look of ('iContainer, 'iTangible, 'iCreature, 'iCharacter, 'iBodypart,
+  | Cmd_look of ('iMud_object, 'iContainer, 'iTangible, 'iCreature, 'iCharacter,
       'iLocation, 'iPortal) object_type'
   | Cmd_take of 'iTangible
   | Cmd_drop of 'iTangible
   | Cmd_inventory
+  | Cmd_say of (emote list * 'iCharacter list * string)
 
-type 'iCreature message_data =
-    Msg_init
-  | Msg_wait_start of int
-  | Msg_wait_end of int
-  | Msg_nop
-  | Msg_prompt
+type 'iCreature mud_meta' =
+  | MetaInit
+  | MetaWaitDone of int
+  | MetaPrompt
+  | MetaRoomTitle
+  | MetaRoomDesc
+  | MetaRoomContents
+  | MetaRoomExits
 
-type 'iCreature message' = ('iCreature message_data * string)
+type color =
+  | Black
+  | Red
+  | Green
+  | Yellow
+  | Blue
+  | Magenta
+  | Cyan
+  | White
+  | Normal
+
+type graphics_mode =
+  | Bold
+  | Foreground of color
+  | Background of color
+
+type separator_type =
+  | SeparatorNewline
+  | SeparatorNone
+  | SeparatorSpace
+  | SeparatorComma
+  | SeparatorDefault
+
+type ('iTangible, 'iCreature) mud_string' =
+  | MudStringNone
+  | MudString of string
+  | MudStringMode of (graphics_mode * ('iTangible, 'iCreature) mud_string')
+  | MudStringMeta of ('iCreature mud_meta'
+      * ('iTangible, 'iCreature) mud_string')
+  | MudStringList of (separator_type
+        * ('iTangible, 'iCreature) mud_string' list)
+  | MudStringCondition of ('iCreature * ('iTangible, 'iCreature) mud_string'
+      * ('iTangible, 'iCreature) mud_string')
+  | MudStringName of 'iTangible
 
 type position = (float * float)
 
 type side = Left | Right
 
-type bodypart_type =
+type body_part_kind =
     Head
   | Leg of side
   | Arm of side
@@ -153,12 +160,23 @@ type bodypart_type =
   | Foot of side
   | Torso
 
-type 'iTangible inventory' = (bodypart_type * preposition * 'iTangible list)
+type 'iTangible body_part' = {
+  kind : body_part_kind; 
+  mutable attached_to : 'iTangible body_part' option;
+  mutable receive_list : (body_part_kind * 'iTangible body_part') list;
+  thing : 'iTangible;
+}
+
+type 'iTangible inventory' = (body_part_kind * preposition * 'iTangible list)
   list
 
-class virtual iController =
+class virtual iMud_object =
   object
-    method virtual send_messages : (iCreature message') list -> unit
+    method virtual as_creature : iCreature option
+  end
+and virtual iController =
+  object
+    method virtual send_message : (iTangible, iCreature) mud_string' -> unit
   end
 and virtual iContainer =
   object
@@ -170,7 +188,7 @@ and virtual iContainer =
     method virtual remove : iTangible -> unit
     method virtual get : preposition -> iTangible list
     method virtual contains : preposition -> iTangible -> bool
-    method virtual find : iCreature -> object_desc -> int -> iTangible
+    method virtual get_contents : iCreature -> preposition -> iTangible list
   end
 and virtual iTangible =
   object
@@ -190,42 +208,34 @@ and virtual iTangible =
     method virtual is_visible : iCreature -> bool
     (* return a short description of this iTangible which is custom made for
        the given iCreature *)
-    method virtual get_short_desc : iCreature -> string
-    method virtual get_long_desc : iCreature -> string
+    method virtual get_short_desc : iCreature ->
+        (iTangible, iCreature) mud_string'
+    method virtual get_long_desc : iCreature ->
+        (iTangible, iCreature) mud_string'
     (* should we do things this way? *)
-    method virtual as_bodypart : iBodypart option
     method virtual get_containers : iContainer list
-    method virtual send_messages : (iCreature message') list -> unit
   end
 and virtual iCreature =
   object
     inherit iTangible
     (* called by the controller to give the character commands *)
-    method virtual run_command : (iContainer, iTangible, iCreature, iCharacter,
-        iBodypart, iLocation, iPortal) command' -> unit
+    method virtual run_command : (iMud_object, iContainer, iTangible, iCreature,
+        iCharacter, iLocation, iPortal) command' -> unit
     (* method called by the world and other objects when some stimulus
        effects the character *)
     method virtual set_controller : iController -> unit
     method virtual take : iTangible -> unit
     method virtual drop : iTangible -> unit
-    method virtual get_inventory : iTangible inventory'
-    method virtual get_body : iBodypart
+    method virtual get_inventory : iCreature -> iTangible inventory'
     method virtual look_for : object_desc -> iTangible
-  end
-and virtual iBodypart =
-  object
-    inherit iTangible
-    method virtual receive : iBodypart -> unit
-    method virtual attach_to : iBodypart -> unit
-    method virtual get_type : bodypart_type
-    method virtual get_hands : iBodypart list
-    method virtual get_inventory : iTangible inventory'
+    method virtual send_message : (iTangible, iCreature) mud_string' -> unit
   end
 and virtual iCharacter =
   object
     inherit iCreature
     (* called by the login to check if the given password is right *)
     method virtual match_password : string -> bool
+    method virtual set_password : string -> unit
   end
 and virtual iPortal =
   object
@@ -236,23 +246,21 @@ and virtual iPortal =
 and virtual iLocation =
   object
     inherit iContainer
-    method virtual relay_messages : (iCreature message') list -> unit
+    method virtual relay_message : (iTangible, iCreature) mud_string' -> unit
     method virtual add_portal : iPortal -> unit
     method virtual add_by_coords : iTangible -> position -> unit
     method virtual get_exit : iTangible exit' -> iPortal option
-    method virtual get_description : iCreature -> string
+    method virtual get_description : iCreature ->
+        (iTangible, iCreature) mud_string'
   end
 
-class virtual iCharacter_collection =
+class virtual iTemplate =
   object
-    method virtual find_character_by_name : string -> iCharacter option
-    (*method contains_chararacter : (icharacter -> bool)*)
-    method virtual add_character : (iCharacter -> unit)
-  end
-
-class virtual iLocation_collection =
-  object
-    method virtual add_location : iLocation -> unit
+    method virtual add_adj : string -> unit
+    method virtual set_name : string -> unit
+    method virtual set_sdesc : string -> unit
+    method virtual set_ldesc : string -> unit
+    method virtual create : int -> iTangible
   end
 
 class virtual iPlayer =
@@ -260,13 +268,6 @@ class virtual iPlayer =
     inherit iController
     method virtual run_command : unit -> unit
     method virtual enqueue_command : string -> unit
-  end
-
-class virtual iPlayer_collection =
-  object
-    method virtual add_player : iPlayer -> unit
-    method virtual remove_player : iPlayer -> unit
-    method virtual run_commands : unit -> unit
   end
 
 class virtual iConnection =
@@ -277,22 +278,20 @@ class virtual iConnection =
     method virtual close : unit -> unit
   end
 
-class virtual iConnection_collection =
-  object
-    method virtual get_descriptors : Unix.file_descr list
-    method virtual add : iConnection -> unit
-    method virtual remove : iConnection -> unit
-    method virtual do_input : Unix.file_descr list -> unit
-    method virtual disconnect_all : unit -> unit
-  end
-
-type message = iCreature message'
-type object_type = (iContainer, iTangible, iCreature, iCharacter, iBodypart,
+type mud_string = (iTangible, iCreature) mud_string'
+type object_type = (iMud_object, iContainer, iTangible, iCreature, iCharacter,
   iLocation, iPortal) object_type'
-type command = (iContainer, iTangible, iCreature, iCharacter, iBodypart,
+type command = (iMud_object, iContainer, iTangible, iCreature, iCharacter,
   iLocation, iPortal) command'
 type exit = iTangible exit'
 type inventory = iTangible inventory'
+type body_part = iTangible body_part'
+
+class virtual iRace =
+  object
+    method virtual set_body : body_part -> unit
+    method virtual create : int -> string -> iCharacter
+  end
 
 exception Bad_command of string
 exception Command_error of string
@@ -300,7 +299,6 @@ exception Quit
 exception Object_not_found of (object_desc * int)
 exception Direction_not_valid of direction
 exception Object_not_exit of iTangible
-exception No_attachment of iBodypart
 exception Too_big of iTangible
 exception No_space_for of iTangible
 exception Cannot_add of iTangible

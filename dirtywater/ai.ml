@@ -16,14 +16,16 @@
  You should have received a copy of the GNU General Public License
  along with Dirty Water; if not, write to the Free Software
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *)
 
+(*
    ai.ml : This file responcible for providing all of the artificial
    intelligence of the mud. Some AI is for enemies and will be separated
-   into separet subclass. e.g., there may be a separate goblin and
-   troll AI. This file will also provide AIs for users in certain
-   cituations. e.g. An AI for sitting around the library and reading while
+   into separate subclasses, e.g. there may be a separate goblin and
+   troll AI. This file will also provide AI's for users in certain
+   situations, e.g. an AI for sitting around the library and reading while
    the user is logged off or an AI to protect an area from intruders
-   *)
+*)
 
 open Types
 open Character
@@ -35,8 +37,8 @@ class simple_ai (ch : character) =
     val character = ch
     (* method called by the character when its controller needs to know what
        is happening to the character *)
-    method send_messages (msgs : message list) : unit =
-      let send_message (msg, _) =
+    method send_message (msg: mud_string) : unit = ()
+      (*let send_message (msg, _) =
         match msg with
             Msg_init -> character#run_command (Cmd_wait 1);
               dlog 4 "got hello"
@@ -47,5 +49,5 @@ class simple_ai (ch : character) =
               dlog 4 "ai: ------ran wait"
           | Msg_wait_start _ -> dlog 4 "ai: got a wait start"
           | _ -> ()
-      in List.iter send_message msgs
+      in List.iter send_message msgs*)
   end

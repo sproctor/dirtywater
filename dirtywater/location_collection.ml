@@ -18,12 +18,16 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
+(*
+   location_collection.ml: this file contains the class listing all the
+   locations. any new location created should be added to this list. *)
 open Types
 
 class location_collection =
   object
-    inherit iLocation_collection
-    val mutable location_list : iLocation list = []
-    method add_location (r : iLocation) : unit =
-      location_list <- r::location_list
+    val mutable location_list : (int * iLocation) list = []
+    method add (i: int) (r: iLocation) : unit =
+      location_list <- (i, r)::location_list
+    method get (i: int) : iLocation =
+      List.assoc i location_list
   end

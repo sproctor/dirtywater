@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE location SYSTEM "location.dtd">
+<location id="1002">
+  <title>Another Room</title>
+  <description>This room is inferior to the starting room</description>
+  <portal direction="south" destination="1001" />
+  <portal direction="ne" destination="1003" />
+</location>

@@ -18,6 +18,11 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
+(* player_collection.ml: this file contains the list of players. Any methods
+   that affect all players should be defined here. run_commands runs one
+   command for each player
+*)
+
 open Types
 open Debug
 
@@ -25,12 +30,12 @@ class player_collection =
   object
     val mutable player_list = ([] : iPlayer list)
     (* registers a player in the player list *)
-    method add_player (p : iPlayer) : unit =
+    method add (p : iPlayer) : unit =
       dlog 3 "registering player";
       player_list <- p::player_list
     (* unregister a player from the player list,
        that player's controller must be defunct, or we will block *)
-    method remove_player (p : iPlayer) : unit =
+    method remove (p : iPlayer) : unit =
       dlog 3 ("before removal: " ^ string_of_int (List.length player_list));
       let old_list = player_list in
       player_list <- List.filter ((!=) p) player_list;

@@ -1,3 +1,8 @@
+Version 0.1.1
+  * add string data type and ANSI colors (requires VT100 client)
+  * create rooms from XML files, trash hardcoded stuff
+  * create items from XML files
+
 Version 0.1.0
   * can pick up items
   * can view inventory

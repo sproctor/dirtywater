@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE tangible SYSTEM "tangible.dtd">
+<tangible id="1101">
+  <name>building</name>
+  <sdesc>building</sdesc>
+  <ldesc>
+    A building.
+  </ldesc>
+  <connect signal="take"></connect>
+</tangible>

@@ -18,22 +18,24 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
-(* main : This is the main game file. Running _ starts the game running by
-   starting the server on a separate thread to accept connections and then
-   starting the game scheduler to which is the main event loop of the game.
-   This file is also responcible for command line argument, command line
-   usage messages, versioning information, and help messages. *)
+(*
+   main : This is the main game file. _ contains the main game loop.
+   the game loop iterates the scheduler and processes one line of input from
+   each player.
+   This file is also responsible for command line arguments, command line
+   usage messages, versioning information, and help messages.
+*)
 
-(* global status of whether the game is up or not *)
-let game_running = ref true
+open Debug
+open Scheduler
+open Server
 
-(* start up the main server in another thread and start the scheduler *)
 let _ =
   Sys.catch_break true;
   let port = ref 4000 in
-  let sp = [("--debug", Arg.Int Debug.set_debug,
+  let sp = [("--debug", Arg.Int set_debug,
              "Set the verbosity of the log messages, higher more verbose");
-            ("--log", Arg.String Debug.set_log_file,
+            ("--log", Arg.String set_log_file,
              "File name to write log messages to. defaults to standard out")] in
   let set_port n =
     try
@@ -41,18 +43,20 @@ let _ =
     with Failure _ -> (Arg.usage sp "Bad port number"; exit 1)
   in
   Arg.parse sp set_port "mud [options] port";
-  Debug.dlog 2 ("verbosity set to " ^ string_of_int !Debug.debug_level);
+  dlog 2 ("verbosity set to " ^ string_of_int !debug_level);
+  Load.load_tangibles ();
+  Load.load_locations ();
   let sock = Server.start_server !port in
   begin try
     while true do
-      let delay = Scheduler.iterate_scheduler () in
-      Server.iterate_server sock delay
+      let delay = iterate_scheduler () in
+      iterate_server sock delay
     done
   with
     Sys.Break ->
-      Debug.dlog 0 "Got break"
+      dlog 0 "Got break"
     | x ->
-      Debug.dlog 0 (Printexc.to_string x)
+      dlog 0 (Printexc.to_string x)
   end;
-  Server.disconnect sock;
-  Debug.dlog 0 "Stopping mud server"
+  disconnect sock;
+  dlog 0 "Stopping mud server"

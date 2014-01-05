@@ -16,17 +16,51 @@
  You should have received a copy of the GNU General Public License
  along with Dirty Water; if not, write to the Free Software
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
 
- mud_object.ml : this file contains the base class for the mud objects
+(*
+ base.ml : this file contains the base class for the mud objects and
+   very generic functions on data types.
  *)
 
 open Types
 open Helpers
 
+let direction_list = [
+    (Down, "down");
+    (East, "east");
+    (North, "north");
+    (NorthEast, "northeast");
+    (NorthWest, "northwest");
+    (South, "south");
+    (SouthEast, "southeast");
+    (SouthWest, "southwest");
+    (Up, "up");
+    (West, "west");
+  ]
+
+let direction_lookup_list = [
+    ("down", Down);
+    ("east", East);
+    ("north", North);
+    ("northeast", NorthEast);
+    ("ne", NorthEast);
+    ("northwest", NorthWest);
+    ("nw", NorthWest);
+    ("south", South);
+    ("southeast", SouthEast);
+    ("se", SouthEast);
+    ("southwest", SouthWest);
+    ("sw", SouthWest);
+    ("up", Up);
+    ("west", West);
+  ]
+
 (* base object that the rest of the objects in the mud should be derived from *)
 class virtual mud_object =
   object
     inherit iMud_object
+    method as_creature = None
   end
 
 let noun_desc_to_string ((ord, adjs, noun) : noun_desc) =
@@ -58,11 +92,40 @@ let side_to_string (s : side) =
       Left -> "left"
     | Right -> "right"
 
-let bodypart_to_desc (bp : bodypart_type) =
+let string_of_body_part_kind (bp : body_part_kind) : string =
   match bp with
-      Head -> ([], "head")
-    | Leg s -> ([side_to_string s], "leg")
-    | Arm s -> ([side_to_string s], "arm")
-    | Hand s -> ([side_to_string s], "hand")
-    | Foot s -> ([side_to_string s], "foot")
-    | Torso -> ([], "torso")
+      Head -> "head"
+    | Leg s -> (side_to_string s) ^ " leg"
+    | Arm s -> (side_to_string s) ^ " arm"
+    | Hand s -> (side_to_string s) ^ " hand"
+    | Foot s -> (side_to_string s) ^ " foot"
+    | Torso -> "torso"
+
+let side_of_string (str : string) : side =
+  if str = "left" then Left
+  else if str = "right" then Right
+  else assert false
+
+let body_part_kind_of_string (part : string) (s : string option)
+    : body_part_kind =
+  if part = "head" then (assert (s = None); Head)
+  else if part = "leg" then Leg (side_of_string (get_opt s))
+  else if part = "arm" then Arm (side_of_string (get_opt s))
+  else if part = "hand" then Hand (side_of_string (get_opt s))
+  else if part = "foot" then Foot (side_of_string (get_opt s))
+  else if part = "torso" then (assert (s = None); Torso)
+  else assert false
+
+let emote_lookup = [
+    ("quietly", EmoteQuietly);
+    ("loudly", EmoteLoudly);
+  ]
+
+let string_to_emote str =
+  assoc_fun (start_of str) emote_lookup
+
+let direction_of_string str =
+  assoc_fun (start_of str) direction_lookup_list
+
+let string_of_direction dir =
+  List.assoc dir direction_list

@@ -18,6 +18,12 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
+(*
+   connection.ml: this file contains the data structures for the connection
+   for each player to the server. connections have a state. whether someone
+   is logging in, logged in, etc is stored in the connection.
+*)
+
 open Helpers
 open Debug
 open Types
@@ -69,17 +75,16 @@ class connection s =
         )
       ) else (
         lstate.password <- Some cmd;
-        match active_characters#find_character_by_name
-            (get_opt lstate.name) with
-          |  Some ch -> if not (ch#match_password
-                  (get_opt lstate.password)) then
-              lstate.name <- None;
-              self#output "Invalid password\r\n"
-          | None    ->
-              let ch = make_character (get_opt lstate.name)
-                (get_opt lstate.password) Make_world.start_room in
-              let p = new player ch (self : #iConnection :> iConnection) in
-              state <- Playing p
+        let ch = try
+          let c = active_characters#find_character_by_name
+            (get_opt lstate.name) in
+          if not (c#match_password (get_opt lstate.password)) then
+              (lstate.name <- None; self#output "Invalid password\r\n");
+          c
+        with _ -> make_character (get_opt lstate.name)
+                (get_opt lstate.password) (locations#get 1001) in
+        let p = new player ch (self : #iConnection :> iConnection) in
+        state <- Playing p
       )
     method input () : unit =
       let process_input () =

@@ -18,39 +18,47 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
+(*
+   creature.ml: this file contains the base class for mobs and characters
+*)
+
 open Types
 open Helpers
 open Base
 open Tangible
 open Debug
+open State
+open Container
 
-(* an dummy controller that does not depend on the character class. This
+(* a dummy controller that does not depend on the character class. This
    controller is used for instantiation of the character class after which
    a useful controller is set with a the set_controller method of the
    character *)
 class dummy_controller =
   object
     inherit iController
-    method send_messages (msgs : message list) : unit = ()
+    method send_message (msg : mud_string) : unit = ()
   end 
 
-class bodypart (bp : bodypart_type) (a_type : bodypart_type)
-    (r_types : bodypart_type list) =
-  let (adjs, name) = bodypart_to_desc bp in
-  let desc = String.concat " " (adjs@[name]) in
+(* a bodypart is the data that describe the bodypart characteristsics of a
+   tangible *)
+(*class bodypart (bp : bodypart_type) (a_type : bodypart_type)
+    (r_types : bodypart_type list) (t : iTangible) =
   object (self)
-    inherit tangible adjs name desc desc [In; On] as super
+
     inherit iBodypart
+
     val mutable receive_list : (bodypart_type * bodypart option) list =
       List.map (function x -> (x, None)) r_types
     val mutable attached_to = None
     val my_type = bp
     val attach_type = a_type
-    method private get_received =
-      List.map (function (_, Some bp) -> bp
-          | (_, None) -> raise (Failure "bodypart#get_hands"))
-        (List.filter (fun (_, x) -> x <> None) receive_list)
+    val my_tangible = t
+
     method get_type = my_type
+
+    method get_tangible = my_tangible
+
     method receive (bp : iBodypart) =
       let bt = bp#get_type in
       let rec receive_helper = function
@@ -58,86 +66,99 @@ class bodypart (bp : bodypart_type) (a_type : bodypart_type)
             else (t, c)::(receive_helper xs)
         | []         -> raise (No_attachment bp) in
       receive_list <- receive_helper receive_list
+
     method attach_to (bp : iBodypart) =
       attached_to <- Some bp
-    method get_hands =
-      List.flatten (List.map (function bp -> bp#get_hands) self#get_received)
-    method get_inventory : inventory =
-      (List.filter (function (_, _, x) -> x <> [])
-        (List.map (function p -> (my_type, p, self#get p)) [On; In]))
-        @(List.flatten (List.map (function bp -> bp#get_inventory)
-            self#get_received))
-    method as_bodypart = Some (self : #iBodypart :> iBodypart)
-    method find looker desc count =
-      let rec find_helper count part_list =
-        match part_list with
-          | [] -> raise (Object_not_found (desc, count))
-          | bp::bps -> try bp#find looker desc count
-              with Object_not_found (desc, num) -> find_helper num bps in
-      try super#find looker desc count
-      with Object_not_found (_, num) -> find_helper num self#get_received
-  end
 
-class hand (s : side) =
-  object (self)
-    inherit bodypart (Hand s) (Arm s) [] as body
-    method add (p : preposition) (o : iTangible) =
-      if p = In && self#get In = [] then body#add p o
-      else raise (Failure "hand#add")
-    method can_add p thing =
-      if p = In && self#get In <> [] then (
-        dlog 0 ("Cannot add to hand, # items is " ^ string_of_int
-          (List.length (self#get In)));
-        false
-      ) else body#can_add p thing
-    method get_hands = [(self : #iBodypart :> iBodypart)]
-  end
+    method get_parts : (bodypart_type * iBodypart) list =
+      (my_type, (self : #iBodypart :> iBodypart))::(List.flatten (List.map
+            (function (_, Some p) -> p#get_parts | (_, None) -> [])
+	    receive_list))
+  end*)
+
+let rec get_parts (b : body_part) : body_part list =
+  b::(List.flatten (List.map (fun (_, p) -> get_parts p) b.receive_list))
 
 (* a mob class *)
-class virtual creature (adjs : string list) (name : string) (b : iBodypart) =
+class virtual creature (i : int) (name : string) (b : body_part) =
   object (self)
+
     inherit iCreature
-    inherit tangible adjs name name name []
+    inherit tangible i [] name name name []
+
     val body = b
     val mutable ctrl = new dummy_controller
-    (* called to some control to be in control of this character *)
+
+    (* called to set some controller to be in control of this character *)
     method set_controller (c : iController) =
       ctrl <- c;
-      ctrl#send_messages [(Msg_init, "")]
+      ctrl#send_message (MudStringMeta (MetaInit, MudStringNone))
+
     (* called to pick up an object *)
-    method take (o : iTangible) =
-      if o == (self : #iCreature :> iTangible) then
+    method take (thing : iTangible) =
+      if thing == (self : #iCreature :> iTangible) then
         raise (Command_error "You can't pick up yourself.");
-      if not (o#can_be_gotten (self : #iCreature :> iCreature)) then
+      if not (thing#can_be_gotten (self : #iCreature :> iCreature)) then
         raise (Command_error "You can't pick up that object.");
-      let hands = body#get_hands in
-      if List.exists (function h -> (h :> iContainer)#contains In o) hands then
-        raise (Command_error "You are already holding that.");
+      let hands = map_some (function p ->
+            match p.kind with Hand _ -> Some p | _ -> None) (get_parts body) in
+      if List.exists (function h -> h.thing#contains In thing) hands
+        then raise (Command_error "You are already holding that.");
       let rec take_one_handed = function
-          h::hs -> (try o#move_to [((h :> iContainer), In)]
+          h::hs -> (try thing#move_to [((h.thing :> iContainer), In)]
             with Cannot_add _ -> take_one_handed hs)
-        | [] -> raise (No_space_for o) in
-      take_one_handed hands
+        | [] -> raise (No_space_for thing) in
+      take_one_handed hands;
+      (self#get_location)#relay_message (MudStringCondition
+          ((self: #iCreature :> iCreature), MudStringList (SeparatorNone,
+            [MudString "You pick up the "; MudStringName thing]),
+          MudStringList (SeparatorNone,
+            [MudStringName (self: #iCreature :> iTangible);
+            MudString " picked up the "; MudStringName thing])))
+
     method drop (thing : iTangible) =
-      let hands = List.filter (function h -> (List.exists
-        ((==) (h :> iContainer)) thing#get_containers)) body#get_hands in
-      if hands = [] then raise (Command_error "You aren't holding that.");
-      List.iter (function h -> thing#remove_from (h :> iContainer)) hands
+      let hands = map_some (function b ->
+          match b.kind with
+            | Hand _ -> if b.thing#contains In thing
+	        then Some b.thing
+	        else None
+	    | _      -> None) (get_parts body) in
+      if hands = []
+        then raise (Command_error "You aren't holding that.");
+      List.iter (function h -> thing#remove_from (h :> iContainer)) hands;
+      (self#get_location)#relay_message (MudStringCondition
+          ((self: #iCreature :> iCreature), MudStringList (SeparatorNone,
+            [MudString "You drop the "; MudStringName thing]), MudStringList
+              (SeparatorNone, [MudStringName (self: #iCreature :> iTangible);
+              MudString " dropped the "; MudStringName thing])))
+
     method add (p : preposition) (thing : iTangible) =
-      match thing#as_bodypart with
+      (* FIXME: this part needs to be totally redone *)
+      (*match thing#as_bodypart with
           Some x -> ()
-        | None   -> raise (Cannot_add thing)
+        | None   -> raise (Cannot_add thing)*) ()
+
+    (* FIXME: kill this function, make it exist outside the class or merge the
+       functionality with find *)
     method look_for (desc : object_desc) =
       let rec search_containers containers count =
         match containers with
           | [] -> raise (Object_not_found (desc, count))
-          | l::ls -> try l#find (self : #iCreature :> iCreature) desc count
-             with Object_not_found (_, num) -> search_containers ls num in
-      try self#find (self : #iCreature :> iCreature) desc 0
-      with Object_not_found (_, num) -> search_containers self#get_containers
-          num
-    method find looker desc count = body#find looker desc count
-    method get_inventory = body#get_inventory
-    method get_body = body
+          | l::ls -> try find (self : #iCreature :> iCreature)
+	      l Anywhere desc
+            with Object_not_found (_, num) -> search_containers ls num in
+      try
+        find (self : #iCreature :> iCreature) (self : #iContainer :> iContainer)
+	  Anywhere desc
+      with
+          Object_not_found (_, num) -> search_containers self#get_containers num
+
+    method get_inventory (looker : iCreature) : inventory =
+      List.map (function p ->
+          (p.kind, Anywhere, p.thing#get_contents looker Anywhere))
+        (get_parts body)
+
     method is_visible looker = looker != (self : #iCreature :> iCreature)
+
+    method as_creature = Some (self : #iCreature :> iCreature)
   end

@@ -1,4 +1,4 @@
-Welcome to Dirty Water v0.0.6
+Welcome to Dirty Water
 
 This code is availible from http://mud.rottenvegetable.org/
 
@@ -12,6 +12,17 @@ at the command line. The to run the server type:
 
 Port must be a valid port number which you have permission to open.
 level is a number between 0 and 10
+(what do the different levels mean?
+0 - show only the most basic output (start/stop/fatal errors)
+1 - show important output (new character created, non-fatal errors)
+2 - show interesting ouput (player logged in or logged out)
+3 - show non-reoccurring output (anything mildly interesting that won't be
+    displayed once every iteration)
+4 - show the most important reoccurring output
+5 - show slightly interesting reoccurring output
+6 through 9 - ?
+10 - show everything
+)
 
 You can then try login in to the server with a telnet client by typing:
 

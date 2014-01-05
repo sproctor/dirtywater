@@ -19,6 +19,7 @@
 
  *)
 
+(* time.ml: contains all game time related functions *)
 let base_time = Unix.time ()
 
 (* FIXME: the time should be set by the scheduler and read by these functions *)

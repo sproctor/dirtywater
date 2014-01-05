@@ -4,19 +4,18 @@ to have them in.
 0.2.0
   * Persistence for game state. Store the character data and any other
     important parts of the game state to file or database and reload them.
-  * a string class that we can store meta data in
-  * embedded scripting language
-  * switch to using autoconf, etc.
+  * different types of items and their descriptions stored in XML
 
 1.0
   * experience
   * magic
   * combat
-  * embedded scripting language to build the world
+  * embedded scripting language
 
 General
   * don't show password
-  * different verbosity types or'd, etc ex: dlog (ADMIN + CHARACTER) "string"
+  * possibly have different verbosity types or'd, etc
+    example dlog (ADMIN + CHARACTER) "string"
     Mike: what categories should we have?
   * create an error parser and if it doesn't catch a message, show a usage
     statement for that command.

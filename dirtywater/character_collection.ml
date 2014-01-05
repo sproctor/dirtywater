@@ -18,25 +18,26 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
+(*
+   character_collection.ml: this file contains a class for collecting characters
+   any actions that affect all characters should be implemented here. any
+   character created should be added to this list
+*)
+
 open Types
 open Debug
 
 class character_collection =
   object
-    inherit iCharacter_collection
-    val mutable character_list = ([] : iCharacter list)
+    val mutable character_list: (string * iCharacter) list = []
     (* adds a character to the list *)
-    method add_character (ch : iCharacter) : unit =
+    method add (name: string) (ch: iCharacter) : unit =
       dlog 2 "adding character to list";
-      character_list <- ch::character_list
+      if List.exists (function (n, _) -> n = name) character_list then
+        raise (Failure "add_character");
+      character_list <- (name, ch)::character_list
     (* finds a character in the list of characters. returns Some character if
        it did or None if it didn't *)
-    method find_character_by_name (name : string) : iCharacter option =
-      let rec find_character_in_list characters =
-        match characters with
-            [] -> None
-          | ch::chs -> if(name = ch#get_name)
-                       then Some ch
-                       else find_character_in_list chs
-      in find_character_in_list character_list
+    method find_character_by_name (name : string) : iCharacter =
+      List.assoc name character_list
   end

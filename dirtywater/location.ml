@@ -18,72 +18,85 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
+(*
+   location.ml: this file contains the definition for the location class.
+   locations are rooms, etc. they are where objects exist. the base containers.
+   portals are connections between locations.
+*)
+
 open Types
 open Base
-open State
 open Tangible
 open Helpers
 open Debug
 open Container
+open State
 
+(* a physical object used to represent the physical exits from locations *)
 class direction_object (d : direction) (src : iLocation) (dst : iLocation) =
   let name = List.assoc d direction_list in
   object
-    inherit tangible [] name name name []
+    inherit tangible (tangibles#get_id) [] name name name []
     val dir = d
     val source = src
     val dest = dst
-    method get_short_desc (looker : iCreature) = "error!!"
+    method get_short_desc (looker : iCreature) = MudString "error!!"
     method get_long_desc (looker : iCreature) =
       dest#get_description looker
     method matches_description adjs name =
-      adjs = [] && (try assoc_fun (start_of name) direction_lookup_list = dir
-        with Not_found -> false)
+      try
+        (adjs = []) && ((direction_of_string name) = dir)
+      with Not_found -> false
     method is_visible (looker : iCreature) = false
   end
 
-class location (t : string) (des : string) (wid : float) (dep : float) =
+(* an area in the world *)
+class location (i : int) (t : string) (des : string) (wid : float)
+    (dep : float) =
   object (self)
     inherit iLocation
     inherit container
+    val id = i
     val width = wid
     val depth = dep
     val title = t
     val descr = des
-    val mutable contents : (position * iTangible) list = []
+    val mutable loc_contents : (position * iTangible) list = []
     val mutable portals : iPortal list = []
     method private get_coords (p : preposition) : position =
       (0.0, 0.0)
-    method relay_messages (msgs : message list) : unit =
-      List.iter (function o -> o#send_messages msgs) (self#get Anywhere)
+    method relay_message (msg: mud_string) : unit =
+      let creatures = map_some (function o -> o#as_creature)
+          (self#get Anywhere) in
+      List.iter (function o -> o#send_message msg) creatures
     method get_description (looker : iCreature) =
-      let rec list_exits exits =
-        match exits with
-	    (dir, str)::ls ->
-	      if self#get_exit (ExitDir dir) <> None then str::(list_exits ls)
-              else list_exits ls
-	  | [] -> []
-      in
       let objs = List.filter (fun obj -> obj#is_visible looker)
         (self#get Anywhere) in
-      let strings = List.map (fun obj -> obj#get_short_desc looker) objs in
-      let exits = list_exits direction_list in
-      "[" ^ title ^ "]\n"
-        ^ descr ^ "\n" ^
-        (if strings <> [] then
-          "You also see here: " ^ (add_commas strings) ^ "\n" else "") ^
-        (if exits <> [] then "Obvious exits: " ^ (add_commas exits) else "")
+      let exits = List.map (fun (_, str) -> MudString str)
+        (List.filter (fun (dir, _) -> self#get_exit (ExitDir dir) <> None)
+        direction_list) in
+      MudStringList (SeparatorNewline,
+        [MudStringMeta (MetaRoomTitle, MudString title);
+          MudStringMeta (MetaRoomDesc, MudString descr);
+          if objs <> [] then MudStringMeta (MetaRoomContents, MudStringList
+              (SeparatorComma, (List.map (function o -> MudStringName o)
+                objs)))
+            else MudStringNone;
+          if exits <> [] then MudStringMeta (MetaRoomExits,
+              MudStringList (SeparatorComma, exits))
+            else MudString "none"])
     method can_add (p : preposition) (thing : iTangible) = true
     method add (l : preposition) (o : iTangible) : unit =
-      contents <- (self#get_coords l, o)::contents;
+      loc_contents <- (self#get_coords l, o)::loc_contents;
       dlog 2 ("added to location: " ^ o#get_name)
     method add_by_coords (o : iTangible) (p : position) : unit =
-      contents <- (p, o)::contents
+      loc_contents <- (p, o)::loc_contents
     method can_remove (thing : iTangible) = true
     method remove (thing : iTangible) : unit =
-      contents <- List.filter (fun (_, obj) -> obj <> thing) contents
+      loc_contents <- List.filter (fun (_, obj) -> obj <> thing) loc_contents
     method get (p : preposition) : iTangible list =
-      List.map (fun (_, obj) -> obj) (List.filter self#has_preposition contents)
+      List.map (fun (_, obj) -> obj) (List.filter self#has_preposition
+        loc_contents)
     method private has_preposition (prep, thing) = true
     method add_portal (p : iPortal) =
       portals <- p::portals
@@ -95,8 +108,12 @@ class location (t : string) (des : string) (wid : float) (dep : float) =
 	  | []    -> None
       in find_portal portals
     method get_location : iLocation = (self : #iLocation :> iLocation)
+    initializer
+      locations#add id (self : #iLocation :> iLocation)
   end
 
+(* a way to get from one location to another. this can be a directions such
+   as "north" or it can be associated with a tangible object, like a door *)
 class portal (d : direction option) (o : iTangible) (slocation : iLocation)
     (dlocation : iLocation) =
   object (self)
@@ -113,12 +130,3 @@ class portal (d : direction option) (o : iTangible) (slocation : iLocation)
     method dest = dest_location
     initializer source_location#add_portal (self : #iPortal :> iPortal)
   end
-
-let make_portal e (source : iLocation) (dest : iLocation) =
-  let (dir, obj) = match e with
-      ExitDir d ->
-        let thing = new direction_object d source dest in
-        source#add Anywhere thing;
-        Some d, thing
-    | ExitObj o -> None, o in
-  new portal dir obj source dest

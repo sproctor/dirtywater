@@ -19,75 +19,88 @@
 
  *)
 
+(* tangible.ml: this file contains the tangible class. a tangible is any
+   object in the mud than can be manipulated in some way.
+*)
+
 open Types
 open Helpers
 open Container
 open Base
+open State
 
-(* base physical object that physical objects should be derived from *)
-class tangible (a : string list) (n : string) (sd : string) (ld : string)
-    (ps : preposition list) =
+(* base physical object *)
+class tangible (i : int) (a : string list) (n : string) (sd : string)
+    (ld : string) (ps : preposition list) =
   object (self)
+
     inherit iTangible
     inherit container
+
+    val id = if i < 0 then tangibles#get_id else i
     val name = n
     val adjs = a
     val short_desc = sd
     val long_desc = ld
     val mutable containers : iContainer list = []
+
     method get_location : iLocation =
       match containers with
           x::xs -> x#get_location
         | [] -> raise (Failure "Got location from object not in the world.")
+
     method remove_from (con : iContainer) : unit =
       let loc = self#get_location in
-      let len = List.length containers in
+      let old_len = List.length containers in
       containers <- List.filter (function c -> c != con) containers;
-      if len = List.length containers then
+      if old_len = List.length containers then
         raise (Cannot_remove (self : #iTangible :> iTangible));
       con#remove (self : #iTangible :> iTangible);
       if containers = [] then self#add_to On (loc :> iContainer)
+
     method add_to (prep : preposition) (con : iContainer) : unit =
       con#add prep (self : #iTangible :> iTangible);
       containers <- con::containers
-    method move_to (cs : (iContainer * preposition) list) : unit =
-      let (cons, _) = List.split cs in
-      let remove_from (a : iContainer) =
-        a#remove (self : #iTangible :> iTangible) in
-      let add_to (c, p) =
-        c#add p (self : #iTangible :> iTangible) in
-      let cannot_remove_from (a : iContainer) =
-        not (a#can_remove (self : #iTangible :> iTangible)) in
-      let cannot_add_to (c, p) =
-        not (c#can_add p (self : #iTangible :> iTangible)) in
-      if List.exists cannot_remove_from containers then
+
+    method move_to (dest_cs : (iContainer * preposition) list) : unit =
+      let this = (self : #iTangible :> iTangible) in
+      (** First check that we can do this **)
+      (* if can't remove from containers abort *)
+      if List.exists (fun a -> not (a#can_remove this)) containers then
         raise (Cannot_remove (self : #iTangible :> iTangible))
-      else if List.exists cannot_add_to cs then
+      (* if can't add to the new containers abort *)
+      else if List.exists (fun (c, p) -> not (c#can_add p this)) dest_cs then
         raise (Cannot_add (self : #iTangible :> iTangible))
       else begin
-        List.iter remove_from containers;
-        List.iter add_to cs;
-        containers <- cons
+        (** then do it **)
+        (* remove from old containers *)
+        List.iter (fun a -> a#remove this) containers;
+        (* add to new containers *)
+        List.iter (fun (c, p) -> c#add p this) dest_cs;
+        (* make the new containers the current containers *)
+        let (dest_cons, _) = List.split dest_cs in
+        containers <- dest_cons
       end
+
     method matches_description sadjs sname =
       if not (starts_with name sname) then false
       else not (List.exists (function sadj -> List.exists
             (function adj -> not (starts_with adj sadj)) adjs) sadjs)
-    method can_be_found looker = true
-    method can_be_gotten looker = true
-    method is_visible looker = true
-    method get_name : string = name
-    method get_short_desc looker = short_desc
-    method get_long_desc looker = long_desc
-    method as_bodypart = None
-    method get_containers = containers
-    method send_messages msgs = ()
-  end
 
-let make_tangible_in_room ?(adjs = []) ~name ?short_desc ?long_desc room =
-  let sd = (match short_desc with Some x -> x
-    | None -> String.concat " " (adjs@[name])) in
-  let ld = (match long_desc with Some x -> x | None -> sd) in
-  let thing = new tangible adjs name sd ld [] in
-  thing#move_to [((room :> iContainer), Anywhere)];
-  thing
+    method can_be_found looker = true
+
+    method can_be_gotten looker = true
+
+    method is_visible looker = true
+
+    method get_name = name
+
+    method get_short_desc looker = MudString short_desc
+
+    method get_long_desc looker = MudString long_desc
+
+    method get_containers = containers
+
+    initializer
+      State.tangibles#add id (self : #iTangible :> iTangible)
+  end

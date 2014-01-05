@@ -19,6 +19,11 @@
 
  *)
 
+(*
+   events.ml: this file contains the event class. an event is a thunk that
+   is scheduled to execute at a certain time
+*)
+
 open Time
 open Debug
 

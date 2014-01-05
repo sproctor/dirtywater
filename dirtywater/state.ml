@@ -18,8 +18,13 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
+(* state.ml: this file contains all the global state for the game *)
+
 let current_players = new Player_collection.player_collection
 let active_characters = new Character_collection.character_collection
 let event_list = new Events.timed_event_list
 let locations = new Location_collection.location_collection
 let connections = new Connection_collection.connection_collection
+let templates = new Template_collection.template_collection
+let tangibles = new Tangible_collection.tangible_collection
+let races = new Race_collection.race_collection

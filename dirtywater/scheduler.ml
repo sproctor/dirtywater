@@ -18,21 +18,19 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
-(* scheduler.ml : This file contains the scheduler function, which is the
-   main event loop for the game. The whole game takes place inside the
-   schduler which is started by start_schduler. The schduler is an infinite
-   loop which prompts each player in the game to execute one of his or her
-   commands if one is pending. The scheduler is also incharge of invoking
-   delayed effects which are to be executed some time in the future. *)
+(* scheduler.ml : This file contains the iterate_scheduler function,
+   which is one iteration of the main event loop for the game. The whole
+   game takes place inside the schduler. The schduler prompts each player
+   in the game to execute one of his or her commands if one is pending.
+   The scheduler is also incharge of invoking delayed effects which are to
+   be executed some time in the future. *)
 
 open Debug
 open Time
+open State
 
 (* sorted list of event to take place in the future *)
 (* let pending_events = ref []*)
-
-(* global state whether the game is running or not *)
-let game_running = ref true
 
 (* game time of when the scheduler was last run *)
 let t = ref (get_time_float ())
@@ -44,7 +42,7 @@ let iterate_scheduler () : float =
   let time_until_iteration = 0.25 -. time_delta in
   if time_until_iteration <= 0.0 then (
     t := get_time_float ();
-    State.event_list#run_events ();
-    State.current_players#run_commands ();
+    event_list#run_events ();
+    current_players#run_commands ();
     0.0
   ) else time_until_iteration
