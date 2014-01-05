@@ -1,0 +1,113 @@
+First of all, the designers (Sean and Mike) have resolved to avoid the
+use of numbers to describe any attributes of a player. Numbers representing
+the skill levels and character traits such as intellegence will almost
+certainly be used in the underlying code but these numbers should not
+be used to tell a player what their skill level is. Phrases such as
+"Very skilled" or "Untrained" can be used to describe a range in which
+a skill level number appears when the player must know a skill level.
+
+We think its a good idea to avoid these numbers because its a sucky game
+play feel when players are just performing tasks to watch their experience
+meter go up a notch so that eventuall their all around level goes up. It
+should not be an environment where you watch character's meters go up and
+up. One should have an idea of how well he can do something but not have
+it be a set number. There should also not be a set number that it takes
+to be able to do a particular thing. It should be probabalistic.
+This avoids minmaxers or munchkins or whatever you call them and makes the
+game more of a fantasy role playing world and not a place where you can
+pump up your character. Also there should not be an overall stat that is
+your level because it is not very realistic. One should have many skill
+levels that are independant.
+
+;;;;;;;;;;
+;; On character creation:
+
+  There are certain things that a player will pick about his character
+uppon creating it. These attributes of the character cannot be changed
+at all during the course of the game. In keeping with our resolution to
+avoid the use of numbers to describe skill levels, this set of attributes
+combined will define their characters skill levels. The following are
+the attributes that are set at creation time.
+
+Race : Certain races can cast spells better or are more physically fit for
+       running fast or stronger.
+Class : This is the type of person you are (e.g. Figher, spell caster, rouge)
+        being of a class means you have been in this class and learned with
+        other members of it (maybe a school for your class) In short you
+        start the game with lots of experience in  areas your class would
+        give you.
+Family : Your family raises you a certain way and having grown up in a
+         family of fighters will make you a person who likely has experience
+         fighting.
+Religion (or order) : if you are the type of person who worships a god of
+                      magic, then you are likely someone who has atleast
+                      dabbled in magic.
+Gender : Not yet sure which things each gender will be good at.
+
+We need think of some more attributes that are chosen at start up. I would
+like to have about 6 - 10 (10 may be over doing it) so that we get really
+diverse character options. Adam suggested "region" that a character was
+raised in.
+
+Picking from a large variety of options in these catagories players will be
+able to make diverse characters that are custom taylored to their play.
+For instance if you want to be a very smart spell caster you could choose
+to be an elf spell caster who born to a family of academics. However if
+you wish to be sacrifice a bit of intellegence for physical prowes, you
+might chose to have been born to a family of hunters instead.
+
+Note: We should be extra careful to avoid making families or races that
+only go with a particular class. It should not be obivous that if you want
+to be a fighter, you pick fighter as you class, the violent god, the family
+that values strength the most and the race with  the best body type. There
+should be pros and cons in each choice for every class. So Dwarves may be
+good fighters because they are strong, but they might be slow in combat so
+an elf might be a better choice for fighter if you want to be a quick one.
+Also it would be a good idea to have some races or religions to be much
+better or worse at certain things just so long as there is more than one
+obvious choice. Possible disallowing certain combinations is a good idea
+too, like a person who worships a pasafist god can't be a fighter.
+
+Note: Most families should be for one particular race. It'd be cool to have
+a few familes that bridge races that are not enemy races. It'd be cool to
+have a story about these families. Maybe we could even have one family that
+bridged enemy races and have a romeo and julietish story about that family
+name. Actually a good number of families should bridge allied races since
+their is a city that has a diverse population. About 60% or more of families
+in a race should be only in that race (dependant on the race of course)
+
+Note: Certain character properties that are set at start up should cause
+AI (and good role players) to like or hate you based on predgudice. Especially
+race and religion. Certain families hate each other too. Maybe some people
+are sexist also.
+
+Note: Some of these properties clash. In the case where you are of a race
+that would never worship a particular god (for instance) you will either
+not be provided that oppertunity or take a serious disadvatage you skill
+for doing so. There needs to be a warning for this too.
+
+;;;;;;;;;;
+;; On in game character development
+
+  When a character first joins a game, there are futher attributes that
+one may chose. So far these attributes are
+Guild : The group of people you chose to further your skills with. Lots
+        guilds will only accept certain (maybe only one) class of people
+        and lots will accept all. More is written on guilds in other
+        documentation.
+Job   : Certain classes are better at certain jobs, it gives you very
+        specific skills. (e.g locksmith job would give you lots of lock
+        piking skills.)
+
+These later picked attributes would (we think) give you experience points
+over time. So the longer you've been a character of a guild or job the
+more experience you have in that field. These things can also be changed
+probablly with no negative effect to your character. Also can can be without
+a guild or job.
+
+Joining a guild or getting a job should require social interaction with
+other members of that guild or profession. (e.g. joining the theives guild
+will require a long time period of proving you're trustworthiness to the
+other members. joining the mages guild would probablly require just going
+to an open meeting and asking the leader to let you join. He may ask to
+have a display of your skills at trivial magic or not)

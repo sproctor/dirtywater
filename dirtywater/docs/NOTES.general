@@ -1,0 +1,27 @@
+A thought on spells: Spells could be implemented using object inheritence.
+An enchanted character is a spell that is derived from the character. All
+methods are inherited accept the apporpriate ones that the spell changes.
+e.g. If a spell enchants a character that makes him small. The enchantment
+derives the character and all method sent to the character are instead sent
+to the spell. If the spell gets the result of all methods from the character
+accept size. It just returns its own value for size. This makes it easy
+for the spell to be removed. Another way this could be done is with a chain
+of responcibility pattern. A character could have a list of spells and then
+if no spell answers the method call, the character answers it himself.
+
+on outputing strings in connections:
+think about how to abstract newlines, etc in connections. some way to mark-up
+the text.
+
+about quit command:
+quit isn't a command, it's a player leaving the game. we raise an exception on
+an invalid command, why not raise an exception on quit? quit doesn't cause the
+player to do something. it is a function outside of the game world. it doesn't
+affect the character, only the controller. I made quit a command for now,
+though.
+-Sean
+
+on newbies:
+-higher level characters should not have the same range of abilities and should lose certain abilities when they specilize, so newbies should have some abilities that few/none higher level characters have
+-guilds/factions/etc should have an income or other similar idea (political power) based on the number of people in it, so it would be important to get newbies to join your faction/guild/etc
+-quests that newbies can be a part of because they have little to lose (some way to prevent this from being abused by people who create characters just to fill this role)
