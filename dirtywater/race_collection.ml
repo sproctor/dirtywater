@@ -1,5 +1,5 @@
 (*
- Copyright 2004, 2003 Sean Proctor, Mike MacHenry
+ Copyright 2014, 2004, 2003 Sean Proctor, Mike MacHenry
 
  This file is part of Dirty Water.
 
@@ -23,11 +23,9 @@ open Types
 
 class race_collection =
   object (self)
-    val mutable races : (int * iRace) list = []
+    val mutable races : (string * iRace) list = []
     method add id race =
       races <- (id, race)::races
-    method get id =
+    method get (id : string) : iRace =
       List.assoc id races
-    method create race_id creature_id =
-      (self#get race_id)#create creature_id
   end

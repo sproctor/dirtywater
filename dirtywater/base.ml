@@ -1,5 +1,5 @@
 (*
- Copyright 2003 Sean Proctor, Mike MacHenry
+ Copyright 2014, 2003 Sean Proctor, Mike MacHenry
 
  This file is part of Dirty Water.
 
@@ -92,22 +92,22 @@ let side_to_string (s : side) =
       Left -> "left"
     | Right -> "right"
 
-let string_of_body_part_kind (bp : body_part_kind) : string =
+let bodypart_to_desc (bp : bodypart_type) =
   match bp with
-      Head -> "head"
-    | Leg s -> (side_to_string s) ^ " leg"
-    | Arm s -> (side_to_string s) ^ " arm"
-    | Hand s -> (side_to_string s) ^ " hand"
-    | Foot s -> (side_to_string s) ^ " foot"
-    | Torso -> "torso"
+      Head -> ([], "head")
+    | Leg s -> ([side_to_string s], "leg")
+    | Arm s -> ([side_to_string s], "arm")
+    | Hand s -> ([side_to_string s], "hand")
+    | Foot s -> ([side_to_string s], "foot")
+    | Torso -> ([], "torso")
 
 let side_of_string (str : string) : side =
   if str = "left" then Left
   else if str = "right" then Right
   else assert false
 
-let body_part_kind_of_string (part : string) (s : string option)
-    : body_part_kind =
+let bodypart_type_of_string (part : string) (s : string option)
+    : bodypart_type =
   if part = "head" then (assert (s = None); Head)
   else if part = "leg" then Leg (side_of_string (get_opt s))
   else if part = "arm" then Arm (side_of_string (get_opt s))

@@ -1,5 +1,5 @@
 (*
- Copyright 2004, 2003 Sean Proctor, Mike MacHenry
+ Copyright 2014, 2004, 2003 Sean Proctor, Mike MacHenry
 
  This file is part of Dirty Water.
 
@@ -23,23 +23,37 @@
 open Helpers
 open Types
 open State
+open Creature
 open Character
 
-class race id n =
+class bodypartDef (bp : bodypart_type) (r_parts : bodypartDef list) =
+  object (self)
+    val receive_list : bodypartDef list = r_parts
+    val my_type = bp
+
+    method create : bodypart =
+      new bodypart my_type (List.map (function b -> b#create) receive_list)
+  end
+
+class race id n b =
   object (self)
 
     inherit iRace
 
-    val mutable body : body_part option = None
+    val mutable body : bodypartDef = b
     val name = n
 
-    method set_body b = body <- Some b
-
-    method create id name =
+    method create (id : int) (name : string) (password : string) =
       (* FIXME: this function needs to be expanded when we have more than
          just characters... not sure how yet *)
-      new character id name (get_opt body)
+      new character id name password (body#create)
 
     initializer
       races#add id (self : #iRace :> iRace)
   end
+
+let make_character name password start =
+  let r = races#get "normalhuman" in
+  let ch = r#create (tangibles#get_id) name password in
+  ch#move_to [((start :> iContainer), Anywhere)];
+  ch

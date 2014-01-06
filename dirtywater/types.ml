@@ -1,5 +1,5 @@
 (*
- Copyright 2003 Sean Proctor, Mike MacHenry
+ Copyright 2014, 2003 Sean Proctor, Mike MacHenry
 
  This file is part of Dirty Water.
 
@@ -152,7 +152,7 @@ type position = (float * float)
 
 type side = Left | Right
 
-type body_part_kind =
+type bodypart_type =
     Head
   | Leg of side
   | Arm of side
@@ -160,14 +160,7 @@ type body_part_kind =
   | Foot of side
   | Torso
 
-type 'iTangible body_part' = {
-  kind : body_part_kind; 
-  mutable attached_to : 'iTangible body_part' option;
-  mutable receive_list : (body_part_kind * 'iTangible body_part') list;
-  thing : 'iTangible;
-}
-
-type 'iTangible inventory' = (body_part_kind * preposition * 'iTangible list)
+type 'iTangible inventory' = (bodypart_type * preposition * 'iTangible list)
   list
 
 class virtual iMud_object =
@@ -230,6 +223,14 @@ and virtual iCreature =
     method virtual look_for : object_desc -> iTangible
     method virtual send_message : (iTangible, iCreature) mud_string' -> unit
   end
+and virtual iBodypart =
+  object
+    inherit iTangible
+    method virtual get_type : bodypart_type
+    method virtual receive : iBodypart -> unit
+    method virtual attach_to : iBodypart -> unit
+    method virtual get_parts : iBodypart list
+  end
 and virtual iCharacter =
   object
     inherit iCreature
@@ -285,12 +286,10 @@ type command = (iMud_object, iContainer, iTangible, iCreature, iCharacter,
   iLocation, iPortal) command'
 type exit = iTangible exit'
 type inventory = iTangible inventory'
-type body_part = iTangible body_part'
 
 class virtual iRace =
   object
-    method virtual set_body : body_part -> unit
-    method virtual create : int -> string -> iCharacter
+    method virtual create : int -> string -> string -> iCharacter
   end
 
 exception Bad_command of string
@@ -299,6 +298,7 @@ exception Quit
 exception Object_not_found of (object_desc * int)
 exception Direction_not_valid of direction
 exception Object_not_exit of iTangible
+exception No_attachment of iBodypart
 exception Too_big of iTangible
 exception No_space_for of iTangible
 exception Cannot_add of iTangible

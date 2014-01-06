@@ -1,4 +1,4 @@
-VERSION = 0.1.1pre3
+VERSION = 0.1.1
 
 SOURCES := helpers.ml \
            debug.ml \
@@ -22,8 +22,8 @@ SOURCES := helpers.ml \
            creature.ml \
 	   character.ml \
 	   location.ml \
-	   template.ml \
 	   race.ml \
+	   template.ml \
 	   ai.ml \
 	   player.ml \
 	   load.ml \

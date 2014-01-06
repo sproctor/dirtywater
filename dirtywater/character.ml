@@ -1,5 +1,5 @@
 (*
- Copyright 2003 Sean Proctor, Mike MacHenry
+ Copyright 2014, 2003 Sean Proctor, Mike MacHenry
 
  This file is part of Dirty Water.
 
@@ -45,13 +45,13 @@ let cmd_to_string cmd =
     | Cmd_say _ -> "say"
 
 (* basic character class *)
-class character (i : int) (n : string) (b : body_part) =
+class character (i : int) (n : string) (p : string) (b : bodypart) =
   object (self)
 
     inherit iCharacter
     inherit creature i n b
 
-    val mutable password = ""
+    val mutable password = p
 
     method private do_attack (target : iTangible) (weapon : iTangible)
         : mud_string =
@@ -135,34 +135,3 @@ class character (i : int) (n : string) (b : body_part) =
     initializer
       active_characters#add name (self : #iCharacter :> iCharacter)
   end
-
-(*let make_character name password start =
-  let head = new bodypart Head Head [Torso] in
-  let ch = new character (tangibles#get_id) name password head in
-  head#move_to [((ch :> iContainer), Anywhere)];
-  let connect_to this that =
-    this#move_to [((ch :> iContainer), Anywhere)];
-    this#attach_to that;
-    that#receive this in
-  let torso = new bodypart Torso Head
-    [(Arm Left);(Arm Right);(Leg Left);(Leg Right)] in
-  connect_to torso head;
-  let left_arm = new bodypart (Arm Left) Torso [(Hand Left)] in
-  connect_to left_arm torso;
-  let left_hand = new hand Left in
-  connect_to left_hand left_arm;
-  let right_arm = new bodypart (Arm Right) Torso [(Hand Right)] in
-  connect_to right_arm torso;
-  let right_hand = new hand Right in
-  connect_to right_hand right_arm;
-  let left_leg = new bodypart (Leg Left) Torso [(Foot Left)] in
-  connect_to left_leg torso;
-  let left_foot = new bodypart (Foot Left) (Leg Left) [] in
-  connect_to left_foot left_leg;
-  let right_leg = new bodypart (Leg Right) Torso [(Foot Right)] in
-  connect_to right_leg torso;
-  let right_foot = new bodypart (Foot Right) (Leg Right) [] in
-  connect_to right_foot right_leg;
-  ch#move_to [((start :> iContainer), Anywhere)];
-  ch
-  *)

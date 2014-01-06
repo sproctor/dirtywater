@@ -1,5 +1,5 @@
 (*
- Copyright 2003 Sean Proctor, Mike MacHenry
+ Copyright 2014, 2003 Sean Proctor, Mike MacHenry
 
  This file is part of Dirty Water.
 
@@ -42,45 +42,37 @@ class dummy_controller =
 
 (* a bodypart is the data that describe the bodypart characteristsics of a
    tangible *)
-(*class bodypart (bp : bodypart_type) (a_type : bodypart_type)
-    (r_types : bodypart_type list) (t : iTangible) =
+class bodypart (t : bodypart_type) (r_parts : iBodypart list) =
+  let (adjs, name) = bodypart_to_desc t in
+  let desc = String.concat " " (adjs@[name]) in
   object (self)
 
     inherit iBodypart
+    inherit tangible (-1) adjs name desc desc [In; On] as super
 
-    val mutable receive_list : (bodypart_type * bodypart option) list =
-      List.map (function x -> (x, None)) r_types
-    val mutable attached_to = None
-    val my_type = bp
-    val attach_type = a_type
-    val my_tangible = t
+    val mutable receive_list : iBodypart list = r_parts
+    val mutable attached_to : iBodypart option = None
+    val my_type : bodypart_type = t
 
-    method get_type = my_type
+    method get_type : bodypart_type = my_type
 
-    method get_tangible = my_tangible
+    method receive (bp : iBodypart) : unit =
+      receive_list <- bp::receive_list
 
-    method receive (bp : iBodypart) =
-      let bt = bp#get_type in
-      let rec receive_helper = function
-          (t, c)::xs -> if t = bt && c = None then (t, Some bp)::xs
-            else (t, c)::(receive_helper xs)
-        | []         -> raise (No_attachment bp) in
-      receive_list <- receive_helper receive_list
-
-    method attach_to (bp : iBodypart) =
+    method attach_to (bp : iBodypart) : unit =
       attached_to <- Some bp
 
-    method get_parts : (bodypart_type * iBodypart) list =
-      (my_type, (self : #iBodypart :> iBodypart))::(List.flatten (List.map
-            (function (_, Some p) -> p#get_parts | (_, None) -> [])
-	    receive_list))
-  end*)
+    method get_parts : iBodypart list =
+      (self : #iBodypart :> iBodypart)::(List.flatten (List.map
+            (function p -> p#get_parts) receive_list))
 
-let rec get_parts (b : body_part) : body_part list =
-  b::(List.flatten (List.map (fun (_, p) -> get_parts p) b.receive_list))
+    initializer
+      List.iter (function bp -> bp#attach_to (self : #iBodypart :> iBodypart))
+          receive_list
+  end
 
 (* a mob class *)
-class virtual creature (i : int) (name : string) (b : body_part) =
+class virtual creature (i : int) (name : string) (b : bodypart) =
   object (self)
 
     inherit iCreature
@@ -100,12 +92,12 @@ class virtual creature (i : int) (name : string) (b : body_part) =
         raise (Command_error "You can't pick up yourself.");
       if not (thing#can_be_gotten (self : #iCreature :> iCreature)) then
         raise (Command_error "You can't pick up that object.");
-      let hands = map_some (function p ->
-            match p.kind with Hand _ -> Some p | _ -> None) (get_parts body) in
-      if List.exists (function h -> h.thing#contains In thing) hands
+      let hands = List.filter (function p ->
+            match p#get_type with Hand _ -> true | _ -> false) body#get_parts in
+      if List.exists (function h -> h#contains In thing) hands
         then raise (Command_error "You are already holding that.");
       let rec take_one_handed = function
-          h::hs -> (try thing#move_to [((h.thing :> iContainer), In)]
+          h::hs -> (try thing#move_to [((h :> iContainer), In)]
             with Cannot_add _ -> take_one_handed hs)
         | [] -> raise (No_space_for thing) in
       take_one_handed hands;
@@ -118,11 +110,11 @@ class virtual creature (i : int) (name : string) (b : body_part) =
 
     method drop (thing : iTangible) =
       let hands = map_some (function b ->
-          match b.kind with
-            | Hand _ -> if b.thing#contains In thing
-	        then Some b.thing
+          match b#get_type with
+            | Hand _ -> if b#contains In thing
+	        then Some b
 	        else None
-	    | _      -> None) (get_parts body) in
+	    | _      -> None) body#get_parts in
       if hands = []
         then raise (Command_error "You aren't holding that.");
       List.iter (function h -> thing#remove_from (h :> iContainer)) hands;
@@ -132,6 +124,7 @@ class virtual creature (i : int) (name : string) (b : body_part) =
               (SeparatorNone, [MudStringName (self: #iCreature :> iTangible);
               MudString " dropped the "; MudStringName thing])))
 
+    (* What is this function supposed to do? *)
     method add (p : preposition) (thing : iTangible) =
       (* FIXME: this part needs to be totally redone *)
       (*match thing#as_bodypart with
@@ -155,8 +148,8 @@ class virtual creature (i : int) (name : string) (b : body_part) =
 
     method get_inventory (looker : iCreature) : inventory =
       List.map (function p ->
-          (p.kind, Anywhere, p.thing#get_contents looker Anywhere))
-        (get_parts body)
+          (p#get_type, Anywhere, p#get_contents looker Anywhere))
+        (body#get_parts)
 
     method is_visible looker = looker != (self : #iCreature :> iCreature)
 
