@@ -46,9 +46,9 @@ let _ =
   Arg.parse sp set_port "mud [options] port";
   dlog 2 ("verbosity set to " ^ string_of_int !debug_level);
   let load_file (str : string) =
-    dlog 0 ("filename: " ^ str ^ "\n");
+    dlog 0 ("filename: " ^ str);
     try Dynlink.loadfile str
-    with Dynlink.Error e -> dlog 0 (Dynlink.error_message e ^ "\n") in
+    with Dynlink.Error e -> dlog 0 (Dynlink.error_message e) in
   Load.load_dynamic "data/races" load_file;
   Load.load_dynamic "data/tangibles" load_file;
   Load.load_dynamic "data/state/tangibles" load_file;

@@ -39,30 +39,30 @@ open Base
 
 let whitespace = [' ''\t''\r''\n']
 
-rule default_lexer = parse
-    whitespace  { default_lexer lexbuf }
-  | "the"       { ARTICLE }
-  | "an"        { ARTICLE }
-  | "a"         { ARTICLE }
-  | "under"     { UNDER }
-  | "on"        { ON }
-  | "in"        { IN }
-  | "between"   { BETWEEN }
-  | "near"      { NEAR }
-  | "by"        { NEAR }
-  | "with"      { WITH }
-  | "w/"        { WITH }
-  | "and"       { AND }
-  | (['0'-'9']+ as n)   { NUMBER (int_of_string n) }
-  | (['0'-'9']+ as n)("st"|"nd"|"rd"|"th")      { ORDINAL (int_of_string n) }
-  | (['a'-'z''\'']+ as w)       { WORD w }
-  | eof         { EOF }
-and say_lexer = parse
-    '!'(['a'-'z''A'-'Z']+ as e)         { EMOTE (string_to_emote e) }
-  | '>'(['a'-'z''A'-'Z']+ as t)         { TARGET t }
-  | (([^'!''>'' ''\t''\r''\n']_+) as w) { WORD w }
-  | whitespace                          { say_lexer lexbuf }
-  | eof                                 { EOF }
+rule default_lexer =
+  parse whitespace  { default_lexer lexbuf }
+      | "the"       { dlog 0 "article"; ARTICLE }
+      | "an"        { dlog 0 "article"; ARTICLE }
+      | "a"         { dlog 0 "article"; ARTICLE }
+      | "under"     { dlog 0 "under"; UNDER }
+      | "on"        { dlog 0 "on"; ON }
+      | "in"        { dlog 0 "in"; IN }
+      | "between"   { dlog 0 "between"; BETWEEN }
+      | "near"      { dlog 0 "near"; NEAR }
+      | "by"        { dlog 0 "near"; NEAR }
+      | "with"      { dlog 0 "with"; WITH }
+      | "w/"        { dlog 0 "with"; WITH }
+      | "and"       { dlog 0 "and"; AND }
+      | (['0'-'9']+ as n)   { dlog 0 ("number " ^ n); NUMBER (int_of_string n) }
+      | (['0'-'9']+ as n)("st"|"nd"|"rd"|"th") { dlog 0 ("ordinal " ^ n); ORDINAL (int_of_string n) }
+      | (['a'-'z''\'']+ as w)       { dlog 0 ("word " ^ w); WORD w }
+      | eof         { dlog 0 "eof"; EOF }
+and say_lexer =
+  parse '!'(['a'-'z''A'-'Z']+ as e)         { dlog 0 "emote"; EMOTE (string_to_emote e) }
+      | '>'(['a'-'z''A'-'Z']+ as t)         { dlog 0 "target"; TARGET t }
+      | (([^'!''>'' ''\t''\r''\n']_+) as w) { dlog 0 ("word " ^ w); WORD w }
+      | whitespace                          { say_lexer lexbuf }
+      | eof                                 { dlog 0 "eof"; EOF }
 {
 let cmd_list = [
   ("'", (Parser.say, say_lexer));
@@ -98,11 +98,15 @@ let parse_command str =
   let s = try
       Str.matched_group 1 str
     with Not_found -> raise (Bad_command "No command given.") in
+  dlog 0 ("first match " ^ s);
   let (handler, lexer) = try
     assoc_fun (start_of s) cmd_list
   with Not_found -> raise (Bad_command "I don't understand that.") in
   let remainder = Str.matched_group 2 str in
   let lexbuf = Lexing.from_string remainder in
+  dlog 0 ("remainder " ^ remainder);
   dlog 4 "created the lexbuf";
-  handler lexer lexbuf
+  try handler lexer lexbuf
+  with Parsing.Parse_error ->
+      raise (Bad_command "I don't understand what you mean.")
 }

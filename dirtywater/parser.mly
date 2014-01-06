@@ -29,6 +29,7 @@
 
 open Types
 open Helpers
+open Debug
 
 %}
 
@@ -85,7 +86,8 @@ down:
     EOF            { Player_move (ExitDescDir Down)       }
 ;
 go:
-    obj_phrase EOF   { Player_move (ExitDescObj $1)         }
+    obj_phrase WORD EOF   { dlog 0 "got go result"; Player_move (ExitDescObj $1) }
+  | EOF              { raise (Bad_command "Go where?") }
 ;
 inventory:
     EOF       { Player_inventory                     }
