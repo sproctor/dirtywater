@@ -33,16 +33,15 @@ open Container
 open State
 
 (* a physical object used to represent the physical exits from locations *)
-class direction_object (d : direction) (src : iLocation) (dst : iLocation) =
+class direction_object (d : direction) (dst : int) =
   let name = List.assoc d direction_list in
   object
     inherit tangible (tangibles#get_id) [] name name name []
     val dir = d
-    val source = src
-    val dest = dst
+    val dest_id = dst
     method get_short_desc (looker : iCreature) = MudString "error!!"
     method get_long_desc (looker : iCreature) =
-      dest#get_description looker
+      (locations#get dest_id)#get_description looker
     method matches_description adjs name =
       try
         (adjs = []) && ((direction_of_string name) = dir)
@@ -51,18 +50,17 @@ class direction_object (d : direction) (src : iLocation) (dst : iLocation) =
   end
 
 (* an area in the world *)
-class location (i : int) (t : string) (des : string) (wid : float)
-    (dep : float) =
+class location (i : int) (t : string) (d : string) (ps : iPortal list) =
   object (self)
     inherit iLocation
     inherit container
     val id = i
-    val width = wid
-    val depth = dep
+    val width = 10.0
+    val depth = 10.0
     val title = t
-    val descr = des
+    val desc = d
     val mutable loc_contents : (position * iTangible) list = []
-    val mutable portals : iPortal list = []
+    val mutable portals : iPortal list = ps
     method private get_coords (p : preposition) : position =
       (0.0, 0.0)
     method relay_message (msg: mud_string) : unit =
@@ -77,7 +75,7 @@ class location (i : int) (t : string) (des : string) (wid : float)
         direction_list) in
       MudStringList (SeparatorNewline,
         [MudStringMeta (MetaRoomTitle, MudString title);
-          MudStringMeta (MetaRoomDesc, MudString descr);
+          MudStringMeta (MetaRoomDesc, MudString desc);
           if objs <> [] then MudStringMeta (MetaRoomContents, MudStringList
               (SeparatorComma, (List.map (function o -> MudStringName o)
                 objs)))
@@ -114,12 +112,10 @@ class location (i : int) (t : string) (des : string) (wid : float)
 
 (* a way to get from one location to another. this can be a directions such
    as "north" or it can be associated with a tangible object, like a door *)
-class portal (d : direction option) (o : iTangible) (slocation : iLocation)
-    (dlocation : iLocation) =
+class portal (d : direction option) (o : iTangible) (d_id : int) =
   object (self)
     inherit iPortal
-    val source_location = slocation
-    val dest_location = dlocation
+    val dest_id = d_id
     val obj = o
     val dir = d
     method can_pass (thing : iTangible) : bool = true
@@ -127,6 +123,8 @@ class portal (d : direction option) (o : iTangible) (slocation : iLocation)
       match e with
           ExitDir d -> (dir = Some d)
         | ExitObj o -> (obj == o)
-    method dest = dest_location
-    initializer source_location#add_portal (self : #iPortal :> iPortal)
+    method dest = locations#get dest_id
   end
+
+let create_portal (d : direction) (d_id : int) =
+  new portal (Some d) (new direction_object d d_id) d_id

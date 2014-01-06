@@ -25,33 +25,19 @@ open Tangible
 open State
 open Helpers
 
-class template id =
+class template (id : string) (a : string list) (n : string) (s : string)
+    (l : string) =
   object (self)
 
     inherit iTemplate
 
-    val mutable adjs : string list = []
-    val mutable name : string option = None
-    val mutable sdesc : string option = None
-    val mutable ldesc : string option = None
-
-    method add_adj (str : string) : unit =
-      adjs <- adjs@[str]
-
-    method set_name (str : string) : unit =
-      assert (name = None);
-      name <- Some str
-
-    method set_sdesc (str : string) : unit =
-      assert (sdesc = None);
-      sdesc <- Some str
-
-    method set_ldesc (str : string) : unit =
-      assert (ldesc = None);
-      ldesc <- Some str
+    val mutable adjs : string list = a
+    val mutable name : string = n
+    val mutable sdesc : string = s
+    val mutable ldesc : string = l
 
     method create (id : int) : iTangible =
-      new tangible id adjs (get_opt name) (get_opt sdesc) (get_opt ldesc) []
+      new tangible id adjs name sdesc ldesc []
 
     initializer
       templates#add id (self : #iTemplate :> iTemplate)

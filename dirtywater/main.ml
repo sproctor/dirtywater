@@ -31,6 +31,7 @@ open Scheduler
 open Server
 
 let _ =
+  Dynlink.init ();
   Sys.catch_break true;
   let port = ref 4000 in
   let sp = [("--debug", Arg.Int set_debug,
@@ -44,8 +45,14 @@ let _ =
   in
   Arg.parse sp set_port "mud [options] port";
   dlog 2 ("verbosity set to " ^ string_of_int !debug_level);
-  Load.load_tangibles ();
-  Load.load_locations ();
+  let load_file (str : string) =
+    dlog 0 ("filename: " ^ str ^ "\n");
+    try Dynlink.loadfile str
+    with Dynlink.Error e -> dlog 0 (Dynlink.error_message e ^ "\n") in
+  Load.load_dynamic "data/races" load_file;
+  Load.load_dynamic "data/tangibles" load_file;
+  Load.load_dynamic "data/state/tangibles" load_file;
+  Load.load_dynamic "data/state/locations" load_file;
   let sock = Server.start_server !port in
   begin try
     while true do

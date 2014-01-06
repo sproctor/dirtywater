@@ -22,34 +22,23 @@
    load.ml: this file contains the generic functions to load the XML files
 *)
 
-open Pxp_document
+open Unix
 
-let load_generic prefix load_function =
-  let dir = Unix.opendir prefix in
+let rec load_dynamic prefix load_function =
+  let dir = opendir prefix in
   let rec get_files () =
     try
-      let n = Unix.readdir dir in
-      (Filename.concat prefix n)::(get_files ())
+      let n = readdir dir in
+      let name = Filename.concat prefix n in
+      if (stat name).st_kind = S_DIR && String.get n 0 <> '.' then
+        (load_dynamic name load_function;
+        get_files ())
+      else
+        (Filename.concat prefix n)::(get_files ())
     with End_of_file -> [] in
   let filenames = get_files () in
   let filter_name str =
-    ((Unix.stat str).Unix.st_kind <> Unix.S_DIR)
-      && (Filename.check_suffix str ".xml") in
-  List.map (function str -> load_function str)
+    ((stat str).st_kind <> S_DIR)
+      && (Filename.check_suffix str ".cmo") in
+  List.iter (function str -> load_function str)
     (List.filter filter_name filenames)
-
-class ['a] generic_default_ext =
-  object
-
-    val mutable node : 'a node option = None
-
-    method clone = {< >}
-
-    method node =
-      match node with
-        | None -> assert false
-        | Some n -> n
-
-    method set_node n =
-      node <- Some n
-  end

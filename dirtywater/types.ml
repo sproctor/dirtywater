@@ -257,10 +257,6 @@ and virtual iLocation =
 
 class virtual iTemplate =
   object
-    method virtual add_adj : string -> unit
-    method virtual set_name : string -> unit
-    method virtual set_sdesc : string -> unit
-    method virtual set_ldesc : string -> unit
     method virtual create : int -> iTangible
   end
 

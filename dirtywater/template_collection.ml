@@ -23,11 +23,11 @@ open Types
 
 class template_collection =
   object (self)
-    val mutable templates : (int * iTemplate) list = []
+    val mutable templates : (string * iTemplate) list = []
     method add id template =
       templates <- (id, template)::templates
-    method get id =
+    method get (id : string) =
       List.assoc id templates
-    method create template_id tangible_id =
+    method create_tangible (template_id : string) (tangible_id : int) =
       (self#get template_id)#create tangible_id
   end

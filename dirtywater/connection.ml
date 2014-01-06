@@ -30,6 +30,7 @@ open Types
 open State
 open Character
 open Player
+open Race
 
 type login_state = {
   mutable name: string option;

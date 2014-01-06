@@ -27,19 +27,19 @@ SOURCES := helpers.ml \
 	   ai.ml \
 	   player.ml \
 	   load.ml \
-	   load_templates.ml \
-	   load_tangibles.ml \
-	   load_locations.ml \
-	   load_races.ml \
 	   connection.ml \
 	   scheduler.ml \
 	   server.ml \
-	   main.ml
+	   main.ml \
+	   data/state/tangibles/tangibles.ml \
+	   data/state/locations/rooms.ml \
+	   data/tangibles/rock.ml \
+           data/races/human.ml
 RESULT = mud
-LIBS = unix str stream
+LIBS = unix str dynlink # stream
 OCAMLBCFLAGS := -g
 YFLAGS := -v
-PACKS = pxp
+#PACKS = pxp
 USE_CAMLP4 := yes
 
 include OCamlMakefile
