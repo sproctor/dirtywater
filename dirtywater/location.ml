@@ -53,7 +53,7 @@ class direction_object (d : direction) (dst : int) =
 class location (i : int) (t : string) (d : string) (ps : iPortal list) =
   object (self)
     inherit iLocation
-    inherit container
+    inherit container as super
     val id = i
     val width = 10.0
     val depth = 10.0
@@ -61,6 +61,12 @@ class location (i : int) (t : string) (d : string) (ps : iPortal list) =
     val desc = d
     val mutable loc_contents : (position * iTangible) list = []
     val mutable portals : iPortal list = ps
+
+    method get_contents (looker : iCreature) (prep : preposition)
+        : iTangible list =
+      (super#get_contents looker prep)@(List.map (function (_, t) -> t)
+         loc_contents)@(List.map (function p -> p#tangible) portals)
+
     method private get_coords (p : preposition) : position =
       (0.0, 0.0)
     method relay_message (msg: mud_string) : unit =
@@ -124,6 +130,7 @@ class portal (d : direction option) (o : iTangible) (d_id : int) =
           ExitDir d -> (dir = Some d)
         | ExitObj o -> (obj == o)
     method dest = locations#get dest_id
+    method tangible = o
   end
 
 let create_portal (d : direction) (d_id : int) =

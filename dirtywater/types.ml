@@ -243,6 +243,7 @@ and virtual iPortal =
     method virtual can_pass : iTangible -> bool
     method virtual has_exit : iTangible exit' -> bool
     method virtual dest : iLocation
+    method virtual tangible : iTangible
   end
 and virtual iLocation =
   object

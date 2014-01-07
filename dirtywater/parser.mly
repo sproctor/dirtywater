@@ -86,7 +86,7 @@ down:
     EOF            { Player_move (ExitDescDir Down)       }
 ;
 go:
-    obj_phrase WORD EOF   { dlog 0 "got go result"; Player_move (ExitDescObj $1) }
+    obj_phrase EOF   { dlog 0 "got go result"; Player_move (ExitDescObj $1) }
   | EOF              { raise (Bad_command "Go where?") }
 ;
 inventory:

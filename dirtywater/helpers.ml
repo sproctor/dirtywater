@@ -143,13 +143,10 @@ let rec map_to_stream (f : 'a -> 'b Stream.t) (l : 'a list) : 'b Stream.t =
     | x::xs -> [< f x; map_to_stream f xs >]
     | []    -> [< >]
 
-let rec list_to_stream (l : 'a list) : 'a Stream.t =
-  match l with
-    | x::xs -> [< 'x; list_to_stream xs >]
-    | []    -> [< >]
-
-let rec stream_nth (n : int) (s : 'a Stream.t) : 'a =
-  match n with
-    | 1 -> Stream.next s
-    | n when n > 1 -> Stream.next s; stream_nth (n - 1) s
-    | n when n < 1 -> assert false
+let rec stream_nth (n : int) (s : 'a Stream.t) : 'a option =
+  try
+    match n with
+      | 1 -> Some (Stream.next s)
+      | n when n > 1 -> Stream.junk; stream_nth (n - 1) s
+      | n when n < 1 -> assert false
+  with Stream.Failure -> None

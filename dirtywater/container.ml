@@ -79,25 +79,32 @@ class virtual container =
 let rec get_full_contents (looker : iCreature) (prep : preposition)
     (lookee : iContainer) : iTangible Stream.t =
   let contents = lookee#get_contents looker prep in
-  [< (list_to_stream contents);
+  [< Stream.of_list contents;
     map_to_stream (function t -> get_full_contents looker prep
           (t :> iContainer)) contents >]
 
 let rec filter_contents (adjs : string list) (name : string)
     : iTangible Stream.t -> iTangible Stream.t = parser
-  [< 'n; s >] -> if n#matches_description adjs name
+    [< 'n; s >] -> dlog 4 ("filtering " ^ name);
+      if n#matches_description adjs name
       then [< 'n; filter_contents adjs name s >]
       else [< filter_contents adjs name s >]
+  | [< >] -> [< >]
 
 let rec find (looker : iCreature) (lookee : iContainer) (prep : preposition)
     (desc : object_desc) : iTangible =
   let items = get_full_contents looker prep lookee in
+  dlog 4 ("Searching for " ^ object_desc_to_string desc);
   match desc with
     | ObjectDesc (od, p, (n, adjs, name)) ->
-        let item = stream_nth (get_opt_default n 1)
-            (filter_contents adjs name items) in
-        find looker (item :> iContainer) p od
+        let istream = (filter_contents adjs name items) in
+        (match stream_nth (get_opt_default n 1) istream with
+           | Some item -> dlog 4 "found the first item"; find looker (item :> iContainer) p od
+           | None -> raise (dlog 4 "object not found"; Object_not_found (desc, Stream.count istream)))
     | ObjectDescRelative (od, p) ->
         find looker lookee prep od
     | ObjectDescBase (n, adjs, name) ->
-        stream_nth (get_opt_default n 1) (filter_contents adjs name items)
+        let istream = (filter_contents adjs name items) in
+        (match stream_nth (get_opt_default n 1) istream with
+           | Some item -> dlog 4 "found the item"; item
+           | None -> raise (dlog 4 "object not found"; Object_not_found (desc, Stream.count istream)))
