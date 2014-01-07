@@ -25,14 +25,20 @@
 type noun_desc = (int option * string list * string)
 
 type preposition =
-  | Under
-  | On
+  | Prep_under
+  | Prep_on
+  | Prep_in
+  | Prep_from
+  | Prep_of
+  | Prep_any
+
+type containment =
   | In
-  | From
-  | Of
-  | Between of (noun_desc * noun_desc)
-  | Near of noun_desc
-  | Anywhere
+  | On
+
+type position =
+  | Under
+  | Behind
 
 type object_desc =
   | ObjectDesc of (object_desc * preposition * noun_desc)
@@ -148,8 +154,6 @@ type ('iTangible, 'iCreature) mud_string' =
       * ('iTangible, 'iCreature) mud_string')
   | MudStringName of 'iTangible
 
-type position = (float * float)
-
 type side = Left | Right
 
 type bodypart_type =
@@ -160,8 +164,8 @@ type bodypart_type =
   | Foot of side
   | Torso
 
-type 'iTangible inventory' = (bodypart_type * preposition * 'iTangible list)
-  list
+type 'iTangible inventory' = (bodypart_type * containment * 'iTangible list)
+    list
 
 class virtual iMud_object =
   object
@@ -175,21 +179,22 @@ and virtual iContainer =
   object
     inherit iMud_object
     method virtual get_location : iLocation
-    method virtual can_add : preposition -> iTangible -> bool
-    method virtual add : preposition -> iTangible -> unit
+    method virtual can_add : containment -> iTangible -> bool
+    method virtual add : containment -> iTangible -> unit
     method virtual can_remove : iTangible -> bool
     method virtual remove : iTangible -> unit
-    method virtual get : preposition -> iTangible list
-    method virtual contains : preposition -> iTangible -> bool
-    method virtual get_contents : iCreature -> preposition -> iTangible list
+    method virtual contains : containment -> iTangible -> bool
+    method virtual get_contents : containment option -> iTangible list
+    method virtual view_contents : iCreature -> containment option
+        -> iTangible list
   end
 and virtual iTangible =
   object
     inherit iContainer
     method virtual remove_from : iContainer -> unit
-    method virtual add_to : preposition -> iContainer -> unit
+    method virtual add_to : containment -> iContainer -> unit
     (* move this iTangible into the given containers *)
-    method virtual move_to : (iContainer * preposition) list -> unit
+    method virtual move_to : (iContainer * containment) list -> unit
     (* get the name of this iTangible (is this useful?) *)
     method virtual get_name : string
     (* match this iTangible against the given noun description *)
@@ -250,7 +255,6 @@ and virtual iLocation =
     inherit iContainer
     method virtual relay_message : (iTangible, iCreature) mud_string' -> unit
     method virtual add_portal : iPortal -> unit
-    method virtual add_by_coords : iTangible -> position -> unit
     method virtual get_exit : iTangible exit' -> iPortal option
     method virtual get_description : iCreature ->
         (iTangible, iCreature) mud_string'

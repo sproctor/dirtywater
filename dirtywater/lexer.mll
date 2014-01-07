@@ -47,9 +47,6 @@ rule default_lexer =
       | "under"     { dlog 0 "under"; UNDER }
       | "on"        { dlog 0 "on"; ON }
       | "in"        { dlog 0 "in"; IN }
-      | "between"   { dlog 0 "between"; BETWEEN }
-      | "near"      { dlog 0 "near"; NEAR }
-      | "by"        { dlog 0 "near"; NEAR }
       | "with"      { dlog 0 "with"; WITH }
       | "w/"        { dlog 0 "with"; WITH }
       | "and"       { dlog 0 "and"; AND }

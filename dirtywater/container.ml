@@ -1,6 +1,6 @@
 (*pp camlp4o *)
 (*
- Copyright 2003 Sean Proctor, Mike MacHenry
+ Copyright 2014, 2003 Sean Proctor, Mike MacHenry
 
  This file is part of Dirty Water.
 
@@ -39,48 +39,41 @@ class virtual container =
     inherit iContainer
     inherit mud_object
 
-    val mutable contents : (preposition * iTangible) list = []
+    val mutable contents : (containment * iTangible) list = []
 
-    method can_add (prep : preposition) (thing : iTangible) =
-      not (List.exists ((==) thing) (self#get prep))
+    method can_add (con : containment) (thing : iTangible) : bool =
+      not (self#contains con thing)
 
-    method add (prep : preposition) (thing : iTangible) : unit =
-      if List.exists ((==) thing) (self#get prep) then
+    method add (con : containment) (thing : iTangible) : unit =
+      if self#contains con thing then
         raise (Failure "container#add")
-      else contents <- (prep, thing)::contents
+      else contents <- (con, thing)::contents
 
-    method can_remove (thing : iTangible) = true
+    method can_remove (thing : iTangible) =
+      List.exists (function (_, t) -> t = thing) contents
 
     method remove (thing : iTangible) : unit =
       let len = List.length contents in
       contents <- List.filter (function (_, t) -> t != thing) contents;
       if len - 1 <> List.length contents then raise (Failure "container#remove")
 
-    method get (prep : preposition) : iTangible list =
-      List.map (function (_, t) -> t)
-        (List.filter self#preposition_matches contents)
+    method contains (con : containment) (thing : iTangible) : bool =
+      List.exists ((=) (con, thing)) contents
 
-    method contains (prep : preposition) (thing : iTangible) : bool =
-      List.exists ((==) thing) (self#get prep)
-
-    method private preposition_matches
-      ((prep : preposition), (thing : iTangible)) : bool =
-      try
-        let (p, _) = List.find (function (_, t) -> t == thing) contents in
-        prep = p
-      with Not_found -> false
-
-    method get_contents (looker : iCreature) (prep : preposition)
-        : iTangible list =
-      map_some (function (p, o) -> if (prep = Anywhere || p = prep)
+    method get_contents (con : containment option) : iTangible list =
+      map_some (function (c, o) -> if (con = None || con = Some c)
             then Some o else None) contents
+
+    method view_contents (looker : iCreature) (con : containment option)
+        : iTangible list =
+      List.filter (function t -> t#is_visible looker) (self#get_contents con)
   end
 
-let rec get_full_contents (looker : iCreature) (prep : preposition)
+let rec get_full_contents (looker : iCreature) (con : containment option)
     (lookee : iContainer) : iTangible Stream.t =
-  let contents = lookee#get_contents looker prep in
+  let contents = lookee#view_contents looker con in
   [< Stream.of_list contents;
-    map_to_stream (function t -> get_full_contents looker prep
+    map_to_stream (function t -> get_full_contents looker con
           (t :> iContainer)) contents >]
 
 let rec filter_contents (adjs : string list) (name : string)
@@ -91,18 +84,18 @@ let rec filter_contents (adjs : string list) (name : string)
       else [< filter_contents adjs name s >]
   | [< >] -> [< >]
 
-let rec find (looker : iCreature) (lookee : iContainer) (prep : preposition)
+let rec find (looker : iCreature) (lookee : iContainer) (con : containment option)
     (desc : object_desc) : iTangible =
-  let items = get_full_contents looker prep lookee in
+  let items = get_full_contents looker con lookee in
   dlog 4 ("Searching for " ^ object_desc_to_string desc);
   match desc with
     | ObjectDesc (od, p, (n, adjs, name)) ->
         let istream = (filter_contents adjs name items) in
         (match stream_nth (get_opt_default n 1) istream with
-           | Some item -> dlog 4 "found the first item"; find looker (item :> iContainer) p od
+           | Some item -> dlog 4 "found the first item"; find looker (item :> iContainer) (preposition_to_containment_option p) od
            | None -> raise (dlog 4 "object not found"; Object_not_found (desc, Stream.count istream)))
     | ObjectDescRelative (od, p) ->
-        find looker lookee prep od
+        find looker lookee con od
     | ObjectDescBase (n, adjs, name) ->
         let istream = (filter_contents adjs name items) in
         (match stream_nth (get_opt_default n 1) istream with

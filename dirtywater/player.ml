@@ -64,7 +64,7 @@ class player (ch : iCharacter) (co : iConnection) =
                 ExitDescDir dir -> (ExitDir dir, Direction_not_valid dir)
               | ExitDescObj desc ->
                 let obj = Container.find (controllee :> iCreature)
-                    (room :> iContainer) Anywhere desc in
+                    (room :> iContainer) None desc in
                 (ExitObj obj, Object_not_exit obj) in
             let port = room#get_exit exit_obj in
 	    Cmd_move (match port with Some y -> y

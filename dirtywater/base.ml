@@ -69,15 +69,19 @@ let noun_desc_to_string ((ord, adjs, noun) : noun_desc) =
 
 let preposition_to_string prep =
   match prep with
-      Under -> "under"
-    | On    -> "on"
-    | In    -> "in"
-    | From  -> "from"
-    | Of    -> "of"
-    | Between (n1, n2) -> "between " ^ noun_desc_to_string n1 ^ " and "
-        ^ noun_desc_to_string n2
-    | Near noun -> "near " ^ noun_desc_to_string noun
-    | Anywhere -> "anywhere"
+      Prep_under -> "under"
+    | Prep_on    -> "on"
+    | Prep_in    -> "in"
+    | Prep_from  -> "from"
+    | Prep_of    -> "of"
+    | Prep_any   -> "anywhere"
+
+let preposition_to_containment_option (prep : preposition)
+    : (containment option)=
+  match prep with
+      Prep_on -> Some On
+    | Prep_in -> Some In
+    | _       -> None
 
 let rec object_desc_to_string desc =
   match desc with

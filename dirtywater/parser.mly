@@ -40,7 +40,7 @@ open Debug
 %token <int> ORDINAL
 
 /* prepositions */
-%token UNDER ON IN FROM OF BETWEEN NEAR
+%token UNDER ON IN FROM OF
 
 %token <Types.emote> EMOTE
 %token <string> TARGET
@@ -115,7 +115,6 @@ wait:
 ;
 obj_phrase:
     obj_phrase preposition noun_phrase	{ ObjectDesc ($1, $2, $3) }
-  | obj_phrase location			{ ObjectDescRelative ($1, $2) }
   | noun_phrase				{ ObjectDescBase $1 }
 ;
 noun_phrase:
@@ -134,15 +133,11 @@ adjs:
   | adjs WORD		{ $1@[$2] }
 ;
 preposition:
-    UNDER			{ Under }
-  | ON				{ On }
-  | IN				{ In }
-  | FROM			{ From }
-  | OF				{ Of }
-;
-location:
-    BETWEEN noun_phrase AND noun_phrase	{ Between ($2, $4) }
-  | NEAR noun_phrase			{ Near $2 }
+    UNDER			{ Prep_under }
+  | ON				{ Prep_on }
+  | IN				{ Prep_in }
+  | FROM			{ Prep_from }
+  | OF				{ Prep_of }
 ;
 say_attributes:
     /* empty */                 { ([], []) }

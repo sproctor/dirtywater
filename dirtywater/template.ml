@@ -37,7 +37,7 @@ class template (id : string) (a : string list) (n : string) (s : string)
     val mutable ldesc : string = l
 
     method create (id : int) : iTangible =
-      new tangible id adjs name sdesc ldesc []
+      new tangible id adjs name sdesc ldesc
 
     initializer
       templates#add id (self : #iTemplate :> iTemplate)

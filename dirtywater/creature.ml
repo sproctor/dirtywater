@@ -48,7 +48,7 @@ class bodypart (t : bodypart_type) (r_parts : iBodypart list) =
   object (self)
 
     inherit iBodypart
-    inherit tangible (-1) adjs name desc desc [In; On] as super
+    inherit tangible (-1) adjs name desc desc as super
 
     val mutable receive_list : iBodypart list = r_parts
     val mutable attached_to : iBodypart option = None
@@ -76,7 +76,7 @@ class virtual creature (i : int) (name : string) (b : bodypart) =
   object (self)
 
     inherit iCreature
-    inherit tangible i [] name name name []
+    inherit tangible i [] name name name
 
     val body = b
     val mutable ctrl = new dummy_controller
@@ -125,7 +125,7 @@ class virtual creature (i : int) (name : string) (b : bodypart) =
               MudString " dropped the "; MudStringName thing])))
 
     (* What is this function supposed to do? *)
-    method add (p : preposition) (thing : iTangible) =
+    method add (con : containment) (thing : iTangible) =
       (* FIXME: this part needs to be totally redone *)
       (*match thing#as_bodypart with
           Some x -> ()
@@ -137,19 +137,22 @@ class virtual creature (i : int) (name : string) (b : bodypart) =
       let rec search_containers containers count =
         match containers with
           | [] -> raise (Object_not_found (desc, count))
-          | l::ls -> try find (self : #iCreature :> iCreature)
-	      l Anywhere desc
+          | l::ls -> try find (self : #iCreature :> iCreature) l None desc
             with Object_not_found (_, num) -> search_containers ls num in
       try
         find (self : #iCreature :> iCreature) (self : #iContainer :> iContainer)
-	  Anywhere desc
+	  None desc
       with
           Object_not_found (_, num) -> search_containers self#get_containers num
 
     method get_inventory (looker : iCreature) : inventory =
-      List.map (function p ->
-          (p#get_type, Anywhere, p#get_contents looker Anywhere))
-        (body#get_parts)
+      (List.map (function p ->
+          (p#get_type, In, p#view_contents looker (Some In)))
+        (body#get_parts))
+      @
+      (List.map (function p ->
+          (p#get_type, On, p#view_contents looker (Some On)))
+        (body#get_parts))
 
     method is_visible looker = looker != (self : #iCreature :> iCreature)
 

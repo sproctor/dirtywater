@@ -55,5 +55,5 @@ class race id n b =
 let make_character name password start =
   let r = races#get "normalhuman" in
   let ch = r#create (tangibles#get_id) name password in
-  ch#move_to [((start :> iContainer), Anywhere)];
+  ch#move_to [((start :> iContainer), On)];
   ch

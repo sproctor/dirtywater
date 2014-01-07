@@ -5,7 +5,7 @@ open Types
 let () =
   let loc1001 = new location 1001 "Starting Room" "...with a simple description"
       [(create_portal North 1002)] in
-    loc1001#add Anywhere (tangibles#get 1001);
+    loc1001#add On (tangibles#get 1001);
   ignore (new location 1002 "Another Room" "This room is in all ways inferior to the starting room. You should leave now."
      [create_portal South 1001;
       create_portal NorthEast 1003]);

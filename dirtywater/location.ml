@@ -1,5 +1,5 @@
 (*
- Copyright 2003 Sean Proctor, Mike MacHenry
+ Copyright 2014, 2003 Sean Proctor, Mike MacHenry
 
  This file is part of Dirty Water.
 
@@ -36,7 +36,7 @@ open State
 class direction_object (d : direction) (dst : int) =
   let name = List.assoc d direction_list in
   object
-    inherit tangible (tangibles#get_id) [] name name name []
+    inherit tangible (tangibles#get_id) [] name name name
     val dir = d
     val dest_id = dst
     method get_short_desc (looker : iCreature) = MudString "error!!"
@@ -46,7 +46,7 @@ class direction_object (d : direction) (dst : int) =
       try
         (adjs = []) && ((direction_of_string name) = dir)
       with Not_found -> false
-    method is_visible (looker : iCreature) = false
+    method is_visible (looker : iCreature) = true
   end
 
 (* an area in the world *)
@@ -59,23 +59,20 @@ class location (i : int) (t : string) (d : string) (ps : iPortal list) =
     val depth = 10.0
     val title = t
     val desc = d
-    val mutable loc_contents : (position * iTangible) list = []
     val mutable portals : iPortal list = ps
 
-    method get_contents (looker : iCreature) (prep : preposition)
-        : iTangible list =
-      (super#get_contents looker prep)@(List.map (function (_, t) -> t)
-         loc_contents)@(List.map (function p -> p#tangible) portals)
+    method get_contents (con : containment option) : iTangible list =
+      (super#get_contents con)@(List.map (function p -> p#tangible) portals)
 
-    method private get_coords (p : preposition) : position =
-      (0.0, 0.0)
     method relay_message (msg: mud_string) : unit =
       let creatures = map_some (function o -> o#as_creature)
-          (self#get Anywhere) in
+          (self#get_contents None) in
       List.iter (function o -> o#send_message msg) creatures
+
     method get_description (looker : iCreature) =
-      let objs = List.filter (fun obj -> obj#is_visible looker)
-        (self#get Anywhere) in
+      let objs = List.filter (fun t -> not (List.exists
+            (fun p -> p#tangible = t) portals))
+          (self#view_contents looker None) in
       let exits = List.map (fun (_, str) -> MudString str)
         (List.filter (fun (dir, _) -> self#get_exit (ExitDir dir) <> None)
         direction_list) in
@@ -89,21 +86,10 @@ class location (i : int) (t : string) (d : string) (ps : iPortal list) =
           if exits <> [] then MudStringMeta (MetaRoomExits,
               MudStringList (SeparatorComma, exits))
             else MudString "none"])
-    method can_add (p : preposition) (thing : iTangible) = true
-    method add (l : preposition) (o : iTangible) : unit =
-      loc_contents <- (self#get_coords l, o)::loc_contents;
-      dlog 2 ("added to location: " ^ o#get_name)
-    method add_by_coords (o : iTangible) (p : position) : unit =
-      loc_contents <- (p, o)::loc_contents
-    method can_remove (thing : iTangible) = true
-    method remove (thing : iTangible) : unit =
-      loc_contents <- List.filter (fun (_, obj) -> obj <> thing) loc_contents
-    method get (p : preposition) : iTangible list =
-      List.map (fun (_, obj) -> obj) (List.filter self#has_preposition
-        loc_contents)
-    method private has_preposition (prep, thing) = true
+
     method add_portal (p : iPortal) =
       portals <- p::portals
+
     method get_exit (e : exit) : iPortal option =
       let rec find_portal pl =
         match pl with
@@ -111,7 +97,9 @@ class location (i : int) (t : string) (d : string) (ps : iPortal list) =
 	      else find_portal ps
 	  | []    -> None
       in find_portal portals
+
     method get_location : iLocation = (self : #iLocation :> iLocation)
+
     initializer
       locations#add id (self : #iLocation :> iLocation)
   end
