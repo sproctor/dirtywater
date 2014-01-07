@@ -37,17 +37,16 @@ class virtual container =
   object (self)
 
     inherit iContainer
-    inherit mud_object
 
-    val mutable contents : (containment * iTangible) list = []
+    val mutable contents : iTangible list = []
 
-    method can_add (con : containment) (thing : iTangible) : bool =
-      not (self#contains con thing)
+    method can_add (thing : iTangible) : bool =
+      not (self#contains thing)
 
-    method add (con : containment) (thing : iTangible) : unit =
-      if self#contains con thing then
+    method add (thing : iTangible) : unit =
+      if self#contains thing then
         raise (Failure "container#add")
-      else contents <- (con, thing)::contents
+      else contents <- thing::contents
 
     method can_remove (thing : iTangible) =
       List.exists (function (_, t) -> t = thing) contents
@@ -57,16 +56,14 @@ class virtual container =
       contents <- List.filter (function (_, t) -> t != thing) contents;
       if len - 1 <> List.length contents then raise (Failure "container#remove")
 
-    method contains (con : containment) (thing : iTangible) : bool =
-      List.exists ((=) (con, thing)) contents
+    method contains (thing : iTangible) : bool =
+      List.exists ((=) thing) contents
 
-    method get_contents (con : containment option) : iTangible list =
-      map_some (function (c, o) -> if (con = None || con = Some c)
-            then Some o else None) contents
+    method get_contents : iTangible list =
+       contents
 
-    method view_contents (looker : iCreature) (con : containment option)
-        : iTangible list =
-      List.filter (function t -> t#is_visible looker) (self#get_contents con)
+    method view_contents (looker : iCreature) : iTangible list =
+      List.filter (function t -> t#is_visible looker) (self#get_contents)
   end
 
 let rec get_full_contents (looker : iCreature) (con : containment option)

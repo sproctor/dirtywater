@@ -66,16 +66,15 @@ type exit_desc =
     ExitDescDir of direction
   | ExitDescObj of object_desc
 
-type ('iMud_object, 'iContainer, 'iTangible, 'iCreature, 'iCharacter,
+type ('iContainer, 'iTangible, 'iCreature, 'iCharacter,
     'iLocation, 'iPortal) object_type' =
-  | MudObject of 'iMud_object
   | ContainerObject of 'iContainer
   | TangibleObject of 'iTangible
   | CreatureObject of 'iCreature
   | CharacterObject of 'iCharacter
   | LocationObject of 'iLocation
   | PortalObject of 'iPortal
-  | PrepositionObject of (preposition * ('iMud_object, 'iContainer, 'iTangible,
+  | PrepositionObject of (preposition * ('iContainer, 'iTangible,
       'iCreature, 'iCharacter, 'iLocation, 'iPortal) object_type')
 
 type emote =
@@ -98,12 +97,12 @@ type player_command =
   | Player_say of (emote list * string list* string)
 
 (* command is the structure sent to the controller *)
-type ('iMud_object, 'iContainer, 'iTangible, 'iCreature, 'iCharacter,
+type ('iContainer, 'iTangible, 'iCreature, 'iCharacter,
     'iLocation, 'iPortal) command' =
   | Cmd_wait of int
   | Cmd_attack of ('iTangible * 'iTangible)
   | Cmd_move of 'iPortal
-  | Cmd_look of ('iMud_object, 'iContainer, 'iTangible, 'iCreature, 'iCharacter,
+  | Cmd_look of ('iContainer, 'iTangible, 'iCreature, 'iCharacter,
       'iLocation, 'iPortal) object_type'
   | Cmd_take of 'iTangible
   | Cmd_drop of 'iTangible
@@ -169,7 +168,7 @@ type 'iTangible inventory' = (bodypart_type * containment * 'iTangible list)
 
 class virtual iMud_object =
   object
-    method virtual as_creature : iCreature option
+    method virtual get_location : iLocation
   end
 and virtual iController =
   object
@@ -178,23 +177,20 @@ and virtual iController =
 and virtual iContainer =
   object
     inherit iMud_object
-    method virtual get_location : iLocation
-    method virtual can_add : containment -> iTangible -> bool
-    method virtual add : containment -> iTangible -> unit
+    method virtual can_add : iTangible -> bool
+    method virtual add : iTangible -> unit
     method virtual can_remove : iTangible -> bool
     method virtual remove : iTangible -> unit
-    method virtual contains : containment -> iTangible -> bool
-    method virtual get_contents : containment option -> iTangible list
-    method virtual view_contents : iCreature -> containment option
-        -> iTangible list
+    method virtual contains : iTangible -> bool
+    method virtual get_contents : iTangible list
+    method virtual view_contents : iCreature -> iTangible list
   end
 and virtual iTangible =
   object
-    inherit iContainer
-    method virtual remove_from : iContainer -> unit
-    method virtual add_to : containment -> iContainer -> unit
-    (* move this iTangible into the given containers *)
-    method virtual move_to : (iContainer * containment) list -> unit
+    inherit iMud_object
+    method virtual get_parent : iContainer
+    (* move this iTangible into the given container *)
+    method virtual move_to : iContainer -> unit
     (* get the name of this iTangible (is this useful?) *)
     method virtual get_name : string
     (* match this iTangible against the given noun description *)
@@ -211,13 +207,13 @@ and virtual iTangible =
     method virtual get_long_desc : iCreature ->
         (iTangible, iCreature) mud_string'
     (* should we do things this way? *)
-    method virtual get_containers : iContainer list
+    method virtual as_creature : iCreature option
   end
 and virtual iCreature =
   object
     inherit iTangible
     (* called by the controller to give the character commands *)
-    method virtual run_command : (iMud_object, iContainer, iTangible, iCreature,
+    method virtual run_command : (iContainer, iTangible, iCreature,
         iCharacter, iLocation, iPortal) command' -> unit
     (* method called by the world and other objects when some stimulus
        effects the character *)
@@ -281,9 +277,9 @@ class virtual iConnection =
   end
 
 type mud_string = (iTangible, iCreature) mud_string'
-type object_type = (iMud_object, iContainer, iTangible, iCreature, iCharacter,
+type object_type = (iContainer, iTangible, iCreature, iCharacter,
   iLocation, iPortal) object_type'
-type command = (iMud_object, iContainer, iTangible, iCreature, iCharacter,
+type command = (iContainer, iTangible, iCreature, iCharacter,
   iLocation, iPortal) command'
 type exit = iTangible exit'
 type inventory = iTangible inventory'

@@ -56,13 +56,6 @@ let direction_lookup_list = [
     ("west", West);
   ]
 
-(* base object that the rest of the objects in the mud should be derived from *)
-class virtual mud_object =
-  object
-    inherit iMud_object
-    method as_creature = None
-  end
-
 let noun_desc_to_string ((ord, adjs, noun) : noun_desc) =
   (string_of_int (get_opt_default ord 1)) ^ " "
     ^ String.concat " " (adjs@[noun])

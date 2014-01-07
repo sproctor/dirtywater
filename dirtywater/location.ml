@@ -100,6 +100,7 @@ class location (i : int) (t : string) (d : string) (ps : iPortal list) =
 
     method get_location : iLocation = (self : #iLocation :> iLocation)
 
+    method
     initializer
       locations#add id (self : #iLocation :> iLocation)
   end

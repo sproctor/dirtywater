@@ -31,56 +31,41 @@ open State
 
 (* base physical object *)
 class tangible (i : int) (a : string list) (n : string) (sd : string)
-    (ld : string) =
+    (ld : string) (loc : iContainer) =
   object (self)
 
     inherit iTangible
-    inherit container
 
     val id = if i < 0 then tangibles#get_id else i
     val name = n
     val adjs = a
     val short_desc = sd
     val long_desc = ld
-    val mutable containers : iContainer list = []
+    val mutable parent : iContainer = loc
+    val mutable containers : (containment * iContainer) = []
 
-    method get_location : iLocation =
-      match containers with
-          x::xs -> x#get_location
-        | [] -> raise (Failure "Got location from object not in the world.")
+    method get_location : iLocation = parent#get_location
+        (* | [] -> raise (Failure "Got location from object not in the world.") *)
 
-    method remove_from (con : iContainer) : unit =
-      let loc = self#get_location in
-      let old_len = List.length containers in
-      containers <- List.filter (function c -> c != con) containers;
-      if old_len = List.length containers then
-        raise (Cannot_remove (self : #iTangible :> iTangible));
-      con#remove (self : #iTangible :> iTangible);
-      if containers = [] then self#add_to On (loc :> iContainer)
+    method get_parent : iContainer = parent
 
-    method add_to (con : containment) (c : iContainer) : unit =
-      c#add con (self : #iTangible :> iTangible);
-      containers <- c::containers
-
-    method move_to (dest_cs : (iContainer * containment) list) : unit =
+    method move_to (dest : iContainer * containment) : unit =
       let this = (self : #iTangible :> iTangible) in
       (** First check that we can do this **)
-      (* if can't remove from containers abort *)
-      if List.exists (fun a -> not (a#can_remove this)) containers then
+      (* if can't remove from parent abort *)
+      if not (parent#can_remove this) then
         raise (Cannot_remove (self : #iTangible :> iTangible))
-      (* if can't add to the new containers abort *)
-      else
-        if List.exists (fun (c, con) -> not (c#can_add con this)) dest_cs then
-        raise (Cannot_add (self : #iTangible :> iTangible))
+      (* if can't add to the new parent abort *)
+      else if not (dest#can_add con this)
+        then raise (Cannot_add (self : #iTangible :> iTangible))
       else begin
         (** then do it **)
-        (* remove from old containers *)
-        List.iter (fun a -> a#remove this) containers;
-        (* add to new containers *)
-        List.iter (fun (c, con) -> c#add con this) dest_cs;
-        (* make the new containers the current containers *)
-        let (dest_cons, _) = List.split dest_cs in
-        containers <- dest_cons
+        (* remove from old parent *)
+        parent#remove this;
+        (* add to new parent *)
+        dest#add con this;
+        (* make the new parent the current parent *)
+        parent <- dest
       end
 
     method matches_description sadjs sname =
@@ -100,7 +85,7 @@ class tangible (i : int) (a : string list) (n : string) (sd : string)
 
     method get_long_desc looker = MudString long_desc
 
-    method get_containers = containers
+    method as_creature = None
 
     initializer
       State.tangibles#add id (self : #iTangible :> iTangible)
