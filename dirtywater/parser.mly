@@ -90,13 +90,13 @@ go:
   | EOF              { raise (Bad_command "Go where?") }
 ;
 inventory:
-    EOF       { Player_inventory                     }
+    EOF { Player_inventory }
 ;
 say:
-    say_attributes WORD EOF     { let (es, ts) = $1 in Player_say (es, ts, $2) }
+    say_attributes WORD EOF { let (es, ts) = $1 in Player_say (es, ts, $2) }
 ;
 take:
-    obj_phrase EOF { Player_take $1                       }
+    obj_phrase EOF { Player_take $1 }
 ;
 drop:
     obj_phrase EOF { Player_drop $1                       }

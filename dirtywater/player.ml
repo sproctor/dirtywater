@@ -40,6 +40,7 @@ class player (ch : iCharacter) (co : iConnection) =
     val mutable cmd_queue = []
     val conn = co
     val mutable prompting = false
+
     (* send a message to the user's connection. returns immediatly *)
     (* called by scheduler *)
     method send_message (msg: mud_string) : unit = 
@@ -48,27 +49,30 @@ class player (ch : iCharacter) (co : iConnection) =
           (MudStringList (SeparatorNewline,
             [msg; MudStringMeta (MetaPrompt, MudStringNone)])));
       dlog 5 "end player->send message";
+
     method private translate_command (pcmd : player_command) : command =
       match pcmd with
-          Player_attack (ptarget, pweapon) ->
-	    raise (Bad_command "Not yet implemented")
-	| Player_wait (Some x) ->
-            Cmd_wait x
-	| Player_wait None ->
-            Cmd_wait 10
-	| Player_quit ->
-           raise Quit
-	| Player_move ed ->
-	    let room = controllee#get_location in
-            let (exit_obj, error) = match ed with
-                ExitDescDir dir -> (ExitDir dir, Direction_not_valid dir)
-              | ExitDescObj desc ->
+      | Player_attack (ptarget, pweapon) ->
+          raise (Bad_command "Not yet implemented")
+      | Player_wait (Some x) ->
+          Cmd_wait x
+      | Player_wait None ->
+          Cmd_wait 10
+      | Player_quit ->
+          raise Quit
+      | Player_move ed ->
+          let room = controllee#get_location in
+          let (exit_obj, error) =
+            match ed with
+            | ExitDescDir dir -> (ExitDir dir, Direction_not_valid dir)
+            | ExitDescObj desc ->
                 let obj = Container.find (controllee :> iCreature)
-                    (room :> iContainer) desc in
+                  (room :> iContainer) desc in
                 (ExitObj obj, Object_not_exit obj) in
-            let port = room#get_exit exit_obj in
-	    Cmd_move (match port with Some y -> y
-	      | None -> raise error)
+                let portal_opt = room#get_exit exit_obj in
+                let portal = (match portal_opt with Some y -> y
+                    | None -> raise error) in
+	        Cmd_move portal
         | Player_inventory ->
             Cmd_inventory
 	| Player_look None ->
@@ -79,7 +83,8 @@ class player (ch : iCharacter) (co : iConnection) =
             Cmd_look (PrepositionObject (prep, TangibleObject
                   (controllee#look_for desc)))
         | Player_take desc -> 
-            Cmd_take (controllee#look_for desc)
+            (dlog 4 ("taking " ^ (object_desc_to_string desc));
+            Cmd_take (controllee#look_for desc))
         | Player_drop desc ->
             Cmd_drop (controllee#look_for desc)
         | Player_say (es, _, str) ->

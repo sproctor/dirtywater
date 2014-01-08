@@ -95,11 +95,25 @@ class tangible (i : int) (a : string list) (n : string) (sd : string)
     method get_container (con : containment) : iContainer =
       List.assoc con containers
 
+    method add_container (con: containment) (container : iContainer) =
+      containers <- (con, container) :: containers
+
     method get_contents : iTangible list =
       List.flatten (List.map (fun (_, c) -> c#get_contents) containers)
 
+    method get_contents_recursive : iTangible list =
+      List.flatten (List.map (fun (_, c) -> c#get_contents_recursive)
+          containers)
+
     method view_contents (looker : iCreature) : iTangible list =
       List.filter (fun t -> t#is_visible looker) self#get_contents
+
+    method view_contents_recursive (looker : iCreature) : iTangible list =
+      List.flatten (List.map (fun (_, c) -> c#view_contents_recursive looker)
+          containers)
+
+    method to_string : string =
+      "tangible" ^ (string_of_int id) ^ ": " ^ short_desc
 
     initializer
       State.tangibles#add id (self : #iTangible :> iTangible)

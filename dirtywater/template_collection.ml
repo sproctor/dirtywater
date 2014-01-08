@@ -28,6 +28,9 @@ class template_collection =
       templates <- (id, template)::templates
     method get (id : string) =
       List.assoc id templates
-    method create_tangible (template_id : string) (tangible_id : int) =
-      (self#get template_id)#create tangible_id
+    method create_tangible (template_id : string) (tangible_id : int)
+        (con : iContainer) =
+      let thing = (self#get template_id)#create tangible_id in
+      con#add thing;
+      thing#set_parent (Some con)
   end

@@ -26,9 +26,9 @@ open State
 open Creature
 open Character
 
-class bodypartDef (bp : bodypart_type) (r_parts : bodypartDef list) =
+class bodypart_def (bp : bodypart_type) (r_parts : bodypart_def list) =
   object (self)
-    val receive_list : bodypartDef list = r_parts
+    val receive_list : bodypart_def list = r_parts
     val my_type = bp
 
     method create : bodypart =
@@ -40,7 +40,7 @@ class race id n b =
 
     inherit iRace
 
-    val mutable body : bodypartDef = b
+    val mutable body : bodypart_def = b
     val name = n
 
     method create (id : int) (name : string) (password : string) : iCharacter =

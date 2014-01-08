@@ -31,15 +31,15 @@ SOURCES := helpers.ml \
 	   scheduler.ml \
 	   server.ml \
 	   main.ml \
-	   data/state/tangibles/tangibles.ml \
 	   data/state/locations/rooms.ml \
 	   data/tangibles/rock.ml \
            data/races/human.ml
 RESULT = mud
-LIBS = unix str dynlink # stream
+LIBS = unix str dynlink
 OCAMLBCFLAGS := -g
 YFLAGS := -v
 #PACKS = pxp
+PACKS = extlib
 USE_CAMLP4 := yes
 
 include OCamlMakefile

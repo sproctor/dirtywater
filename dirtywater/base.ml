@@ -57,7 +57,7 @@ let direction_lookup_list = [
   ]
 
 let noun_desc_to_string ((ord, adjs, noun) : noun_desc) =
-  (string_of_int (get_opt_default ord 1)) ^ " "
+  (string_of_int (Option.default 1 ord)) ^ " "
     ^ String.concat " " (adjs@[noun])
 
 let preposition_to_string prep =
@@ -103,10 +103,10 @@ let side_of_string (str : string) : side =
 let bodypart_type_of_string (part : string) (s : string option)
     : bodypart_type =
   if part = "head" then (assert (s = None); Head)
-  else if part = "leg" then Leg (side_of_string (get_opt s))
-  else if part = "arm" then Arm (side_of_string (get_opt s))
-  else if part = "hand" then Hand (side_of_string (get_opt s))
-  else if part = "foot" then Foot (side_of_string (get_opt s))
+  else if part = "leg" then Leg (side_of_string (Option.get s))
+  else if part = "arm" then Arm (side_of_string (Option.get s))
+  else if part = "hand" then Hand (side_of_string (Option.get s))
+  else if part = "foot" then Foot (side_of_string (Option.get s))
   else if part = "torso" then (assert (s = None); Torso)
   else assert false
 

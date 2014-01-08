@@ -114,16 +114,6 @@ let ascii_to_telnet (str : string) : string =
   let reg = Str.regexp "\255" in
   Str.global_replace reg "\255\255" str
 
-let get_opt (a : 'a option) : 'a =
-  match a with
-    | None -> raise (Failure "get_opt")
-    | Some x -> x
-
-let get_opt_default (a : 'a option) (b : 'a) : 'a =
-  match a with
-    | None -> b
-    | Some x -> x
-
 let rec map_some (f : 'a -> 'b option) (l : 'a list) : 'b list =
   match l with
       x::xs -> (match f x with

@@ -56,6 +56,7 @@ class character (i : int) (n : string) (p : string) (b : bodypart) =
     method private do_attack (target : iTangible) (weapon : iTangible)
         : mud_string =
       raise (Command_error "Command not implemented yet")
+
     method private do_wait (time : int) =
       let end_time = time + get_time () in
       dlog 3 ("someone is waiting until " ^ string_of_int end_time);
@@ -65,17 +66,20 @@ class character (i : int) (n : string) (p : string) (b : bodypart) =
           ("After " ^ string_of_int time ^ " you grow tired of waiting."))) in
       event_list#register_event wait_thunk end_time;
       MudString "You begin waiting."
+
     method private do_move (p : iPortal) : mud_string =
       if p#can_pass (self : #iCharacter :> iTangible) then
         self#move_to (p#dest :> iContainer);
       MudStringList (SeparatorNone, [(MudString "You start walking...");
         (self#do_look (LocationObject self#get_location))])
+
     method private do_look (target : object_type) : mud_string =
       match target with
         | TangibleObject x -> x#get_long_desc (self : #iCharacter :> iCreature)
 	| LocationObject x -> x#get_description
             (self : #iCharacter :> iCreature)
         | _ -> raise (Command_error "This type of look isn't implemented.")
+
     method private do_inventory () : mud_string =
       let i : inventory = self#get_inventory (self : #iCreature :> iCreature) in
       let inv = List.flatten (List.map (function (_, _, x) -> x) (List.filter
@@ -93,14 +97,17 @@ class character (i : int) (n : string) (p : string) (b : bodypart) =
           List.map (function x -> MudStringName x) inv)
           else MudString "nothing"]) in
       MudStringList (SeparatorNewline, [carrying_string; inv_string])
+
     method private do_take (thing : iTangible) : mud_string =
       try self#take thing; MudStringNone
       with
         | No_space_for _ -> MudString "Your hands are full."
         | Cannot_add _ -> MudString "You can't hold that."
         | Cannot_remove _ -> MudString "You cannot pick that up."
+
     method private do_drop (thing : iTangible) : mud_string =
         self#drop thing; MudStringNone
+
     method private do_say (_, _, str) : mud_string =
       (self#get_location)#relay_message (MudStringCondition
         ((self: #iCharacter :> iCreature),
@@ -109,6 +116,7 @@ class character (i : int) (n : string) (p : string) (b : bodypart) =
               [MudStringName (self: #iCharacter :> iTangible);
               MudString (" says, \"" ^ str ^ "\"")]))));
       MudStringNone
+
     (* called by the controller to give the character commands *)
     method run_command (cmd : command) : unit =
       dlog 4 (name ^ " is running command " ^ cmd_to_string cmd);
@@ -121,9 +129,11 @@ class character (i : int) (n : string) (p : string) (b : bodypart) =
         | Cmd_drop x    -> self#do_drop x
         | Cmd_inventory -> self#do_inventory ()
         | Cmd_say x     -> self#do_say x)
+
     (* method called by the world and other objects when some stimulus
        effects the character *)
     method send_message (msg: mud_string) : unit = ctrl#send_message msg
+
     (* called by the login to check if the given password is right *)
     method match_password (guess : string) : bool = (guess = password)
 

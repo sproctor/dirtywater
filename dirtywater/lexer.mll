@@ -1,6 +1,6 @@
 {
 (*
- Copyright 2003 Sean Proctor, Mike MacHenry
+ Copyright 2014, 2003 Sean Proctor, Mike MacHenry
 
  This file is part of Dirty Water.
 

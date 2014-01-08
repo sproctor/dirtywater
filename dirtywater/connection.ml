@@ -78,12 +78,12 @@ class connection s =
         lstate.password <- Some cmd;
         let ch = try
           let c = active_characters#find_character_by_name
-            (get_opt lstate.name) in
-          if not (c#match_password (get_opt lstate.password)) then
+            (Option.get lstate.name) in
+          if not (c#match_password (Option.get lstate.password)) then
               (lstate.name <- None; self#output "Invalid password\r\n");
           c
-        with _ -> make_character (get_opt lstate.name)
-                (get_opt lstate.password) (locations#get 1001) in
+        with _ -> make_character (Option.get lstate.name)
+                (Option.get lstate.password) (locations#get 1001) in
         let p = new player ch (self : #iConnection :> iConnection) in
         state <- Playing p
       )

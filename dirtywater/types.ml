@@ -167,6 +167,7 @@ type 'iTangible inventory' = (bodypart_type * containment * 'iTangible list)
 class virtual iMud_object =
   object
     method virtual get_location : iLocation
+    method virtual to_string : string
   end
 and virtual iController =
   object
@@ -181,7 +182,9 @@ and virtual iContainer =
     method virtual remove : iTangible -> unit
     method virtual contains : iTangible -> bool
     method virtual get_contents : iTangible list
+    method virtual get_contents_recursive : iTangible list
     method virtual view_contents : iCreature -> iTangible list
+    method virtual view_contents_recursive : iCreature -> iTangible list
   end
 and virtual iTangible =
   object
@@ -208,8 +211,11 @@ and virtual iTangible =
     (* should we do things this way? *)
     method virtual as_creature : iCreature option
     method virtual get_container : containment -> iContainer
+    method virtual add_container : containment -> iContainer -> unit
     method virtual get_contents : iTangible list
+    method virtual get_contents_recursive : iTangible list
     method virtual view_contents : iCreature -> iTangible list
+    method virtual view_contents_recursive : iCreature -> iTangible list
   end
 and virtual iCreature =
   object

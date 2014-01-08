@@ -88,19 +88,24 @@ class virtual creature (i : int) (name : string) (b : bodypart) =
 
     (* called to pick up an object *)
     method take (thing : iTangible) =
+      dlog 4 "called take";
       if thing == (self : #iCreature :> iTangible) then
         raise (Command_error "You can't pick up yourself.");
       if not (thing#can_be_gotten (self : #iCreature :> iCreature)) then
         raise (Command_error "You can't pick up that object.");
       let hands = List.filter (function p ->
             match p#get_type with Hand _ -> true | _ -> false) body#get_parts in
+      dlog 0 "got hands";
       if List.exists (function h -> (h#get_container In)#contains thing) hands
         then raise (Command_error "You are already holding that.");
+      dlog 0 "checked hands";
       let rec take_one_handed = function
           h::hs -> (try thing#move_to (h#get_container In)
             with Cannot_add _ -> take_one_handed hs)
         | [] -> raise (No_space_for thing) in
+      dlog 4 ("creature is picking up " ^ (thing#to_string));
       take_one_handed hands;
+      dlog 4 "and got it.";
       (self#get_location)#relay_message (MudStringCondition
           ((self: #iCreature :> iCreature), MudStringList (SeparatorNone,
             [MudString "You pick up the "; MudStringName thing]),
@@ -139,20 +144,66 @@ class virtual creature (i : int) (name : string) (b : bodypart) =
               (self#get_parent) desc
 
     method get_inventory (looker : iCreature) : inventory =
-      (List.map (function p ->
-          (p#get_type, In, (p#get_container In)#view_contents looker))
-        (body#get_parts))
-      @
-      (List.map (function p ->
-          (p#get_type, On, (p#get_container On)#view_contents looker))
-        (body#get_parts))
+      List.flatten (
+        List.map (fun p ->
+           map_some
+             (fun con ->
+               try
+                 let container = p#get_container con in
+                 Some (p#get_type, con, container#view_contents looker)
+               with Not_found -> None (* container not found *)
+             ) [In; On]
+         )
+       (body#get_parts))
 
     method is_visible looker = looker != (self : #iCreature :> iCreature)
 
     method as_creature = Some (self : #iCreature :> iCreature)
 
     initializer
-      containers <- [In, new container
-          (Some (self : #iMud_object :> iMud_object))];
-      body#set_parent (Some (self#get_container In))
+      let c = new container (Some (self : #iMud_object :> iMud_object)) in
+      containers <- [In, c];
+      body#set_parent (Some (self#get_container In));
+      c#add (body :> iTangible)
+  end
+
+class hand_container (p : iMud_object) =
+  object (self)
+    inherit iContainer
+
+    val parent = p
+    val mutable contents : iTangible option = None
+
+    method to_string =
+      "hand container for: " ^ (parent#to_string)
+
+    method can_add (thing : iTangible) : bool =
+      Option.is_none contents
+
+    method add (thing : iTangible) : unit =
+      if Option.is_some contents then
+        raise (Cannot_add thing)
+      else contents <- Some thing
+
+    method can_remove (thing : iTangible) : bool =
+      contents = Some thing
+
+    method remove (thing : iTangible) : unit =
+      if contents <> Some thing then
+        raise (Cannot_remove thing)
+      else contents <- None
+
+    method contains (thing : iTangible) : bool =
+      contents = Some thing
+
+    method get_contents : iTangible list =
+      match contents with
+      | Some t -> [t]
+      | None -> []
+
+    method view_contents (looker : iCreature) : iTangible list =
+      List.filter (fun t -> t#is_visible looker) (self#get_contents)
+
+    method get_location : iLocation =
+      parent#get_location
   end

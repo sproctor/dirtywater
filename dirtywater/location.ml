@@ -54,12 +54,16 @@ class location (i : int) (t : string) (d : string) (ps : iPortal list) =
   object (self)
     inherit iLocation
     inherit container None as super
+
     val id = i
     val width = 10.0
     val depth = 10.0
     val title = t
     val desc = d
     val mutable portals : iPortal list = ps
+
+    method to_string =
+      "location " ^ (string_of_int id) ^ ": " ^ title
 
     method get_contents : iTangible list =
       (super#get_contents)@(List.map (function p -> p#tangible) portals)

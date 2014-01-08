@@ -41,6 +41,14 @@ class container (p : iMud_object option) =
     val parent = p
     val mutable contents : iTangible list = []
 
+    method to_string =
+      let pstring =
+        match parent with
+        | Some p -> p#to_string
+        | None -> "nothing"
+      in
+      "container for: " ^ pstring
+
     method can_add (thing : iTangible) : bool =
       not (self#contains thing)
 
@@ -63,8 +71,17 @@ class container (p : iMud_object option) =
     method get_contents : iTangible list =
        contents
 
+    method get_contents_recursive : iTangible list =
+       let c = self#get_contents in
+       c @ (List.flatten (List.map (fun t -> t#get_contents_recursive) c))
+
     method view_contents (looker : iCreature) : iTangible list =
-      List.filter (function t -> t#is_visible looker) (self#get_contents)
+      List.filter (fun t -> t#is_visible looker) (self#get_contents)
+
+    method get_contents_recursive (looker : iCreature) : iTangible list =
+      let c = List.filter (fun t -> t#is_visible looker) (self#get_contents) in
+      c @ (List.flatten (List.map (fun t -> t#view_contents_recursive looker)
+            c))
 
     method get_location : iLocation =
       match parent with
@@ -79,15 +96,9 @@ let rec view_full_contents_tangible (looker : iCreature) (lookee : iTangible)
     map_to_stream (function t -> view_full_contents_tangible looker t)
         contents >]
 
-let view_full_contents_container (looker : iCreature) (lookee : iContainer)
-    : iTangible Stream.t =
-  let contents = lookee#view_contents looker in
-  [< Stream.of_list contents;
-    map_to_stream (function t -> view_full_contents_tangible looker t)
-        contents >]
-
 let rec filter_contents (adjs : string list) (name : string)
-    : iTangible Stream.t -> iTangible Stream.t = parser
+    : iTangible list -> iTangible list =
+    List.filter (fun 
     [< 'n; s >] -> dlog 4 ("filtering " ^ name);
       if n#matches_description adjs name
       then [< 'n; filter_contents adjs name s >]
@@ -102,7 +113,7 @@ let rec find (looker : iCreature) (lookee : iContainer) (desc : object_desc)
     | ObjectDesc (od, p, (n, adjs, name)) ->
         let istream = (filter_contents adjs name items) in
         begin
-          match stream_nth (get_opt_default n 1) istream with
+          match stream_nth (Option.default 1 n) istream with
           | Some item -> dlog 4 "found the first item";
               begin 
                 match p with
@@ -124,7 +135,7 @@ let rec find (looker : iCreature) (lookee : iContainer) (desc : object_desc)
     | ObjectDescBase (n, adjs, name) ->
         let istream = (filter_contents adjs name items) in
         begin
-          match stream_nth (get_opt_default n 1) istream with
+          match stream_nth (Option.default 1 n) istream with
           | Some item -> dlog 4 "found the item"; item
           | None -> raise (dlog 4 "object not found"; Object_not_found (desc, Stream.count istream))
         end
