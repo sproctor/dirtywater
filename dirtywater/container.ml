@@ -33,11 +33,12 @@ open Base
 open Debug
 
 (* an object that can contain things *)
-class virtual container =
+class container (p : iMud_object option) =
   object (self)
 
     inherit iContainer
 
+    val parent = p
     val mutable contents : iTangible list = []
 
     method can_add (thing : iTangible) : bool =
@@ -45,33 +46,45 @@ class virtual container =
 
     method add (thing : iTangible) : unit =
       if self#contains thing then
-        raise (Failure "container#add")
+        raise (Cannot_add thing)
       else contents <- thing::contents
 
-    method can_remove (thing : iTangible) =
-      List.exists (function (_, t) -> t = thing) contents
+    method can_remove (thing : iTangible) : bool =
+      self#contains thing
 
     method remove (thing : iTangible) : unit =
       let len = List.length contents in
-      contents <- List.filter (function (_, t) -> t != thing) contents;
-      if len - 1 <> List.length contents then raise (Failure "container#remove")
+      contents <- List.filter (function t -> t <> thing) contents;
+      if len - 1 <> List.length contents then raise (Cannot_remove thing)
 
     method contains (thing : iTangible) : bool =
-      List.exists ((=) thing) contents
+      List.mem thing self#get_contents
 
     method get_contents : iTangible list =
        contents
 
     method view_contents (looker : iCreature) : iTangible list =
       List.filter (function t -> t#is_visible looker) (self#get_contents)
+
+    method get_location : iLocation =
+      match parent with
+      | Some p -> p#get_location
+      | None -> raise (Failure "Container is not in the world")
   end
 
-let rec get_full_contents (looker : iCreature) (con : containment option)
-    (lookee : iContainer) : iTangible Stream.t =
-  let contents = lookee#view_contents looker con in
+let rec view_full_contents_tangible (looker : iCreature) (lookee : iTangible)
+    : iTangible Stream.t =
+  let contents = lookee#view_contents looker in
   [< Stream.of_list contents;
-    map_to_stream (function t -> get_full_contents looker con
-          (t :> iContainer)) contents >]
+    map_to_stream (function t -> view_full_contents_tangible looker t)
+        contents >]
+
+let view_full_contents_container (looker : iCreature) (lookee : iContainer)
+    : iTangible Stream.t =
+  let contents = lookee#view_contents looker in
+  [< Stream.of_list contents;
+    map_to_stream (function t -> view_full_contents_tangible looker t)
+        contents >]
 
 let rec filter_contents (adjs : string list) (name : string)
     : iTangible Stream.t -> iTangible Stream.t = parser
@@ -81,20 +94,37 @@ let rec filter_contents (adjs : string list) (name : string)
       else [< filter_contents adjs name s >]
   | [< >] -> [< >]
 
-let rec find (looker : iCreature) (lookee : iContainer) (con : containment option)
-    (desc : object_desc) : iTangible =
-  let items = get_full_contents looker con lookee in
+let rec find (looker : iCreature) (lookee : iContainer) (desc : object_desc)
+    : iTangible =
+  let items = view_full_contents_container looker lookee in
   dlog 4 ("Searching for " ^ object_desc_to_string desc);
   match desc with
     | ObjectDesc (od, p, (n, adjs, name)) ->
         let istream = (filter_contents adjs name items) in
-        (match stream_nth (get_opt_default n 1) istream with
-           | Some item -> dlog 4 "found the first item"; find looker (item :> iContainer) (preposition_to_containment_option p) od
-           | None -> raise (dlog 4 "object not found"; Object_not_found (desc, Stream.count istream)))
-    | ObjectDescRelative (od, p) ->
-        find looker lookee con od
+        begin
+          match stream_nth (get_opt_default n 1) istream with
+          | Some item -> dlog 4 "found the first item";
+              begin 
+                match p with
+                | Prep_in -> find looker (item#get_container In) od
+                | Prep_on -> find looker (item#get_container On) od
+                  (* try all containment methods with "from" *)
+                | Prep_from ->
+                    begin
+                      try find looker (item#get_container On) od
+                      with
+                      | Object_not_found _ -> find looker
+                          (item#get_container In) od
+                    end
+                | Prep_under -> raise (Bad_command "Preposition \"under\" is not yet supported.")
+                | Prep_behind -> raise (Bad_command "Preposition \"behind\" is not yet supported.")
+              end
+          | None -> raise (dlog 4 "object not found"; Object_not_found (desc, Stream.count istream))
+        end
     | ObjectDescBase (n, adjs, name) ->
         let istream = (filter_contents adjs name items) in
-        (match stream_nth (get_opt_default n 1) istream with
-           | Some item -> dlog 4 "found the item"; item
-           | None -> raise (dlog 4 "object not found"; Object_not_found (desc, Stream.count istream)))
+        begin
+          match stream_nth (get_opt_default n 1) istream with
+          | Some item -> dlog 4 "found the item"; item
+          | None -> raise (dlog 4 "object not found"; Object_not_found (desc, Stream.count istream))
+        end

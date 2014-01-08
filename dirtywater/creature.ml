@@ -94,10 +94,10 @@ class virtual creature (i : int) (name : string) (b : bodypart) =
         raise (Command_error "You can't pick up that object.");
       let hands = List.filter (function p ->
             match p#get_type with Hand _ -> true | _ -> false) body#get_parts in
-      if List.exists (function h -> h#contains In thing) hands
+      if List.exists (function h -> (h#get_container In)#contains thing) hands
         then raise (Command_error "You are already holding that.");
       let rec take_one_handed = function
-          h::hs -> (try thing#move_to [((h :> iContainer), In)]
+          h::hs -> (try thing#move_to (h#get_container In)
             with Cannot_add _ -> take_one_handed hs)
         | [] -> raise (No_space_for thing) in
       take_one_handed hands;
@@ -109,52 +109,50 @@ class virtual creature (i : int) (name : string) (b : bodypart) =
             MudString " picked up the "; MudStringName thing])))
 
     method drop (thing : iTangible) =
-      let hands = map_some (function b ->
-          match b#get_type with
-            | Hand _ -> if b#contains In thing
-	        then Some b
-	        else None
-	    | _      -> None) body#get_parts in
-      if hands = []
+      (* FIXME: if two hands share a container to hold something,
+           then this is won't work *)
+      let get_holder b =
+        match b#get_type with
+        | Hand _ -> let c = b#get_container In in
+            if c#contains thing then Some c else None
+	| _ -> None
+      in
+      let hand_containers = map_some get_holder (body#get_parts) in
+      if hand_containers = []
         then raise (Command_error "You aren't holding that.");
-      List.iter (function h -> thing#remove_from (h :> iContainer)) hands;
+      thing#move_to ((self#get_location) :> iContainer);
       (self#get_location)#relay_message (MudStringCondition
           ((self: #iCreature :> iCreature), MudStringList (SeparatorNone,
             [MudString "You drop the "; MudStringName thing]), MudStringList
               (SeparatorNone, [MudStringName (self: #iCreature :> iTangible);
               MudString " dropped the "; MudStringName thing])))
 
-    (* What is this function supposed to do? *)
-    method add (con : containment) (thing : iTangible) =
-      (* FIXME: this part needs to be totally redone *)
-      (*match thing#as_bodypart with
-          Some x -> ()
-        | None   -> raise (Cannot_add thing)*) ()
-
     (* FIXME: kill this function, make it exist outside the class or merge the
        functionality with find *)
     method look_for (desc : object_desc) =
-      let rec search_containers containers count =
-        match containers with
-          | [] -> raise (Object_not_found (desc, count))
-          | l::ls -> try find (self : #iCreature :> iCreature) l None desc
-            with Object_not_found (_, num) -> search_containers ls num in
       try
-        find (self : #iCreature :> iCreature) (self : #iContainer :> iContainer)
-	  None desc
+        find (self : #iCreature :> iCreature) (self#get_container In)
+	  desc
       with
-          Object_not_found (_, num) -> search_containers self#get_containers num
+          (* FIXME: this searches self twice and messes up the ordinal *)
+          Object_not_found (_, num) -> find (self : #iCreature :> iCreature)
+              (self#get_parent) desc
 
     method get_inventory (looker : iCreature) : inventory =
       (List.map (function p ->
-          (p#get_type, In, p#view_contents looker (Some In)))
+          (p#get_type, In, (p#get_container In)#view_contents looker))
         (body#get_parts))
       @
       (List.map (function p ->
-          (p#get_type, On, p#view_contents looker (Some On)))
+          (p#get_type, On, (p#get_container On)#view_contents looker))
         (body#get_parts))
 
     method is_visible looker = looker != (self : #iCreature :> iCreature)
 
     method as_creature = Some (self : #iCreature :> iCreature)
+
+    initializer
+      containers <- [In, new container
+          (Some (self : #iMud_object :> iMud_object))];
+      body#set_parent (Some (self#get_container In))
   end

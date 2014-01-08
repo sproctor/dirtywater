@@ -25,12 +25,11 @@
 type noun_desc = (int option * string list * string)
 
 type preposition =
-  | Prep_under
   | Prep_on
   | Prep_in
   | Prep_from
-  | Prep_of
-  | Prep_any
+  | Prep_behind
+  | Prep_under
 
 type containment =
   | In
@@ -42,7 +41,6 @@ type position =
 
 type object_desc =
   | ObjectDesc of (object_desc * preposition * noun_desc)
-  | ObjectDescRelative of (object_desc * preposition)
   | ObjectDescBase of noun_desc
 
 (* the ways to get out of a room *)
@@ -189,6 +187,7 @@ and virtual iTangible =
   object
     inherit iMud_object
     method virtual get_parent : iContainer
+    method virtual set_parent : iContainer option -> unit
     (* move this iTangible into the given container *)
     method virtual move_to : iContainer -> unit
     (* get the name of this iTangible (is this useful?) *)
@@ -208,6 +207,9 @@ and virtual iTangible =
         (iTangible, iCreature) mud_string'
     (* should we do things this way? *)
     method virtual as_creature : iCreature option
+    method virtual get_container : containment -> iContainer
+    method virtual get_contents : iTangible list
+    method virtual view_contents : iCreature -> iTangible list
   end
 and virtual iCreature =
   object
@@ -300,3 +302,4 @@ exception Too_big of iTangible
 exception No_space_for of iTangible
 exception Cannot_add of iTangible
 exception Cannot_remove of iTangible
+exception No_body

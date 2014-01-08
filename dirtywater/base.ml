@@ -62,12 +62,11 @@ let noun_desc_to_string ((ord, adjs, noun) : noun_desc) =
 
 let preposition_to_string prep =
   match prep with
-      Prep_under -> "under"
-    | Prep_on    -> "on"
-    | Prep_in    -> "in"
-    | Prep_from  -> "from"
-    | Prep_of    -> "of"
-    | Prep_any   -> "anywhere"
+    | Prep_on     -> "on"
+    | Prep_in     -> "in"
+    | Prep_from   -> "from"
+    | Prep_behind -> "behind"
+    | Prep_under  -> "under"
 
 let preposition_to_containment_option (prep : preposition)
     : (containment option)=
@@ -80,8 +79,6 @@ let rec object_desc_to_string desc =
   match desc with
       ObjectDesc (next, prep, noun) -> object_desc_to_string next ^ " "
           ^ preposition_to_string prep ^ " " ^ noun_desc_to_string noun
-    | ObjectDescRelative (next, prep) -> object_desc_to_string next ^ " "
-          ^ preposition_to_string prep
     | ObjectDescBase noun -> noun_desc_to_string noun
 
 let side_to_string (s : side) =

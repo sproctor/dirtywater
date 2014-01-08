@@ -43,7 +43,7 @@ class race id n b =
     val mutable body : bodypartDef = b
     val name = n
 
-    method create (id : int) (name : string) (password : string) =
+    method create (id : int) (name : string) (password : string) : iCharacter =
       (* FIXME: this function needs to be expanded when we have more than
          just characters... not sure how yet *)
       new character id name password (body#create)
@@ -55,5 +55,6 @@ class race id n b =
 let make_character name password start =
   let r = races#get "normalhuman" in
   let ch = r#create (tangibles#get_id) name password in
-  ch#move_to [((start :> iContainer), On)];
+  ch#set_parent (Some (start :> iContainer));
+  start#add (ch :> iTangible);
   ch

@@ -1,5 +1,5 @@
 (*
- Copyright 2003 Sean Proctor, Mike MacHenry
+ Copyright 2014, 2003 Sean Proctor, Mike MacHenry
 
  This file is part of Dirty Water.
 
@@ -31,7 +31,7 @@ open State
 
 (* base physical object *)
 class tangible (i : int) (a : string list) (n : string) (sd : string)
-    (ld : string) (loc : iContainer) =
+    (ld : string) =
   object (self)
 
     inherit iTangible
@@ -41,31 +41,36 @@ class tangible (i : int) (a : string list) (n : string) (sd : string)
     val adjs = a
     val short_desc = sd
     val long_desc = ld
-    val mutable parent : iContainer = loc
-    val mutable containers : (containment * iContainer) = []
+    val mutable parent : iContainer option = None
+    val mutable containers : (containment * iContainer) list = []
 
-    method get_location : iLocation = parent#get_location
-        (* | [] -> raise (Failure "Got location from object not in the world.") *)
+    method get_location : iLocation = (self#get_parent)#get_location
 
-    method get_parent : iContainer = parent
+    method get_parent : iContainer =
+      match parent with
+      | Some p -> p
+      | None -> raise (Failure "Trying to access an object not in the world.")
 
-    method move_to (dest : iContainer * containment) : unit =
+    method set_parent (p : iContainer option) : unit =
+      parent <- p
+
+    method move_to (dest : iContainer) : unit =
       let this = (self : #iTangible :> iTangible) in
       (** First check that we can do this **)
       (* if can't remove from parent abort *)
-      if not (parent#can_remove this) then
+      if not ((self#get_parent)#can_remove this) then
         raise (Cannot_remove (self : #iTangible :> iTangible))
       (* if can't add to the new parent abort *)
-      else if not (dest#can_add con this)
+      else if not (dest#can_add this)
         then raise (Cannot_add (self : #iTangible :> iTangible))
       else begin
         (** then do it **)
         (* remove from old parent *)
-        parent#remove this;
+        (self#get_parent)#remove this;
         (* add to new parent *)
-        dest#add con this;
+        dest#add this;
         (* make the new parent the current parent *)
-        parent <- dest
+        parent <- Some dest
       end
 
     method matches_description sadjs sname =
@@ -86,6 +91,15 @@ class tangible (i : int) (a : string list) (n : string) (sd : string)
     method get_long_desc looker = MudString long_desc
 
     method as_creature = None
+
+    method get_container (con : containment) : iContainer =
+      List.assoc con containers
+
+    method get_contents : iTangible list =
+      List.flatten (List.map (fun (_, c) -> c#get_contents) containers)
+
+    method view_contents (looker : iCreature) : iTangible list =
+      List.filter (fun t -> t#is_visible looker) self#get_contents
 
     initializer
       State.tangibles#add id (self : #iTangible :> iTangible)

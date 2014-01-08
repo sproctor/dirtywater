@@ -67,7 +67,7 @@ class character (i : int) (n : string) (p : string) (b : bodypart) =
       MudString "You begin waiting."
     method private do_move (p : iPortal) : mud_string =
       if p#can_pass (self : #iCharacter :> iTangible) then
-        self#move_to [((p#dest :> iContainer), On)];
+        self#move_to (p#dest :> iContainer);
       MudStringList (SeparatorNone, [(MudString "You start walking...");
         (self#do_look (LocationObject self#get_location))])
     method private do_look (target : object_type) : mud_string =
@@ -126,7 +126,6 @@ class character (i : int) (n : string) (p : string) (b : bodypart) =
     method send_message (msg: mud_string) : unit = ctrl#send_message msg
     (* called by the login to check if the given password is right *)
     method match_password (guess : string) : bool = (guess = password)
-    method add con thing = ()
 
     method set_password p =
       password <- p

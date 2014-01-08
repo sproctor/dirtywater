@@ -40,18 +40,21 @@ open Base
 let whitespace = [' ''\t''\r''\n']
 
 rule default_lexer =
-  parse whitespace  { default_lexer lexbuf }
-      | "the"       { dlog 0 "article"; ARTICLE }
-      | "an"        { dlog 0 "article"; ARTICLE }
-      | "a"         { dlog 0 "article"; ARTICLE }
-      | "under"     { dlog 0 "under"; UNDER }
-      | "on"        { dlog 0 "on"; ON }
-      | "in"        { dlog 0 "in"; IN }
-      | "with"      { dlog 0 "with"; WITH }
-      | "w/"        { dlog 0 "with"; WITH }
-      | "and"       { dlog 0 "and"; AND }
-      | (['0'-'9']+ as n)   { dlog 0 ("number " ^ n); NUMBER (int_of_string n) }
-      | (['0'-'9']+ as n)("st"|"nd"|"rd"|"th") { dlog 0 ("ordinal " ^ n); ORDINAL (int_of_string n) }
+  parse
+  | whitespace  { default_lexer lexbuf }
+  | "the"       { dlog 0 "article"; ARTICLE }
+  | "an"        { dlog 0 "article"; ARTICLE }
+  | "a"         { dlog 0 "article"; ARTICLE }
+  | "on"        { dlog 0 "on"; ON }
+  | "in"        { dlog 0 "in"; IN }
+  | "from"	{ dlog 0 "from"; FROM }
+  | "under"     { dlog 0 "under"; UNDER }
+  | "behind"	{ dlog 0 "behind"; BEHIND }
+  | "with"      { dlog 0 "with"; WITH }
+  | "w/"        { dlog 0 "with"; WITH }
+  | "and"       { dlog 0 "and"; AND }
+  | (['0'-'9']+ as n)   { dlog 0 ("number " ^ n); NUMBER (int_of_string n) }
+  | (['0'-'9']+ as n)("st"|"nd"|"rd"|"th") { dlog 0 ("ordinal " ^ n); ORDINAL (int_of_string n) }
       | (['a'-'z''\'']+ as w)       { dlog 0 ("word " ^ w); WORD w }
       | eof         { dlog 0 "eof"; EOF }
 and say_lexer =

@@ -40,7 +40,7 @@ open Debug
 %token <int> ORDINAL
 
 /* prepositions */
-%token UNDER ON IN FROM OF
+%token UNDER BEHIND ON IN FROM
 
 %token <Types.emote> EMOTE
 %token <string> TARGET
@@ -129,15 +129,15 @@ ord:
   | ORDINAL                             { Some $1 }
 ;
 adjs:
-    /* empty */		{ [] }
-  | adjs WORD		{ $1@[$2] }
+| /* empty */		{ [] }
+| adjs WORD		{ $1@[$2] }
 ;
 preposition:
-    UNDER			{ Prep_under }
-  | ON				{ Prep_on }
-  | IN				{ Prep_in }
-  | FROM			{ Prep_from }
-  | OF				{ Prep_of }
+| ON			{ Prep_on }
+| IN			{ Prep_in }
+| FROM			{ Prep_from }
+| UNDER			{ Prep_under }
+| BEHIND		{ Prep_behind }
 ;
 say_attributes:
     /* empty */                 { ([], []) }

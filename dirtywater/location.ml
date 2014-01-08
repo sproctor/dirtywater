@@ -53,7 +53,7 @@ class direction_object (d : direction) (dst : int) =
 class location (i : int) (t : string) (d : string) (ps : iPortal list) =
   object (self)
     inherit iLocation
-    inherit container as super
+    inherit container None as super
     val id = i
     val width = 10.0
     val depth = 10.0
@@ -61,18 +61,18 @@ class location (i : int) (t : string) (d : string) (ps : iPortal list) =
     val desc = d
     val mutable portals : iPortal list = ps
 
-    method get_contents (con : containment option) : iTangible list =
-      (super#get_contents con)@(List.map (function p -> p#tangible) portals)
+    method get_contents : iTangible list =
+      (super#get_contents)@(List.map (function p -> p#tangible) portals)
 
     method relay_message (msg: mud_string) : unit =
       let creatures = map_some (function o -> o#as_creature)
-          (self#get_contents None) in
+          (self#get_contents) in
       List.iter (function o -> o#send_message msg) creatures
 
     method get_description (looker : iCreature) =
       let objs = List.filter (fun t -> not (List.exists
             (fun p -> p#tangible = t) portals))
-          (self#view_contents looker None) in
+          (self#view_contents looker) in
       let exits = List.map (fun (_, str) -> MudString str)
         (List.filter (fun (dir, _) -> self#get_exit (ExitDir dir) <> None)
         direction_list) in
@@ -100,7 +100,6 @@ class location (i : int) (t : string) (d : string) (ps : iPortal list) =
 
     method get_location : iLocation = (self : #iLocation :> iLocation)
 
-    method
     initializer
       locations#add id (self : #iLocation :> iLocation)
   end
