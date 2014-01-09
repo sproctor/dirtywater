@@ -201,8 +201,17 @@ class hand_container (p : iMud_object) =
       | Some t -> [t]
       | None -> []
 
+    method get_contents_recursive : iTangible list =
+      let c = self#get_contents in
+      c @ (List.flatten (List.map (fun t -> t#get_contents_recursive) c))
+
     method view_contents (looker : iCreature) : iTangible list =
       List.filter (fun t -> t#is_visible looker) (self#get_contents)
+
+    method view_contents_recursive (looker : iCreature) : iTangible list =
+      let c = self#get_contents in
+      c @ (List.flatten (List.map (fun t -> t#view_contents_recursive looker)
+            c))
 
     method get_location : iLocation =
       parent#get_location

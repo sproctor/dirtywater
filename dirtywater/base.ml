@@ -56,9 +56,28 @@ let direction_lookup_list = [
     ("west", West);
   ]
 
+let string_of_ordinal (ord : int) : string =
+  let mod100 = ord mod 100 in
+  let mod10 = ord mod 10 in
+  let suffix =
+    if ord < 1 then raise (Failure "ordinal less than 1")
+    else if mod100 = 11 then "th"
+    else if mod100 = 12 then "th"
+    else if mod100 = 13 then "th"
+    else if mod10 = 1 then "st"
+    else if mod10 = 2 then "nd"
+    else if mod10 = 3 then "rd"
+    else "th"
+  in
+  (string_of_int ord) ^ suffix
+
 let noun_desc_to_string ((ord, adjs, noun) : noun_desc) =
-  (string_of_int (Option.default 1 ord)) ^ " "
-    ^ String.concat " " (adjs@[noun])
+  let ord_string =
+    match ord with
+    | Some o -> (string_of_ordinal o) ^ " "
+    | None -> ""
+  in
+  ord_string ^ (String.concat " " (adjs@[noun]))
 
 let preposition_to_string prep =
   match prep with

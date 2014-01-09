@@ -78,10 +78,10 @@ class container (p : iMud_object option) =
     method view_contents (looker : iCreature) : iTangible list =
       List.filter (fun t -> t#is_visible looker) (self#get_contents)
 
-    method get_contents_recursive (looker : iCreature) : iTangible list =
-      let c = List.filter (fun t -> t#is_visible looker) (self#get_contents) in
-      c @ (List.flatten (List.map (fun t -> t#view_contents_recursive looker)
-            c))
+    method view_contents_recursive (looker : iCreature) : iTangible list =
+      let c = self#view_contents looker in
+      (c @ (List.flatten (List.map (fun t -> t#view_contents_recursive looker)
+            c)))
 
     method get_location : iLocation =
       match parent with
@@ -89,53 +89,46 @@ class container (p : iMud_object option) =
       | None -> raise (Failure "Container is not in the world")
   end
 
-let rec view_full_contents_tangible (looker : iCreature) (lookee : iTangible)
-    : iTangible Stream.t =
-  let contents = lookee#view_contents looker in
-  [< Stream.of_list contents;
-    map_to_stream (function t -> view_full_contents_tangible looker t)
-        contents >]
-
-let rec filter_contents (adjs : string list) (name : string)
-    : iTangible list -> iTangible list =
-    List.filter (fun 
-    [< 'n; s >] -> dlog 4 ("filtering " ^ name);
-      if n#matches_description adjs name
-      then [< 'n; filter_contents adjs name s >]
-      else [< filter_contents adjs name s >]
-  | [< >] -> [< >]
+let filter_contents (adjs : string list) (name : string)
+    (l : iTangible list) : iTangible list =
+    List.filter (fun n -> n#matches_description adjs name) l
 
 let rec find (looker : iCreature) (lookee : iContainer) (desc : object_desc)
     : iTangible =
-  let items = view_full_contents_container looker lookee in
+  let items = lookee#view_contents_recursive looker in
   dlog 4 ("Searching for " ^ object_desc_to_string desc);
   match desc with
     | ObjectDesc (od, p, (n, adjs, name)) ->
-        let istream = (filter_contents adjs name items) in
         begin
-          match stream_nth (Option.default 1 n) istream with
-          | Some item -> dlog 4 "found the first item";
-              begin 
-                match p with
-                | Prep_in -> find looker (item#get_container In) od
-                | Prep_on -> find looker (item#get_container On) od
-                  (* try all containment methods with "from" *)
-                | Prep_from ->
-                    begin
-                      try find looker (item#get_container On) od
-                      with
-                      | Object_not_found _ -> find looker
-                          (item#get_container In) od
-                    end
-                | Prep_under -> raise (Bad_command "Preposition \"under\" is not yet supported.")
-                | Prep_behind -> raise (Bad_command "Preposition \"behind\" is not yet supported.")
-              end
-          | None -> raise (dlog 4 "object not found"; Object_not_found (desc, Stream.count istream))
+          let matched_items = filter_contents adjs name items in
+          try
+            let item = List.nth matched_items ((Option.default 1 n) - 1) in
+            dlog 4 "found the first item";
+            begin 
+              match p with
+              | Prep_in -> find looker (item#get_container In) od
+              | Prep_on -> find looker (item#get_container On) od
+                (* try all containment methods with "from" *)
+              | Prep_from ->
+                  begin
+                    try find looker (item#get_container On) od
+                    with
+                    | Object_not_found _ -> find looker
+                        (item#get_container In) od
+                  end
+              | Prep_under -> raise (Bad_command "Preposition \"under\" is not yet supported.")
+              | Prep_behind -> raise (Bad_command "Preposition \"behind\" is not yet supported.")
+            end
+          with Failure "nth" -> raise (dlog 4 "object not found"; Object_not_found (desc, List.length matched_items))
         end
     | ObjectDescBase (n, adjs, name) ->
-        let istream = (filter_contents adjs name items) in
+        let matched_items = filter_contents adjs name items in
         begin
-          match stream_nth (Option.default 1 n) istream with
-          | Some item -> dlog 4 "found the item"; item
-          | None -> raise (dlog 4 "object not found"; Object_not_found (desc, Stream.count istream))
+          try
+            let item = List.nth matched_items ((Option.default 1 n) - 1) in
+            dlog 4 "found the item";
+            item
+          with Failure "nth" ->
+            dlog 4 "object not found";
+            raise (Object_not_found (desc, List.length matched_items))
         end
