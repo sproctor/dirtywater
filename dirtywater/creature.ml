@@ -66,6 +66,16 @@ class bodypart (t : bodypart_type) (r_parts : iBodypart list) =
       (self : #iBodypart :> iBodypart)::(List.flatten (List.map
             (function p -> p#get_parts) receive_list))
 
+    method get_contents_recursive : iTangible list =
+      (super#get_contents_recursive)
+        @ (List.flatten (List.map (fun bp -> bp#get_contents_recursive)
+            receive_list))
+
+    method view_contents_recursive (looker : iCreature) : iTangible list =
+      (super#view_contents_recursive looker)
+        @ (List.flatten (List.map (fun bp -> bp#view_contents_recursive looker)
+            receive_list))
+
     initializer
       List.iter (function bp -> bp#attach_to (self : #iBodypart :> iBodypart))
           receive_list
