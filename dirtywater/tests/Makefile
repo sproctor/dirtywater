@@ -1,22 +1,36 @@
 OCAMLMAKEFILE := ../OCamlMakefile
 
-SOURCES := ../helpers.ml ../debug.ml ../types.ml ../base.ml \
-	   ../parser.ml ../lexer.ml ../container.ml ../tangible.ml \
-	   ../creature.ml ../character_collection.ml ../player_collection.ml \
-	   ../time.ml ../events.ml ../location_collection.ml \
-	   ../connection_collection.ml ../state.ml ../location.ml \
-	   ../character.ml tests.ml
+SOURCES := ../helpers.ml \
+           ../debug.ml \
+           ../types.ml \
+           ../base.ml \
+	   ../parser.mly \
+           ../lexer.mll \
+           ../container.ml \
+           ../character_collection.ml \
+           ../player_collection.ml \
+	   ../time.ml \
+           ../events.ml \
+           ../location_collection.ml \
+	   ../connection_collection.ml \
+           ../race_collection.ml \
+           ../tangible_collection.ml \
+           ../template_collection.ml \
+           ../state.ml \
+           ../tangible.ml \
+	   ../creature.ml \
+           ../location.ml \
+	   ../character.ml \
+           tests.ml
 RESULT := test
-LIBS = unix str
-
-all: set-perms make-dep-dir nc test-run
+LIBS = unix str dynlink
+PACKS = extlib
 
 include $(OCAMLMAKEFILE)
 
-clean: clean-test
-
-clean-test:
+clean::
 	-rm -f *.d
+
 lines:
 	wc $(SOURCES) $(INTERFACES) $(OTHERSOURCES)
 
@@ -30,5 +44,5 @@ set-perms:
 make-dep-dir:
 	-@test -d ._d || (mkdir ._d; chgrp mud ._d; chmod 775 ._d)
 
-test-run:
+all:
 	(./test)

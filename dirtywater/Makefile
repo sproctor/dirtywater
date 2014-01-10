@@ -47,8 +47,6 @@ include OCamlMakefile
 what:
 	echo $(DINCFLAGS)
 
-all: set-perms make-dep-dir nc
-
 lines:
 	wc $(SOURCES) $(INTERFACES) $(OTHERSOURCES)
 
@@ -60,20 +58,10 @@ package: clean
 	(cp -r . ../mud-$(VERSION) && cd .. && tar -zcf mud-$(VERSION).tar.gz \
 	mud-$(VERSION) && rm -rf mud-$(VERSION))
 
-clean: clean-test clean-other
+clean:: clean-test
 
 clean-test:
 	cd tests && $(MAKE) clean
 
-clean-other:
-	rm -f parser.ml
-set-perms:
-	(chgrp -Rf mud .; chmod -Rf g+w .) || echo -n
-
-make-dep-dir:
-	-@test -d ._d || (mkdir ._d; chgrp mud ._d; chmod 775 ._d)
-
-test: test-run
-
-test-run:
+test:
 	cd tests && $(MAKE)
