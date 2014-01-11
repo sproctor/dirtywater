@@ -88,7 +88,7 @@ let preposition_to_string prep =
     | Prep_under  -> "under"
 
 let preposition_to_containment_option (prep : preposition)
-    : (containment option)=
+    : (position option)=
   match prep with
       Prep_on -> Some On
     | Prep_in -> Some In

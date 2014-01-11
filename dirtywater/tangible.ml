@@ -35,6 +35,7 @@ class tangible (i : int) (a : string list) (n : string) (sd : string)
   object (self)
 
     inherit iTangible
+    inherit container
 
     val id = if i < 0 then tangibles#get_id else i
     val name = n
@@ -42,7 +43,6 @@ class tangible (i : int) (a : string list) (n : string) (sd : string)
     val short_desc = sd
     val long_desc = ld
     val mutable parent : iContainer option = None
-    val mutable containers : (containment * iContainer) list = []
 
     method get_location : iLocation = (self#get_parent)#get_location
 
@@ -91,26 +91,6 @@ class tangible (i : int) (a : string list) (n : string) (sd : string)
     method get_long_desc looker = MudString long_desc
 
     method as_creature = None
-
-    method get_container (con : containment) : iContainer =
-      List.assoc con containers
-
-    method add_container (con: containment) (container : iContainer) =
-      containers <- (con, container) :: containers
-
-    method get_contents : iTangible list =
-      List.flatten (List.map (fun (_, c) -> c#get_contents) containers)
-
-    method get_contents_recursive : iTangible list =
-      List.flatten (List.map (fun (_, c) -> c#get_contents_recursive)
-          containers)
-
-    method view_contents (looker : iCreature) : iTangible list =
-      List.filter (fun t -> t#is_visible looker) self#get_contents
-
-    method view_contents_recursive (looker : iCreature) : iTangible list =
-      List.flatten (List.map (fun (_, c) -> c#view_contents_recursive looker)
-          containers)
 
     method to_string : string =
       "tangible" ^ (string_of_int id) ^ ": " ^ short_desc

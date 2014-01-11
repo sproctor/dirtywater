@@ -31,13 +31,11 @@ type preposition =
   | Prep_behind
   | Prep_under
 
-type containment =
+type ('iTangible) position' =
   | In
   | On
-
-type position =
-  | Under
-  | Behind
+  | Under of 'iTangible
+  | Behind of 'iTangible
 
 type object_desc =
   | ObjectDesc of (object_desc * preposition * noun_desc)
@@ -161,7 +159,8 @@ type bodypart_type =
   | Foot of side
   | Torso
 
-type 'iTangible inventory' = (bodypart_type * containment * 'iTangible list)
+type 'iTangible inventory' = (bodypart_type * 'iTangible position' list
+      * 'iTangible list)
     list
 
 class virtual iMud_object =
@@ -189,6 +188,7 @@ and virtual iContainer =
 and virtual iTangible =
   object
     inherit iMud_object
+    inherit iContainer
     method virtual get_parent : iContainer
     method virtual set_parent : iContainer option -> unit
     (* move this iTangible into the given container *)
@@ -210,12 +210,6 @@ and virtual iTangible =
         (iTangible, iCreature) mud_string'
     (* should we do things this way? *)
     method virtual as_creature : iCreature option
-    method virtual get_container : containment -> iContainer
-    method virtual add_container : containment -> iContainer -> unit
-    method virtual get_contents : iTangible list
-    method virtual get_contents_recursive : iTangible list
-    method virtual view_contents : iCreature -> iTangible list
-    method virtual view_contents_recursive : iCreature -> iTangible list
   end
 and virtual iCreature =
   object
@@ -291,6 +285,7 @@ type command = (iContainer, iTangible, iCreature, iCharacter,
   iLocation, iPortal) command'
 type exit = iTangible exit'
 type inventory = iTangible inventory'
+type position = iTangible position'
 
 class virtual iRace =
   object

@@ -33,21 +33,13 @@ open Base
 open Debug
 
 (* an object that can contain things *)
-class container (p : iMud_object option) =
+class virtual container =
   object (self)
 
     inherit iContainer
 
-    val parent = p
     val mutable contents : iTangible list = []
-
-    method to_string =
-      let pstring =
-        match parent with
-        | Some p -> p#to_string
-        | None -> "nothing"
-      in
-      "container for: " ^ pstring
+    val mutable position_list : (position * iTangible) list = []
 
     method can_add (thing : iTangible) : bool =
       not (self#contains thing)
@@ -83,16 +75,15 @@ class container (p : iMud_object option) =
       (c @ (List.flatten (List.map (fun t -> t#view_contents_recursive looker)
             c)))
 
-    method get_location : iLocation =
-      match parent with
-      | Some p -> p#get_location
-      | None -> raise (Failure "Container is not in the world")
   end
 
 let filter_contents (adjs : string list) (name : string)
     (l : iTangible list) : iTangible list =
     List.filter (fun n -> n#matches_description adjs name) l
 
+let rec find_position (where : position) (looker : iCreature)
+    (lookee : iContainer) (desc : object_desc) : iTangible =
+  let items = 
 let rec find (looker : iCreature) (lookee : iContainer) (desc : object_desc)
     : iTangible =
   let items = lookee#view_contents_recursive looker in
@@ -106,16 +97,10 @@ let rec find (looker : iCreature) (lookee : iContainer) (desc : object_desc)
             dlog 4 "found the first item";
             begin 
               match p with
-              | Prep_in -> find looker (item#get_container In) od
-              | Prep_on -> find looker (item#get_container On) od
+              | Prep_in -> find_position In looker item od
+              | Prep_on -> find_position On looker item od
                 (* try all containment methods with "from" *)
-              | Prep_from ->
-                  begin
-                    try find looker (item#get_container On) od
-                    with
-                    | Object_not_found _ -> find looker
-                        (item#get_container In) od
-                  end
+              | Prep_from -> find looker item od
               | Prep_under -> raise (Bad_command "Preposition \"under\" is not yet supported.")
               | Prep_behind -> raise (Bad_command "Preposition \"behind\" is not yet supported.")
             end
