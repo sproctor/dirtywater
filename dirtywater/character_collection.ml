@@ -26,18 +26,26 @@
 
 open Types
 open Debug
+open Character
 
 class character_collection =
   object
-    val mutable character_list: (string * iCharacter) list = []
+    val mutable character_list: (string * character) list = []
+
     (* adds a character to the list *)
-    method add (name: string) (ch: iCharacter) : unit =
+    method add (name: string) (ch: character) : unit =
       dlog 2 "adding character to list";
       if List.exists (function (n, _) -> n = name) character_list then
         raise (Failure "add_character");
       character_list <- (name, ch)::character_list
+
     (* finds a character in the list of characters. returns Some character if
        it did or None if it didn't *)
-    method find_character_by_name (name : string) : iCharacter =
-      List.assoc name character_list
+    method find_character_by_name (name : string) : character =
+      let rec helper = function
+        | ((n, ch)::rest) -> if name = n then ch else helper rest
+        | [] -> raise Not_found in
+      helper character_list
   end
+
+let active_characters = new character_collection

@@ -22,23 +22,19 @@
 
 open Types
 open Tangible
-open State
 open Helpers
 
-class template (id : string) (a : string list) (n : string) (s : string)
-    (l : string) =
+class simple_template (a : string list) (n : string) (s : string) (l : string) =
   object (self)
 
-    inherit iTemplate
+    inherit tangible_template
 
     val mutable adjs : string list = a
     val mutable name : string = n
     val mutable sdesc : string = s
     val mutable ldesc : string = l
 
-    method create (id : int) : iTangible =
-      new tangible id adjs name sdesc ldesc
+    method create_tangible (con : container) : tangible =
+      new simple_tangible adjs name sdesc ldesc con
 
-    initializer
-      templates#add id (self : #iTemplate :> iTemplate)
   end

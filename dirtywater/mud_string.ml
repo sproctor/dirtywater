@@ -52,7 +52,7 @@ let rec concat (sep: separator_type) (strs: mud_string list) : mud_string =
     | str::[] -> str
     | str1::str2::rest -> concat sep ((merge sep str1 str2)::rest)
 *)
-let to_string (looker: iCreature) (str: mud_string) : string =
+let to_string (looker: creature) (str: mud_string) : string =
   let rec to_string_helper (fg: color) (bg: color) (str: mud_string) : string =
     match str with
       | MudStringNone -> ""

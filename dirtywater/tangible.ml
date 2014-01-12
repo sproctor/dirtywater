@@ -27,50 +27,42 @@ open Types
 open Helpers
 open Container
 open Base
-open State
 
 (* base physical object *)
-class tangible (i : int) (a : string list) (n : string) (sd : string)
-    (ld : string) =
+class simple_tangible (a : string list) (n : string) (sd : string)
+    (ld : string) (p : container) =
   object (self)
+    inherit tangible
+    inherit noncontainer
 
-    inherit iTangible
-    inherit container
-
-    val id = if i < 0 then tangibles#get_id else i
     val name = n
     val adjs = a
     val short_desc = sd
     val long_desc = ld
-    val mutable parent : iContainer option = None
+    val mutable parent : container = p
 
-    method get_location : iLocation = (self#get_parent)#get_location
+    method get_location : location = parent#get_location
 
-    method get_parent : iContainer =
-      match parent with
-      | Some p -> p
-      | None -> raise (Failure "Trying to access an object not in the world.")
+    method get_parent : container =
+      parent
 
-    method set_parent (p : iContainer option) : unit =
-      parent <- p
-
-    method move_to (dest : iContainer) : unit =
-      let this = (self : #iTangible :> iTangible) in
+    method move (actor : creature) (dest : container) (where : position)
+        : unit =
       (** First check that we can do this **)
       (* if can't remove from parent abort *)
-      if not ((self#get_parent)#can_remove this) then
-        raise (Cannot_remove (self : #iTangible :> iTangible))
+      if not ((self#get_parent)#can_remove actor (self : #tangible :> tangible))
+        then raise (Cannot_remove (self : #tangible :> tangible))
       (* if can't add to the new parent abort *)
-      else if not (dest#can_add this)
-        then raise (Cannot_add (self : #iTangible :> iTangible))
+      else if not (dest#can_add actor (self : #tangible :> tangible) where) then
+        raise (Cannot_add (self : #tangible :> tangible))
       else begin
         (** then do it **)
         (* remove from old parent *)
-        (self#get_parent)#remove this;
+        (self#get_parent)#remove (self : #tangible :> tangible);
         (* add to new parent *)
-        dest#add this;
+        dest#add (self : #tangible :> tangible) where;
         (* make the new parent the current parent *)
-        parent <- Some dest
+        parent <- dest
       end
 
     method matches_description sadjs sname =
@@ -90,11 +82,12 @@ class tangible (i : int) (a : string list) (n : string) (sd : string)
 
     method get_long_desc looker = MudString long_desc
 
-    method as_creature = None
+    method look_description looker =
+      self#get_long_desc looker
 
     method to_string : string =
-      "tangible" ^ (string_of_int id) ^ ": " ^ short_desc
+      "tangible: " ^ short_desc
 
-    initializer
-      State.tangibles#add id (self : #iTangible :> iTangible)
+    method send_message msg = ()
+
   end

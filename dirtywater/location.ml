@@ -30,29 +30,29 @@ open Tangible
 open Helpers
 open Debug
 open Container
-open State
 
 (* a physical object used to represent the physical exits from locations *)
 class direction_object (d : direction) (dst : int) =
   let name = List.assoc d direction_list in
   object
-    inherit tangible (tangibles#get_id) [] name name name
+    inherit tangible
+
     val dir = d
     val dest_id = dst
-    method get_short_desc (looker : iCreature) = MudString "error!!"
-    method get_long_desc (looker : iCreature) =
+    method get_short_desc (looker : creature) = MudString "error!!"
+    method get_long_desc (looker : creature) =
       (locations#get dest_id)#get_description looker
     method matches_description adjs name =
       try
         (adjs = []) && ((direction_of_string name) = dir)
       with Not_found -> false
-    method is_visible (looker : iCreature) = true
+    method is_visible (looker : creature) = true
   end
 
 (* an area in the world *)
-class location (i : int) (t : string) (d : string) (ps : iPortal list) =
+class simple_location (i : int) (t : string) (d : string) (ps : portal list) =
   object (self)
-    inherit iLocation
+    inherit location
     inherit container None as super
 
     val id = i
@@ -60,7 +60,7 @@ class location (i : int) (t : string) (d : string) (ps : iPortal list) =
     val depth = 10.0
     val title = t
     val desc = d
-    val mutable portals : iPortal list = ps
+    val mutable portals : portal list = ps
 
     method to_string =
       "location " ^ (string_of_int id) ^ ": " ^ title
@@ -73,7 +73,7 @@ class location (i : int) (t : string) (d : string) (ps : iPortal list) =
           (self#get_contents) in
       List.iter (function o -> o#send_message msg) creatures
 
-    method get_description (looker : iCreature) =
+    method get_description (looker : creature) =
       let objs = List.filter (fun t -> not (List.exists
             (fun p -> p#tangible = t) portals))
           (self#view_contents looker) in
@@ -91,10 +91,10 @@ class location (i : int) (t : string) (d : string) (ps : iPortal list) =
               MudStringList (SeparatorComma, exits))
             else MudString "none"])
 
-    method add_portal (p : iPortal) =
+    method add_portal (p : portal) =
       portals <- p::portals
 
-    method get_exit (e : exit) : iPortal option =
+    method get_exit (e : exit) : portal option =
       let rec find_portal pl =
         match pl with
 	    p::ps -> if p#has_exit e then Some p
@@ -102,28 +102,45 @@ class location (i : int) (t : string) (d : string) (ps : iPortal list) =
 	  | []    -> None
       in find_portal portals
 
-    method get_location : iLocation = (self : #iLocation :> iLocation)
+    method get_location : location = (self : #iLocation :> iLocation)
+
+    method look_description looker = self#get_description looker
 
     initializer
-      locations#add id (self : #iLocation :> iLocation)
+      locations#add id (self : #location :> iLocation)
   end
 
 (* a way to get from one location to another. this can be a directions such
    as "north" or it can be associated with a tangible object, like a door *)
-class portal (d : direction option) (o : iTangible) (d_id : int) =
+class virtual simple_portal (id : int) =
   object (self)
-    inherit iPortal
-    val dest_id = d_id
-    val obj = o
+    inherit portal
+
+    val dest_id = id
+
+    method dest = locations#get dest_id
+    method can_pass (thing : tangible) : bool = true
+  end
+
+class direction_portal (d : direction) (d_id : int) =
+  object (self)
+    inherit simple_portal d_id
+
+    val obj = new direction_object d d_id
     val dir = d
-    method can_pass (thing : iTangible) : bool = true
+
     method has_exit (e : exit) : bool =
       match e with
           ExitDir d -> (dir = Some d)
         | ExitObj o -> (obj == o)
-    method dest = locations#get dest_id
-    method tangible = o
   end
 
-let create_portal (d : direction) (d_id : int) =
-  new portal (Some d) (new direction_object d d_id) d_id
+class object_portal (o : tangible) (d_id : int) =
+  object (self)
+    inherit simple_portal d_id
+
+    method has_exit (e : exit) : bool =
+      match e with
+      | ExitDir _ -> false
+      | ExitObj o -> (obj == o)
+  end

@@ -10,19 +10,17 @@ SOURCES := helpers.ml \
 	   events.ml \
 	   parser.mly \
 	   lexer.mll \
-	   tangible_collection.ml \
 	   player_collection.ml \
+	   character.ml \
 	   character_collection.ml \
 	   location_collection.ml \
 	   connection_collection.ml \
 	   template_collection.ml \
+	   race.ml \
 	   race_collection.ml \
-	   state.ml \
 	   tangible.ml \
            creature.ml \
-	   character.ml \
 	   location.ml \
-	   race.ml \
 	   template.ml \
 	   ai.ml \
 	   player.ml \
@@ -31,6 +29,7 @@ SOURCES := helpers.ml \
 	   scheduler.ml \
 	   server.ml \
 	   main.ml \
+	   convenience.ml \
 	   data/state/locations/rooms.ml \
 	   data/tangibles/rock.ml \
            data/races/human.ml

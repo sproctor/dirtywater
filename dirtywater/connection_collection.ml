@@ -28,7 +28,7 @@ open Types
 
 class connection_collection =
   object
-    val mutable connections : iConnection list = []
+    val mutable connections : connection list = []
     method get_descriptors = List.map (fun x -> x#get_descriptor) connections
     method add c = connections <- c::connections
     method remove c = connections <- List.filter ((!=) c) connections
@@ -37,3 +37,5 @@ class connection_collection =
             ((=) x#get_descriptor) descriptors) connections)
     method disconnect_all () = List.iter (fun x -> x#close ()) connections
   end
+
+let connections = new connection_collection

@@ -48,3 +48,5 @@ class timed_event_list =
                                       self#run_events ())
         | [] -> ()
   end
+
+let event_list = new timed_event_list

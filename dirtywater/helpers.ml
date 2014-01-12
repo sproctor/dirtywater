@@ -116,15 +116,17 @@ let ascii_to_telnet (str : string) : string =
 
 let rec map_some (f : 'a -> 'b option) (l : 'a list) : 'b list =
   match l with
-      x::xs -> (match f x with
-        | Some a -> a::(map_some f xs)
-        | None   -> map_some f xs)
-    | []    -> []
+  | x::xs -> begin
+        match f x with
+        | Some b -> b::(map_some f xs)
+        | None -> map_some f xs
+      end
+  | [] -> []
 
 let rec find_some (l : 'a option list) : 'a =
   match l with
-    | [] -> raise Not_found
-    | x::xs -> (match x with
+  | [] -> raise Not_found
+  | x::xs -> (match x with
         | None -> find_some xs
         | Some a -> a)
 
@@ -135,8 +137,12 @@ let rec map_to_stream (f : 'a -> 'b Stream.t) (l : 'a list) : 'b Stream.t =
 
 let rec stream_nth (n : int) (s : 'a Stream.t) : 'a option =
   try
-    match n with
-      | 1 -> Some (Stream.next s)
-      | n when n > 1 -> Stream.junk; stream_nth (n - 1) s
-      | n when n < 1 -> assert false
+    if n = 1 then Some (Stream.next s)
+    else if n > 1 then (Stream.junk s; stream_nth (n - 1) s)
+    else raise (Failure "sream_nth")
   with Stream.Failure -> None
+
+let option_to_list (o : 'a option) : 'a list =
+  match o with
+  | Some x -> [x]
+  | None -> []

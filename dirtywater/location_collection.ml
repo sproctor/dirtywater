@@ -25,9 +25,11 @@ open Types
 
 class location_collection =
   object
-    val mutable location_list : (int * iLocation) list = []
-    method add (i: int) (r: iLocation) : unit =
+    val mutable location_list : (int * location) list = []
+    method add (i: int) (r: location) : unit =
       location_list <- (i, r)::location_list
-    method get (i: int) : iLocation =
+    method get (i: int) : location =
       List.assoc i location_list
   end
+
+let locations = new location_collection

@@ -27,10 +27,8 @@
 open Helpers
 open Debug
 open Types
-open State
 open Character
 open Player
-open Race
 
 type login_state = {
   mutable name: string option;
@@ -42,9 +40,9 @@ type connection_state =
   | Login of login_state
   | Playing of iPlayer
 
-class connection s =
+class telnet_connection s =
   object (self)
-    inherit iConnection
+    inherit connection
     val sock = s
     val tmp_buffer = String.create 4096
     val in_buffer = Buffer.create 32
@@ -52,13 +50,16 @@ class connection s =
     val mutable cmd_strings = []
     val mutable state = Login {name = None; confirm_name = false;
         password = None;}
+
     method get_descriptor = sock
+
     (* closes the connection *)
     method close () : unit =
       dlog 4 "closing connection...";
       Unix.close sock;
       connections#remove (self : #iConnection :> iConnection);
       dlog 4 "closed down connection";
+
     method private step_login cmd lstate =
       if lstate.name = None then (
         lstate.name <- Some cmd;
@@ -83,8 +84,9 @@ class connection s =
               (lstate.name <- None; self#output "Invalid password\r\n");
           c
         with _ -> make_character (Option.get lstate.name)
-                (Option.get lstate.password) (locations#get 1001) in
-        let p = new player ch (self : #iConnection :> iConnection) in
+                (Option.get lstate.password) in
+        let cr = ch#create_creature (locations#get 1001) in
+        let p = new player cr (self : #connection :> connection) in
         state <- Playing p
       )
     method input () : unit =
@@ -123,7 +125,6 @@ class connection s =
       if len > 10000 then self#close ()
       else ignore (Unix.write sock (ascii_to_telnet str) 0 len)
     initializer
-      connections#add (self : #iConnection :> iConnection);
       self#output "Welcome. What name do you go by? "
   end
 

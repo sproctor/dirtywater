@@ -28,20 +28,23 @@ open Debug
 
 class player_collection =
   object
-    val mutable player_list = ([] : iPlayer list)
+    val mutable player_list = ([] : player list)
+
     (* registers a player in the player list *)
-    method add (p : iPlayer) : unit =
+    method add (p : player) : unit =
       dlog 3 "registering player";
       player_list <- p::player_list
+
     (* unregister a player from the player list,
        that player's controller must be defunct, or we will block *)
-    method remove (p : iPlayer) : unit =
+    method remove (p : player) : unit =
       dlog 3 ("before removal: " ^ string_of_int (List.length player_list));
       let old_list = player_list in
       player_list <- List.filter ((!=) p) player_list;
       dlog 3 ("after removal: " ^ string_of_int (List.length player_list));
       if List.length player_list <> List.length old_list - 1 then
         raise (Failure "Problem removing player")
+
     (* runs one command from each player in the list *)
     method run_commands () : unit =
       let rec run_player_commands pl =
@@ -50,3 +53,5 @@ class player_collection =
           | []    -> ()
       in run_player_commands player_list;
   end
+
+let current_players = new player_collection

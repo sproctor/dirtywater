@@ -18,43 +18,58 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
-(* template.ml: a template to create new tangibles *)
+(* race.ml: a race generator *)
 
 open Helpers
 open Types
-open State
 open Creature
-open Character
 
-class bodypart_def (bp : bodypart_type) (r_parts : bodypart_def list) =
+class bodypart_def (bp : bodypart_type) =
   object (self)
-    val receive_list : bodypart_def list = r_parts
     val my_type = bp
 
-    method create : bodypart =
-      new bodypart my_type (List.map (function b -> b#create) receive_list)
+    method create (c : container) : bodypart =
+      new bodypart my_type c
+
   end
 
-class race id n b =
+class hand_def (s : side) =
   object (self)
+    inherit bodypart_def (Hand s) as super
 
-    inherit iRace
+    method create (c : container) : bodypart =
+      new hand s c
 
-    val mutable body : bodypart_def = b
+  end
+
+class humanoid_race n =
+  object (self)
+    inherit race
+
+    val mutable body_def : bodypart_def list =
+      [
+        new bodypart_def Head;
+        new bodypart_def Torso;
+        new bodypart_def (Arm Left);
+        new bodypart_def (Arm Right);
+        new hand_def Left;
+        new hand_def Right;
+        new bodypart_def (Leg Left);
+        new bodypart_def (Leg Right);
+        new bodypart_def (Foot Left);
+        new bodypart_def (Foot Right);
+      ]
     val name = n
 
-    method create (id : int) (name : string) (password : string) : iCharacter =
-      (* FIXME: this function needs to be expanded when we have more than
-         just characters... not sure how yet *)
-      new character id name password (body#create)
+    method create_creature (character_name : string) (con : container)
+        : creature =
+      let cr = new base_creature name con in
+      let add_part bp_def =
+        let bp = bp_def#create (cr :> container) in
+        cr#add_bodypart bp in
+      List.iter add_part body_def;
+      (cr :> creature)
 
-    initializer
-      races#add id (self : #iRace :> iRace)
+    method get_name = name
+
   end
-
-let make_character name password start =
-  let r = races#get "normalhuman" in
-  let ch = r#create (tangibles#get_id) name password in
-  ch#set_parent (Some (start :> iContainer));
-  start#add (ch :> iTangible);
-  ch

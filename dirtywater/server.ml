@@ -26,7 +26,7 @@
 
 open Types
 open Connection
-open State
+open Connection_collection
 open Helpers
 open Debug
 
@@ -35,7 +35,8 @@ let max_pending = 3
 
 (* logs a user in and creates a controller of a character with the chanels *)
 let establish_connection ((sock : Unix.file_descr), (caller : Unix.sockaddr)) =
-  ignore (new connection sock)
+  let conn = new telnet_connection sock in
+  connections#add (conn :> connection)
 
 (* start up the server to accept connections *)
 let start_server port =

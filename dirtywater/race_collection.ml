@@ -23,9 +23,11 @@ open Types
 
 class race_collection =
   object (self)
-    val mutable races : (string * iRace) list = []
-    method add id race =
-      races <- (id, race)::races
-    method get (id : string) : iRace =
+    val mutable races : (string * race) list = []
+    method add id r =
+      races <- (id, r)::races
+    method get (id : string) : race =
       List.assoc id races
   end
+
+let races = new race_collection

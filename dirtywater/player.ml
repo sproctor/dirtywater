@@ -31,12 +31,13 @@ open Base
 open Lexer
 
 (* a class to maintain the connection and give events to the scheduler *)
-class player (ch : iCharacter) (co : iConnection) =
+(* normal player as opposed to admin *)
+class normal_player (cr : creature) (co : connection) =
   object (self)
     (* must register the controller with the scheduler in base class *)
-    inherit iPlayer
-    inherit iController
-    val controllee = ch
+    inherit controller
+
+    val controllee = cr
     val mutable cmd_queue = []
     val conn = co
     val mutable prompting = false
@@ -45,7 +46,7 @@ class player (ch : iCharacter) (co : iConnection) =
     (* called by scheduler *)
     method send_message (msg: mud_string) : unit = 
       dlog 5 "start player->send message";
-      conn#output (Mud_string.to_string (controllee :> iCreature)
+      conn#output (Mud_string.to_string (controllee :> creature)
           (MudStringList (SeparatorNewline,
             [msg; MudStringMeta (MetaPrompt, MudStringNone)])));
       dlog 5 "end player->send message";
@@ -66,7 +67,7 @@ class player (ch : iCharacter) (co : iConnection) =
             match ed with
             | ExitDescDir dir -> (ExitDir dir, Direction_not_valid dir)
             | ExitDescObj desc ->
-                let obj = Container.find (controllee :> iCreature)
+                let obj = Container.find (controllee :> creature)
                   (room :> iContainer) desc in
                 (ExitObj obj, Object_not_exit obj) in
                 let portal_opt = room#get_exit exit_obj in
@@ -113,20 +114,29 @@ class player (ch : iCharacter) (co : iConnection) =
                       ^ Printexc.to_string x))
 	    end
         | [] -> ()
+
     method private logout () =
       controllee#set_controller (new Ai.simple_ai controllee);
       dlog 4 "logging out";
       current_players#remove (self : #iPlayer :> iPlayer);
       conn#output "\r\nFarewell.\r\n";
       conn#close ();
+
     method enqueue_command (str : string) : unit =
       try
         let cmd = parse_command str in
         cmd_queue <- cmd_queue@[cmd]
       with
-          Bad_command str -> conn#output (str ^ "\r\n")
+        | Bad_command str -> conn#output (str ^ "\r\n")
         | _ -> ()
+
     initializer
       controllee#set_controller (self : #iPlayer :> iController);
       current_players#add (self : #iPlayer :> iPlayer)
   end
+
+let make_character name password start =
+  let r = races#get "normalhuman" in
+  let cr = r#create_creature name (start :> container) in
+  start#add (ch :> tangible);
+  ch

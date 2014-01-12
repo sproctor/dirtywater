@@ -142,3 +142,14 @@ let direction_of_string str =
 
 let string_of_direction dir =
   List.assoc dir direction_list
+
+let string_of_cmd cmd =
+  match cmd with
+      Cmd_wait x -> "wait " ^ string_of_int x
+    | Cmd_attack _ -> "attack"
+    | Cmd_move _ -> "move"
+    | Cmd_look _ -> "look"
+    | Cmd_take _ -> "take"
+    | Cmd_drop _ -> "drop"
+    | Cmd_inventory -> "inventory"
+    | Cmd_say _ -> "say"

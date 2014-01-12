@@ -1,4 +1,7 @@
 open Template
+open Template_collection
 
 let () =
-  ignore (new template "rock" [] "rock" "rock" "A small rock")
+  let rock_template = new simple_template [] "rock" "a rock" "A small rock"
+  in
+  templates#add "rock" rock_template
