@@ -16,10 +16,10 @@ SOURCES := helpers.ml \
 	   location_collection.ml \
 	   connection_collection.ml \
 	   template_collection.ml \
-	   race.ml \
-	   race_collection.ml \
 	   tangible.ml \
            creature.ml \
+	   race.ml \
+	   race_collection.ml \
 	   location.ml \
 	   template.ml \
 	   ai.ml \
