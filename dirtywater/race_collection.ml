@@ -27,7 +27,9 @@ class race_collection =
     method add id r =
       races <- (id, r)::races
     method get (id : string) : race =
-      List.assoc id races
+      try
+        List.assoc id races
+      with Not_found -> raise (Failure "race_collection#get")
   end
 
 let races = new race_collection

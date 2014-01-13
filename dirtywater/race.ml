@@ -63,7 +63,7 @@ class humanoid_race n =
 
     method create_creature (character_name : string) (con : container)
         : creature =
-      let cr = new base_creature name con in
+      let cr = new base_creature character_name con in
       let add_part bp_def =
         let bp = bp_def#create (cr :> container) in
         cr#add_bodypart bp in

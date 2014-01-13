@@ -49,6 +49,7 @@ class virtual simple_container =
     (* This function is not safe. The caller should check that they're allowed
        to add the thing before they call it *)
     method add (thing : tangible) (where : position) : unit =
+      dlog 4 ("adding " ^ thing#to_string ^ " to " ^ self#to_string);
       (* We might be adding a thing that's already here to a new position *)
       if not (List.mem thing contents) then contents <- thing::contents;
       position_list <- (where, thing)::position_list

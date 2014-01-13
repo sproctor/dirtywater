@@ -137,5 +137,5 @@ class normal_player (cr : creature) (co : connection) =
   end
 
 let make_character name password =
-  let r = races#get "normalhuman" in
+  let r = races#get "human" in
   new character name password r

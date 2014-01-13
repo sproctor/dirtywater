@@ -86,8 +86,11 @@ class telnet_connection s =
           if not (c#match_password (Option.get lstate.password)) then
               (lstate.name <- None; self#output "Invalid password\r\n");
           c
-        with _ -> make_character (Option.get lstate.name)
-                (Option.get lstate.password) in
+        with _ -> (
+            dlog 4 ("Creating character: " ^ Option.get lstate.name);
+            make_character (Option.get lstate.name) (Option.get lstate.password)
+            ) in
+        dlog 4 "creating creature";
         let cr = ch#create_creature ((locations#get 1001) :> container) in
         let p = new normal_player cr (self : #connection :> connection) in
         state <- Playing p

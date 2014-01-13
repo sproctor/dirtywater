@@ -44,9 +44,11 @@ class character (n : string) (p : string) (r : race) =
     val name = n
 
     method create_creature (con : container) =
-      let ch = race#create_creature name con in
-      con#add (ch :> tangible);
-      ch
+      let cr = race#create_creature name con in
+      dlog 4 ("character#create_creature adding " ^ cr#to_string ^ " to "
+          ^ con#to_string);
+      con#add (cr :> tangible) On;
+      cr
 
     (* called by the login to check if the given password is right *)
     method match_password (guess : string) : bool = (guess = password)

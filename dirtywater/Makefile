@@ -28,20 +28,20 @@ SOURCES := helpers.ml \
 	   connection.ml \
 	   scheduler.ml \
 	   server.ml \
-	   main.ml \
 	   convenience.ml \
+	   main.ml \
 	   data/state/locations/rooms.ml \
 	   data/tangibles/rock.ml \
            data/races/human.ml
 RESULT = mud
 LIBS = unix str dynlink
-OCAMLBCFLAGS := -g
+OCAMLBCFLAGS := -g -warn-error +a
 YFLAGS := -v
 #PACKS = pxp
 PACKS = extlib
 USE_CAMLP4 := yes
 
-include OCamlMakefile
+-include OCamlMakefile
 
 what:
 	echo $(DINCFLAGS)
