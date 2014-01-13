@@ -70,24 +70,32 @@ class simple_tangible (a : string list) (n : string) (sd : string)
       else not (List.exists (function sadj -> List.exists
             (function adj -> not (starts_with adj sadj)) adjs) sadjs)
 
-    method can_be_found looker = true
-
     method can_be_gotten looker = true
 
     method is_visible looker = true
 
+    method is_shown looker = true
+
     method get_name = name
 
-    method get_short_desc looker = MudString short_desc
-
-    method get_long_desc looker = MudString long_desc
+    method short_description looker =
+      MudString short_desc
 
     method look_description looker =
-      self#get_long_desc looker
+      MudString long_desc
 
     method to_string : string =
       "tangible: " ^ short_desc
 
     method send_message msg = ()
 
+  end
+
+(* FIXME: need a better name for this *)
+class virtual intangible =
+  object
+    inherit tangible
+    method move cr con pos = raise (Failure "intangible#move")
+    method can_be_gotten cr = false
+    method send_message msg = ()
   end

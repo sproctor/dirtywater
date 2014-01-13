@@ -97,5 +97,5 @@ let to_string (looker: creature) (str: mud_string) : string =
       | MudStringCondition (c, s1, s2) -> if looker == c
           then to_string_helper fg bg s1
           else to_string_helper fg bg s2
-      | MudStringName o -> to_string_helper fg bg (o#get_short_desc looker) in
-    to_string_helper Normal Normal str
+      | MudStringName o -> to_string_helper fg bg (o#short_description looker)
+    in to_string_helper Normal Normal str

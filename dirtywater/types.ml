@@ -184,13 +184,13 @@ and virtual tangible =
     method virtual matches_description : string list -> string -> bool
     method virtual can_be_gotten : creature -> bool
     (* can the given creature find this tangible *)
-    method virtual can_be_found : creature -> bool
-    (* Should this creature be shown in room descriptions *)
     method virtual is_visible : creature -> bool
+    (* Should this creature be shown in room descriptions *)
+    method virtual is_shown : creature -> bool
     (* return a short description of this tangible which is custom made for
        the given creature *)
-    method virtual get_short_desc : creature -> (tangible, creature) mud_string'
-    method virtual get_long_desc : creature -> (tangible, creature) mud_string'
+    method virtual short_description : creature
+      -> (tangible, creature) mud_string'
     method virtual send_message : (tangible, creature) mud_string' -> unit
   end
 and virtual creature =
@@ -205,7 +205,8 @@ and virtual creature =
     method virtual take : tangible -> unit
     method virtual drop : tangible -> unit
     method virtual get_inventory : creature -> tangible inventory'
-    method virtual look_for : object_desc -> tangible
+    method virtual look_for : tangible position' option -> object_desc
+        -> tangible
   end
 and virtual portal =
   object

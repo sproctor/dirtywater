@@ -123,13 +123,13 @@ class base_creature (name : string) (con : container) =
 
     (* FIXME: kill this function, make it exist outside the class or merge the
        functionality with find *)
-    method look_for (desc : object_desc) =
+    method look_for (where : position option) (desc : object_desc) : tangible =
       try
-        find (self : #creature :> creature) (self :> container) None desc
+        find (self : #creature :> creature) (self :> container) where desc
       with
           (* FIXME: this searches self twice and messes up the ordinal *)
           Object_not_found (_, num) -> find (self : #creature :> creature)
-              (self#get_parent) None desc
+              (self#get_parent) where desc
 
     method get_inventory (looker : creature) : inventory =
       let bp_inventory (bp : bodypart) =

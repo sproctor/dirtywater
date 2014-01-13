@@ -87,7 +87,7 @@ let preposition_to_string prep =
     | Prep_behind -> "behind"
     | Prep_under  -> "under"
 
-let preposition_to_containment_option (prep : preposition)
+let preposition_to_position_option (prep : preposition)
     : (position option)=
   match prep with
       Prep_on -> Some On

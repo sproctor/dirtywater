@@ -29,6 +29,9 @@ open Debug
 open Types
 open Character
 open Player
+open Connection_collection
+open Character_collection
+open Location_collection
 
 type login_state = {
   mutable name: string option;
@@ -38,7 +41,7 @@ type login_state = {
 
 type connection_state =
   | Login of login_state
-  | Playing of iPlayer
+  | Playing of player
 
 class telnet_connection s =
   object (self)
@@ -57,7 +60,7 @@ class telnet_connection s =
     method close () : unit =
       dlog 4 "closing connection...";
       Unix.close sock;
-      connections#remove (self : #iConnection :> iConnection);
+      connections#remove (self : #connection :> connection);
       dlog 4 "closed down connection";
 
     method private step_login cmd lstate =
@@ -85,8 +88,8 @@ class telnet_connection s =
           c
         with _ -> make_character (Option.get lstate.name)
                 (Option.get lstate.password) in
-        let cr = ch#create_creature (locations#get 1001) in
-        let p = new player cr (self : #connection :> connection) in
+        let cr = ch#create_creature ((locations#get 1001) :> container) in
+        let p = new normal_player cr (self : #connection :> connection) in
         state <- Playing p
       )
     method input () : unit =

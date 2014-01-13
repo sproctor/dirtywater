@@ -26,9 +26,10 @@ open Types
 open Helpers
 open Character
 open Debug
-open State
 open Base
 open Lexer
+open Player_collection
+open Race_collection
 
 (* a class to maintain the connection and give events to the scheduler *)
 (* normal player as opposed to admin *)
@@ -68,7 +69,7 @@ class normal_player (cr : creature) (co : connection) =
             | ExitDescDir dir -> (ExitDir dir, Direction_not_valid dir)
             | ExitDescObj desc ->
                 let obj = Container.find (controllee :> creature)
-                  (room :> iContainer) desc in
+                  (room :> container) None desc in
                 (ExitObj obj, Object_not_exit obj) in
                 let portal_opt = room#get_exit exit_obj in
                 let portal = (match portal_opt with Some y -> y
@@ -77,17 +78,17 @@ class normal_player (cr : creature) (co : connection) =
         | Player_inventory ->
             Cmd_inventory
 	| Player_look None ->
-	    Cmd_look (LocationObject controllee#get_location)
+	    Cmd_look (controllee#get_location :> mud_object)
 	| Player_look Some (None, desc) ->
-            Cmd_look (TangibleObject (controllee#look_for desc))
+            Cmd_look ((controllee#look_for None desc) :> mud_object)
         | Player_look Some (Some prep, desc) ->
-            Cmd_look (PrepositionObject (prep, TangibleObject
-                  (controllee#look_for desc)))
+            let pos = preposition_to_position_option prep in
+            Cmd_look ((controllee#look_for pos desc) :> mud_object)
         | Player_take desc -> 
             (dlog 4 ("taking " ^ (object_desc_to_string desc));
-            Cmd_take (controllee#look_for desc))
+            Cmd_take (controllee#look_for None desc))
         | Player_drop desc ->
-            Cmd_drop (controllee#look_for desc)
+            Cmd_drop (controllee#look_for None desc)
         | Player_say (es, _, str) ->
             Cmd_say (es, [], str)
     (* return the next command in the form (option cmd). if there is no command
@@ -118,7 +119,7 @@ class normal_player (cr : creature) (co : connection) =
     method private logout () =
       controllee#set_controller (new Ai.simple_ai controllee);
       dlog 4 "logging out";
-      current_players#remove (self : #iPlayer :> iPlayer);
+      current_players#remove (self : #player :> player);
       conn#output "\r\nFarewell.\r\n";
       conn#close ();
 
@@ -131,12 +132,10 @@ class normal_player (cr : creature) (co : connection) =
         | _ -> ()
 
     initializer
-      controllee#set_controller (self : #iPlayer :> iController);
-      current_players#add (self : #iPlayer :> iPlayer)
+      controllee#set_controller (self : #player :> controller);
+      current_players#add (self : #player :> player)
   end
 
-let make_character name password start =
+let make_character name password =
   let r = races#get "normalhuman" in
-  let cr = r#create_creature name (start :> container) in
-  start#add (ch :> tangible);
-  ch
+  new character name password r

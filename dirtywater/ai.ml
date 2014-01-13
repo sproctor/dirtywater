@@ -31,10 +31,12 @@ open Types
 open Character
 open Debug
 
-class simple_ai (ch : character) =
+class simple_ai (cr : creature) =
   object (self)
-    inherit iController
-    val character = ch
+    inherit controller
+
+    val creature = cr
+
     (* method called by the character when its controller needs to know what
        is happening to the character *)
     method send_message (msg: mud_string) : unit = ()

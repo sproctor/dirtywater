@@ -27,7 +27,8 @@
 
 open Debug
 open Time
-open State
+open Events
+open Player_collection
 
 (* sorted list of event to take place in the future *)
 (* let pending_events = ref []*)
