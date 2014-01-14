@@ -1,5 +1,5 @@
 (*
- Copyright 2003 Sean Proctor, Mike MacHenry
+ Copyright 2014, 2003 Sean Proctor, Mike MacHenry
 
  This file is part of Dirty Water.
 
@@ -30,6 +30,14 @@ open Base
 open Lexer
 open Player_collection
 open Race_collection
+open Container
+
+(* TODO: move this function and the find functions into their own file *)
+let look_for (looker : creature) (where : position option) (desc : object_desc)
+    : tangible =
+  try find looker (looker :> container) where desc with
+  | Object_not_found (_, num) -> find looker
+        (looker#get_location :> container) where desc
 
 (* a class to maintain the connection and give events to the scheduler *)
 (* normal player as opposed to admin *)
@@ -80,15 +88,15 @@ class normal_player (cr : creature) (co : connection) =
 	| Player_look None ->
 	    Cmd_look (controllee#get_location :> mud_object)
 	| Player_look Some (None, desc) ->
-            Cmd_look ((controllee#look_for None desc) :> mud_object)
+            Cmd_look ((look_for controllee None desc) :> mud_object)
         | Player_look Some (Some prep, desc) ->
             let pos = preposition_to_position_option prep in
-            Cmd_look ((controllee#look_for pos desc) :> mud_object)
+            Cmd_look ((look_for controllee pos desc) :> mud_object)
         | Player_take desc -> 
             (dlog 4 ("taking " ^ (object_desc_to_string desc));
-            Cmd_take (controllee#look_for None desc))
+            Cmd_take (look_for controllee None desc))
         | Player_drop desc ->
-            Cmd_drop (controllee#look_for None desc)
+            Cmd_drop (look_for controllee None desc)
         | Player_say (es, _, str) ->
             Cmd_say (es, [], str)
     (* return the next command in the form (option cmd). if there is no command

@@ -38,30 +38,41 @@ class virtual simple_container =
 
     inherit container
 
-    (* TODO: should we only have one list here? *)
-    val mutable contents : tangible list = []
-    val mutable position_list : (position * tangible) list = []
+    val mutable contents : (position * tangible) list = []
 
     method can_add (actor : creature) (thing : tangible) (where : position)
         : bool =
-      not (List.mem thing (self#get_contents (Some where)))
+      not (List.exists (fun (w, t) -> w = where && t == thing) contents)
 
     (* This function is not safe. The caller should check that they're allowed
        to add the thing before they call it *)
     method add (thing : tangible) (where : position) : unit =
       dlog 4 ("adding " ^ thing#to_string ^ " to " ^ self#to_string);
       (* We might be adding a thing that's already here to a new position *)
-      if not (List.mem thing contents) then contents <- thing::contents;
-      position_list <- (where, thing)::position_list
+      (*if not (List.mem thing contents) *)
+      contents <- (where, thing)::contents
 
     method can_remove (actor : creature) (thing : tangible) : bool =
-      List.mem thing contents
+      self#contains thing
 
     method remove (thing : tangible) : unit =
-      let len = List.length contents in
-      contents <- List.filter ((<>) thing) contents;
-      if len - 1 <> List.length contents then raise (Cannot_remove thing);
-      position_list <- List.filter (fun (_, t) -> t <> thing) position_list
+      let do_remove where =
+        let rec do_helper contents_list =
+          match contents_list with
+          | (_, t)::rest when t == thing -> do_helper rest
+          | (Under t, other)::rest when t == thing ->
+              (where, other)::do_helper rest
+          | (Behind t, other)::rest when t == thing ->
+              (where, other)::do_helper rest
+          | t::rest -> t::do_helper rest
+          | [] -> []
+      in do_helper contents in
+      let rec remove_helper contents_list =
+        match contents_list with
+        | (w, t)::rest -> if t == thing then contents <- do_remove w
+            else remove_helper rest
+        | [] -> raise (Cannot_remove thing)
+      in remove_helper contents
 
     method get_contents (where : position option) : tangible list =
       match where with
@@ -70,12 +81,15 @@ class virtual simple_container =
             if p = pos then Some t
             else None
           in
-          map_some compare_pos position_list
-      | None -> contents
+          map_some compare_pos contents
+      | None -> List.map (fun (_, t) -> t) contents
 
     method view_contents (looker : creature) (where : position option)
         : tangible list =
       List.filter (fun t -> t#is_visible looker) (self#get_contents where)
+
+    method private contains (thing : tangible) : bool =
+      List.exists (fun (_, t) -> t == thing) contents
 
   end
 

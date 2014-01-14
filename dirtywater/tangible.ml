@@ -28,23 +28,11 @@ open Helpers
 open Container
 open Base
 
-(* base physical object *)
-class simple_tangible (a : string list) (n : string) (sd : string)
-    (ld : string) (p : container) =
+class virtual base_tangible =
   object (self)
     inherit tangible
-    inherit noncontainer
 
-    val name = n
-    val adjs = a
-    val short_desc = sd
-    val long_desc = ld
-    val mutable parent : container = p
-
-    method get_location : location = parent#get_location
-
-    method get_parent : container =
-      parent
+    method get_location : location = self#get_parent#get_location
 
     method move (actor : creature) (dest : container) (where : position)
         : unit =
@@ -62,8 +50,27 @@ class simple_tangible (a : string list) (n : string) (sd : string)
         (* add to new parent *)
         dest#add (self : #tangible :> tangible) where;
         (* make the new parent the current parent *)
-        parent <- dest
+        self#set_parent dest
       end
+  end
+
+(* base physical object *)
+class simple_tangible (a : string list) (n : string) (sd : string)
+    (ld : string) (p : container) =
+  object (self)
+    inherit base_tangible
+    inherit noncontainer
+
+    val name = n
+    val adjs = a
+    val short_desc = sd
+    val long_desc = ld
+    val mutable parent : container = p
+
+    method private set_parent p = parent <- p
+
+    method get_parent : container =
+      parent
 
     method matches_description sadjs sname =
       if not (starts_with name sname) then false

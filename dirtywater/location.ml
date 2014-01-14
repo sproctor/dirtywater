@@ -43,6 +43,8 @@ class direction_object (d : direction) (dst : int) (p : container) =
     val dest_id = dst
     val parent = p
 
+    method private set_parent = raise (Failure "direction_object#set_parent")
+
     method get_parent = parent
 
     method get_name = List.assoc dir direction_list

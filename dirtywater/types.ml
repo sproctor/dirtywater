@@ -139,7 +139,7 @@ type ('tangible, 'creature) mud_string' =
 type side = Left | Right
 
 type bodypart_type =
-    Head
+  | Head
   | Leg of side
   | Arm of side
   | Hand of side
@@ -175,6 +175,7 @@ and virtual container =
 and virtual tangible =
   object
     inherit container
+    method private virtual set_parent : container -> unit
     method virtual get_parent : container
     (* move this tangible into the given container *)
     method virtual move : creature -> container -> tangible position' -> unit
@@ -205,8 +206,6 @@ and virtual creature =
     method virtual take : tangible -> unit
     method virtual drop : tangible -> unit
     method virtual get_inventory : creature -> tangible inventory'
-    method virtual look_for : tangible position' option -> object_desc
-        -> tangible
   end
 and virtual portal =
   object

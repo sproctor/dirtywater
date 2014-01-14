@@ -57,14 +57,38 @@ class bodypart (t : bodypart_type) (c : container) =
   end
 
 (* a mob class *)
-class base_creature (name : string) (con : container) =
+class base_creature (n : string) (c : container) =
   object (self)
 
     inherit creature
-    inherit simple_tangible [] name name name con
+    inherit base_tangible
 
+    val name = n
+    val mutable parent = c
     val mutable body : bodypart list = []
     val mutable ctrl : controller = new dummy_controller
+
+    method get_parent = parent
+
+    method set_parent p = parent <- p
+
+    method to_string = "base creature: " ^ name
+
+    method view_contents looker pos =
+      List.flatten (List.map (fun bp -> bp#view_contents looker pos) body)
+
+    method get_contents pos =
+      List.flatten (List.map (fun bp -> bp#get_contents pos) body)
+
+    method matches_description sadjs sname =
+      if sadjs <> [] then false
+      else if starts_with name sname then true
+      else false
+
+    method short_description looker = MudString name
+
+    method look_description looker =
+      MudString name (* TODO: view contents here *)
 
     (* called to set some controller to be in control of this character *)
     method set_controller (c : controller) =
@@ -121,16 +145,6 @@ class base_creature (name : string) (con : container) =
               (SeparatorNone, [MudStringName (self: #creature :> tangible);
               MudString " dropped the "; MudStringName thing])))
 
-    (* FIXME: kill this function, make it exist outside the class or merge the
-       functionality with find *)
-    method look_for (where : position option) (desc : object_desc) : tangible =
-      try
-        find (self : #creature :> creature) (self :> container) where desc
-      with
-          (* FIXME: this searches self twice and messes up the ordinal *)
-          Object_not_found (_, num) -> find (self : #creature :> creature)
-              (self#get_parent) where desc
-
     method get_inventory (looker : creature) : inventory =
       let bp_inventory (bp : bodypart) =
         List.map (fun pos -> (bp#get_type, pos, bp#view_contents looker
@@ -138,7 +152,29 @@ class base_creature (name : string) (con : container) =
           [In; On]
       in List.flatten (List.map bp_inventory body)
 
-    method is_visible looker = looker != (self : #creature :> creature)
+    method is_shown looker = looker != (self : #creature :> creature)
+
+    method is_visible looker = true
+
+    method get_name = name
+
+    method can_remove actor thing =
+      List.exists (fun bp -> bp#can_remove actor thing) body
+
+    method can_add actor thing where = false
+
+    method can_be_gotten actor = false
+
+    method add thing where = raise (Cannot_add thing)
+
+    method remove thing =
+      let rec remove_helper = function
+        | bp::rest -> begin
+              try bp#remove thing with
+              | Cannot_remove _ -> remove_helper rest
+            end
+        | [] -> raise (Cannot_remove thing)
+      in remove_helper body
 
     method private do_attack (target : tangible) (weapon : tangible)
         : mud_string =
