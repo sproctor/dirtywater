@@ -83,22 +83,31 @@ let preposition_to_string prep =
   match prep with
     | Prep_on     -> "on"
     | Prep_in     -> "in"
-    | Prep_from   -> "from"
+    | Prep_any    -> "any"
     | Prep_behind -> "behind"
     | Prep_under  -> "under"
 
-let preposition_to_position_option (prep : preposition)
-    : (position option)=
+let preposition_to_position ((prep : preposition), (thing : tangible))
+    : (position option * tangible) =
   match prep with
-      Prep_on -> Some On
-    | Prep_in -> Some In
-    | _       -> None
+    | Prep_on -> (Some On, thing)
+    | Prep_in -> (Some In, thing)
+    | Prep_under -> (Some (Under thing), thing#get_parent)
+    | Prep_behind -> (Some (Behind thing), thing#get_parent)
+    | Prep_any -> (None, thing)
 
 let rec object_desc_to_string desc =
   match desc with
       ObjectDesc (next, prep, noun) -> object_desc_to_string next ^ " "
           ^ preposition_to_string prep ^ " " ^ noun_desc_to_string noun
     | ObjectDescBase noun -> noun_desc_to_string noun
+
+let string_of_position (pos : position) =
+  match pos with
+  | In -> "in"
+  | On -> "on"
+  | Under _ -> "under"
+  | Behind _ -> "behind"
 
 let side_to_string (s : side) =
   match s with
@@ -145,11 +154,12 @@ let string_of_direction dir =
 
 let string_of_cmd cmd =
   match cmd with
-      Cmd_wait x -> "wait " ^ string_of_int x
-    | Cmd_attack _ -> "attack"
-    | Cmd_move _ -> "move"
-    | Cmd_look _ -> "look"
-    | Cmd_take _ -> "take"
-    | Cmd_drop _ -> "drop"
-    | Cmd_inventory -> "inventory"
-    | Cmd_say _ -> "say"
+  | Cmd_wait x -> "wait " ^ string_of_int x
+  | Cmd_attack _ -> "attack"
+  | Cmd_move _ -> "move"
+  | Cmd_look _ -> "look"
+  | Cmd_look_position _ -> "look"
+  | Cmd_take _ -> "take"
+  | Cmd_drop _ -> "drop"
+  | Cmd_inventory -> "inventory"
+  | Cmd_say _ -> "say"

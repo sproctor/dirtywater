@@ -33,11 +33,10 @@ open Race_collection
 open Container
 
 (* TODO: move this function and the find functions into their own file *)
-let look_for (looker : creature) (where : position option) (desc : object_desc)
-    : tangible =
-  try find looker (looker :> container) where desc with
+let look_for (looker : creature) (desc : object_desc) : tangible =
+  try find looker (looker :> container) None desc with
   | Object_not_found (_, num) -> find looker
-        (looker#get_location :> container) where desc
+        (looker#get_location :> container) None desc
 
 (* a class to maintain the connection and give events to the scheduler *)
 (* normal player as opposed to admin *)
@@ -87,16 +86,19 @@ class normal_player (cr : creature) (co : connection) =
             Cmd_inventory
 	| Player_look None ->
 	    Cmd_look (controllee#get_location :> mud_object)
-	| Player_look Some (None, desc) ->
-            Cmd_look ((look_for controllee None desc) :> mud_object)
-        | Player_look Some (Some prep, desc) ->
-            let pos = preposition_to_position_option prep in
-            Cmd_look ((look_for controllee pos desc) :> mud_object)
+        | Player_look Some (prep, desc) ->
+            let desc_thing = look_for controllee desc in
+            let (pos_opt, thing) = preposition_to_position (prep, desc_thing) in
+            begin
+              match pos_opt with
+              | Some pos -> Cmd_look_position (pos, ((look_for controllee desc) :> mud_object))
+              | None -> Cmd_look ((look_for controllee desc) :> mud_object)
+            end
         | Player_take desc -> 
             (dlog 4 ("taking " ^ (object_desc_to_string desc));
-            Cmd_take (look_for controllee None desc))
+            Cmd_take (look_for controllee desc))
         | Player_drop desc ->
-            Cmd_drop (look_for controllee None desc)
+            Cmd_drop (look_for controllee desc)
         | Player_say (es, _, str) ->
             Cmd_say (es, [], str)
     (* return the next command in the form (option cmd). if there is no command

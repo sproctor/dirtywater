@@ -28,6 +28,7 @@ open Helpers
 open Container
 open Base
 
+(* base physical object *)
 class virtual base_tangible =
   object (self)
     inherit tangible
@@ -54,12 +55,10 @@ class virtual base_tangible =
       end
   end
 
-(* base physical object *)
-class simple_tangible (a : string list) (n : string) (sd : string)
+class virtual described_tangible (a : string list) (n : string) (sd : string)
     (ld : string) (p : container) =
   object (self)
     inherit base_tangible
-    inherit noncontainer
 
     val name = n
     val adjs = a
@@ -95,6 +94,32 @@ class simple_tangible (a : string list) (n : string) (sd : string)
       "tangible: " ^ short_desc
 
     method send_message msg = ()
+
+  end
+
+class simple_tangible (a : string list) (n : string) (sd : string)
+    (ld : string) (p : container) =
+  object (self)
+    inherit described_tangible a n sd ld p
+    inherit noncontainer
+
+    method look_position_description looker where =
+      MudString ("The " ^ self#get_name ^ " cannot contain anything.")
+
+  end
+
+class simple_tangible_container (a : string list) (n : string) (sd : string)
+    (ld : string) (p : container) =
+  object (self)
+    inherit described_tangible a n sd ld p
+    inherit simple_container
+
+    method look_position_description looker where =
+      let things = self#view_contents looker (Some where) in
+      let descs = List.map (fun t -> t#short_description looker) things in
+      MudStringList (SeparatorNewline,
+          [MudString ("On the " ^ self#get_name ^ " you see:");
+            MudStringList (SeparatorComma, descs)])
 
   end
 

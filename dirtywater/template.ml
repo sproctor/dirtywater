@@ -26,15 +26,38 @@ open Helpers
 
 class simple_template (a : string list) (n : string) (s : string) (l : string) =
   object (self)
-
     inherit tangible_template
 
-    val mutable adjs : string list = a
-    val mutable name : string = n
-    val mutable sdesc : string = s
-    val mutable ldesc : string = l
+    val adjs : string list = a
+    val name : string = n
+    val sdesc : string = s
+    val ldesc : string = l
 
     method create_tangible (con : container) : tangible =
       new simple_tangible adjs name sdesc ldesc con
 
+  end
+
+class container_template (a : string list) (n : string) (s : string) (l : string) =
+  object (self)
+    inherit tangible_template
+
+    val adjs : string list = a
+    val name : string = n
+    val sdesc : string = s
+    val ldesc : string = l
+
+    method create_tangible (con : container) : tangible =
+      new simple_tangible_container adjs name sdesc ldesc con
+
+  end
+
+class generic_tangible_template (f : container -> tangible) =
+  object (self)
+    inherit tangible_template
+
+    val factory = f
+
+    method create_tangible (con : container) : tangible =
+      factory con
   end

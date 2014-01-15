@@ -31,8 +31,11 @@ class template_collection =
     method get (id : string) =
       List.assoc id templates
 
-    method create_tangible (template_id : string) (con : container) : tangible =
-      (self#get template_id)#create_tangible con
+    method create_tangible (template_id : string) (con : container)
+        (where : position) : tangible =
+      let thing = (self#get template_id)#create_tangible con in
+      con#add thing where;
+      thing
 
   end
 

@@ -90,6 +90,9 @@ class base_creature (n : string) (c : container) =
     method look_description looker =
       MudString name (* TODO: view contents here *)
 
+    method look_position_description looker where =
+      MudString name (* TODO: implement this funtion *)
+
     (* called to set some controller to be in control of this character *)
     method set_controller (c : controller) =
       ctrl <- c;
@@ -199,6 +202,10 @@ class base_creature (n : string) (c : container) =
     method private do_look (target : mud_object) : mud_string =
       target#look_description (self : #creature :> creature)
 
+    method private do_look_position (target : tangible) (where : position)
+        : mud_string =
+      target#look_position_description (self : #creature :> creature) where
+
     method private do_inventory () : mud_string =
       let inv_to_mud_string_list (stuff : tangible list) =
         MudStringList (SeparatorComma, List.map
@@ -245,6 +252,7 @@ class base_creature (n : string) (c : container) =
         | Cmd_attack (x, y) -> self#do_attack x y
 	| Cmd_move x    -> self#do_move x
 	| Cmd_look x    -> self#do_look x
+        | Cmd_look_position (t, w) -> self#do_look_position t w
 	| Cmd_take x	-> self#do_take x
         | Cmd_drop x    -> self#do_drop x
         | Cmd_inventory -> self#do_inventory ()

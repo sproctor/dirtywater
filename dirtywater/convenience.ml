@@ -24,6 +24,7 @@
 open Types
 open Location
 open Location_collection
+open Template_collection
 
 let create_room (loc_id : int) (title : string) (desc : string)
     (directions : (direction * int) list) =
@@ -33,3 +34,7 @@ let create_room (loc_id : int) (title : string) (desc : string)
   List.iter add_dir directions;
   locations#add loc_id loc;
   loc
+
+let place_tangible (id : string) (target : container) (where : position)
+    : tangible =
+  templates#create_tangible id target where

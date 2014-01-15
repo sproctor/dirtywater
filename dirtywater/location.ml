@@ -59,6 +59,9 @@ class direction_object (d : direction) (dst : int) (p : container) =
     method look_description (looker : creature) =
       (locations#get dest_id)#look_description looker
 
+    method look_position_description looker where =
+      MudString ("You cannot look \"" ^ (string_of_position where) ^"\" that.")
+
     method matches_description adjs name =
       try
         (adjs = []) && ((direction_of_string name) = dir)

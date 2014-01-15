@@ -31,7 +31,7 @@ SOURCES := helpers.ml \
 	   convenience.ml \
 	   main.ml \
 	   data/state/locations/rooms.ml \
-	   data/tangibles/rock.ml \
+	   data/tangibles/items.ml \
            data/races/human.ml
 RESULT = mud
 LIBS = unix str dynlink

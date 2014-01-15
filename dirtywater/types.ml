@@ -27,9 +27,9 @@ type noun_desc = (int option * string list * string)
 type preposition =
   | Prep_on
   | Prep_in
-  | Prep_from
   | Prep_behind
   | Prep_under
+  | Prep_any
 
 type ('tangible) position' =
   | In
@@ -71,11 +71,11 @@ type emote =
    controller. there will be some time between when it's parsed and when this
    happens though *)
 type player_command =
-    Player_wait of int option
+  | Player_wait of int option
   | Player_attack of (object_desc option * object_desc option)
   | Player_move of exit_desc
   | Player_quit
-  | Player_look of (preposition option * object_desc) option
+  | Player_look of (preposition * object_desc) option
   | Player_take of object_desc
   | Player_drop of object_desc
   | Player_inventory
@@ -87,6 +87,7 @@ type ('mud_object, 'tangible, 'creature, 'portal) command' =
   | Cmd_attack of ('tangible * 'tangible)
   | Cmd_move of 'portal
   | Cmd_look of 'mud_object
+  | Cmd_look_position of ('tangible * 'tangible position')
   | Cmd_take of 'tangible
   | Cmd_drop of 'tangible
   | Cmd_inventory
@@ -191,6 +192,8 @@ and virtual tangible =
     (* return a short description of this tangible which is custom made for
        the given creature *)
     method virtual short_description : creature
+      -> (tangible, creature) mud_string'
+    method virtual look_position_description : creature -> tangible position'
       -> (tangible, creature) mud_string'
     method virtual send_message : (tangible, creature) mud_string' -> unit
   end

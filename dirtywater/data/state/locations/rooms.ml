@@ -5,8 +5,9 @@ open Template_collection
 let () =
   let loc1001 = create_room 1001 "Starting Room" "...with a simple description"
       [North, 1002] in
-  let rock = templates#create_tangible "rock" (loc1001 :> container) in
-  loc1001#add rock On;
+  let table = place_tangible "table" (loc1001 :> container) On in
+  let plate = place_tangible "plate" (table :> container) On in
+  ignore (place_tangible "note" (table :> container) (Under plate));
   ignore (create_room 1002 "Another Room"
      "This room is in all ways inferior to the starting room. You should leave now."
      [South, 1001; NorthEast, 1003]);

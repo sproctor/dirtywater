@@ -132,7 +132,8 @@ let rec find (looker : creature) (lookee : container) (p : position option)
               | Prep_on -> find looker (item :> container) (Some On) od
                 (* try all containment methods with "from" *)
               | Prep_from -> find looker (item :> container) None od
-              | Prep_under -> raise (Bad_command "Preposition \"under\" is not yet supported.")
+              | Prep_under ->
+                  find looker (item#get_parent) (Some (Under item)) od
               | Prep_behind -> raise (Bad_command "Preposition \"behind\" is not yet supported.")
             end
           with Failure "nth" -> raise (dlog 4 "object not found"; Object_not_found (desc, List.length matched_items))
