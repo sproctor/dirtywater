@@ -102,9 +102,9 @@ drop:
     obj_phrase EOF { Player_drop $1                       }
 ;
 look:
-    EOF            { Player_look None                     }
-  | obj_phrase EOF { Player_look (Some (None, $1))        }
-  | preposition obj_phrase EOF     { Player_look (Some (Some $1, $2))     }
+  | EOF { Player_look None }
+  | obj_phrase EOF { Player_look (Some (Prep_any, $1)) }
+  | preposition obj_phrase EOF { Player_look (Some ($1, $2)) }
 ;
 quit:
     EOF            { Player_quit                          }
@@ -135,7 +135,7 @@ adjs:
 preposition:
 | ON			{ Prep_on }
 | IN			{ Prep_in }
-| FROM			{ Prep_from }
+| FROM			{ Prep_any }
 | UNDER			{ Prep_under }
 | BEHIND		{ Prep_behind }
 ;

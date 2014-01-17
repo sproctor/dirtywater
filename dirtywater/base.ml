@@ -88,13 +88,13 @@ let preposition_to_string prep =
     | Prep_under  -> "under"
 
 let preposition_to_position ((prep : preposition), (thing : tangible))
-    : (position option * tangible) =
+    : (position option * container) =
   match prep with
-    | Prep_on -> (Some On, thing)
-    | Prep_in -> (Some In, thing)
+    | Prep_on -> (Some On, (thing :> container))
+    | Prep_in -> (Some In, (thing :> container))
     | Prep_under -> (Some (Under thing), thing#get_parent)
     | Prep_behind -> (Some (Behind thing), thing#get_parent)
-    | Prep_any -> (None, thing)
+    | Prep_any -> (None, (thing :> container))
 
 let rec object_desc_to_string desc =
   match desc with

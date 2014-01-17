@@ -91,7 +91,8 @@ class normal_player (cr : creature) (co : connection) =
             let (pos_opt, thing) = preposition_to_position (prep, desc_thing) in
             begin
               match pos_opt with
-              | Some pos -> Cmd_look_position (pos, ((look_for controllee desc) :> mud_object))
+              | Some pos ->
+                  Cmd_look_position (look_for controllee desc, pos)
               | None -> Cmd_look ((look_for controllee desc) :> mud_object)
             end
         | Player_take desc -> 
