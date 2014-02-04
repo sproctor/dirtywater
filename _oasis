@@ -4,6 +4,7 @@ Version:     0.1.1
 Synopsis:    MUD server
 Authors:     Sean Proctor, Mike MacHenry
 License:     LGPL-2.1 with OCaml linking exception
+Plugins:     DevFiles (0.3)
 
 Executable mud
   Path:       src

@@ -1,66 +1,38 @@
-VERSION = 0.1.1
+# OASIS_START
+# DO NOT EDIT (digest: bc1e05bfc8b39b664f29dae8dbd3ebbb)
 
-SOURCES := helpers.ml \
-           debug.ml \
-	   types.ml \
-	   mud_string.ml \
-	   base.ml \
-	   container.ml \
-	   time.ml \
-	   events.ml \
-	   parser.mly \
-	   lexer.mll \
-	   player_collection.ml \
-	   character.ml \
-	   character_collection.ml \
-	   location_collection.ml \
-	   connection_collection.ml \
-	   template_collection.ml \
-	   tangible.ml \
-           creature.ml \
-	   race.ml \
-	   race_collection.ml \
-	   location.ml \
-	   template.ml \
-	   ai.ml \
-	   player.ml \
-	   load.ml \
-	   connection.ml \
-	   scheduler.ml \
-	   server.ml \
-	   convenience.ml \
-	   main.ml \
-	   data/state/locations/rooms.ml \
-	   data/tangibles/items.ml \
-           data/races/human.ml
-RESULT = mud
-LIBS = unix str dynlink
-OCAMLBCFLAGS := -g -warn-error +a
-YFLAGS := -v
-#PACKS = pxp
-PACKS = extlib
-USE_CAMLP4 := yes
+SETUP = ocaml setup.ml
 
--include OCamlMakefile
+build: setup.data
+	$(SETUP) -build $(BUILDFLAGS)
 
-what:
-	echo $(DINCFLAGS)
+doc: setup.data build
+	$(SETUP) -doc $(DOCFLAGS)
 
-lines:
-	wc $(SOURCES) $(INTERFACES) $(OTHERSOURCES)
+test: setup.data build
+	$(SETUP) -test $(TESTFLAGS)
 
-print:
-	echo $(SOURCES) $(INTERFACES) $(OTHERSOURCES) | tr ' ' '\n' | sort | \
-	xargs a2ps $(A2PSOPTIONS)
+all: 
+	$(SETUP) -all $(ALLFLAGS)
 
-package: clean
-	(cp -r . ../mud-$(VERSION) && cd .. && tar -zcf mud-$(VERSION).tar.gz \
-	mud-$(VERSION) && rm -rf mud-$(VERSION))
+install: setup.data
+	$(SETUP) -install $(INSTALLFLAGS)
 
-clean:: clean-test
+uninstall: setup.data
+	$(SETUP) -uninstall $(UNINSTALLFLAGS)
 
-clean-test:
-	cd tests && $(MAKE) clean
+reinstall: setup.data
+	$(SETUP) -reinstall $(REINSTALLFLAGS)
 
-test:
-	cd tests && $(MAKE)
+clean: 
+	$(SETUP) -clean $(CLEANFLAGS)
+
+distclean: 
+	$(SETUP) -distclean $(DISTCLEANFLAGS)
+
+setup.data:
+	$(SETUP) -configure $(CONFIGUREFLAGS)
+
+.PHONY: build doc test all install uninstall reinstall clean distclean configure
+
+# OASIS_STOP
