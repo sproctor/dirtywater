@@ -130,10 +130,10 @@ let rec find_some (l : 'a option list) : 'a =
         | None -> find_some xs
         | Some a -> a)
 
-let rec map_to_stream (f : 'a -> 'b Stream.t) (l : 'a list) : 'b Stream.t =
+(*let rec map_to_stream (f : 'a -> 'b Stream.t) (l : 'a list) : 'b Stream.t =
   match l with
     | x::xs -> [< f x; map_to_stream f xs >]
-    | []    -> [< >]
+    | []    -> [< >]*)
 
 let rec stream_nth (n : int) (s : 'a Stream.t) : 'a option =
   try

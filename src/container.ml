@@ -77,24 +77,11 @@ class virtual simple_container =
     method get_contents (where : position option) : tangible list =
       match where with
       | Some pos ->
-          let rec relative_to thing =
-            let rec relative_helper content_list =
-               match content_list with
-               | (Under t, other)::rest when t == thing ->
-                   other::(relative_to other)@(relative_helper rest)
-               | (Behind t, other)::rest when t == thing ->
-                   other::(relative_to other)@(relative_helper rest)
-               | _::rest -> relative_helper rest
-               | [] -> []
-             in relative_helper contents
+          let compare_pos (p, t) =
+            if p = pos then Some t
+            else None
           in
-          let rec contents_helper content_list =
-            match content_list with
-            | (p, thing)::rest when p = pos ->
-                thing::(relative_to thing)@(contents_helper rest)
-            | _::rest -> contents_helper rest
-            | [] -> []
-          in contents_helper contents
+          map_some compare_pos contents
       | None -> List.map (fun (_, t) -> t) contents
 
     method view_contents (looker : creature) (where : position option)
