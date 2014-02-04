@@ -7,6 +7,6 @@ License:     LGPL-2.1 with OCaml linking exception
 
 Executable mud
   Path:       src
-  BuildDepends: extlib
   BuildTools: ocamlbuild
   MainIs:     main.ml
+  BuildDepends: unix, str, dynlink, extlib
