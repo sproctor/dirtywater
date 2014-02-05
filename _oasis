@@ -6,8 +6,14 @@ Authors:     Sean Proctor, Mike MacHenry
 License:     LGPL-2.1 with OCaml linking exception
 Plugins:     DevFiles (0.3)
 
-Executable mud
+Executable dirtywater
   Path:       src
   BuildTools: ocamlbuild
   MainIs:     main.ml
   BuildDepends: unix, str, dynlink, extlib
+
+Library template
+  Modules:    Template, Template_collection
+  Path:       src
+  BuildTools: ocamlbuild
+
