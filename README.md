@@ -1,21 +1,30 @@
 Welcome to Dirty Water
 ======================
 
-This code is availible from http://mud.rottenvegetable.org/
+This is a mud server written in OCaml.
 
-This is a mud server written in OCaml. To build to program run:
+You need to have oasis, ocaml, ocaml-lua, syck, and ocaml-syck installed.
 
+syck: https://github.com/indeyets/syck
+
+ocaml-syck: https://github.com/sproctor/ocaml-syck
+
+To build to program run:
+
+    oasis setup
+    ./configure
     make
 
 at the command line. The to run the server type:
 
-    mud [port] [--debug level]
+    mud [port] [-debug level]
 
 Port must be a valid port number which you have permission to open.
+
 level is a number between 0 and 10
 
 What do the different levels mean?
-----------------------------------
+
 * 0 - show only the most basic output (start/stop/fatal errors)
 * 1 - show important output (new character created, non-fatal errors)
 * 2 - show interesting ouput (player logged in or logged out)
@@ -34,4 +43,4 @@ You should get a login prompt. Valid logins are defined by the characters
 which exist in the game. if a name doesn't exist, one is created.
 
 Check the AUTHORS file for contact info
-Check the DOC directory for internal code documentation
+Check the docs directory for internal code documentation
