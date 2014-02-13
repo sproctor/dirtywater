@@ -223,8 +223,8 @@ and virtual location =
     method virtual relay_message : (tangible, creature) mud_string' -> unit
     method virtual add_portal : portal -> unit
     method virtual get_exit : tangible exit' -> portal option
-    method virtual get_description : creature ->
-        (tangible, creature) mud_string'
+    method virtual get_description : creature -> (tangible, creature) mud_string'
+    method virtual set_init : string -> unit
   end
 
 class virtual race =

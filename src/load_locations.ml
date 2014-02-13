@@ -28,9 +28,9 @@ open Load
 open Template
 open Base
 
-let rec parse_locations (node: YamlNode.t) =
+let rec parse_locations (node : YamlNode.t) (dir : string) =
   match node with
-  | YamlNode.SEQUENCE (_, nodes) -> List.iter parse_locations nodes
+  | YamlNode.SEQUENCE (_, nodes) -> List.iter (fun x -> parse_locations x dir) nodes
   | YamlNode.MAPPING (_, map) ->
       let parse_location = function
         | (YamlNode.SCALAR (_, "location"), YamlNode.MAPPING (_, values)) -> begin
@@ -38,6 +38,7 @@ let rec parse_locations (node: YamlNode.t) =
             let id = ref None in
             let title = ref None in
             let desc = ref None in
+            let init = ref "" in
             let portals = ref [] in
             let parse_value = function
               | (YamlNode.SCALAR (_, key), YamlNode.SCALAR (_, value)) -> begin
@@ -45,6 +46,7 @@ let rec parse_locations (node: YamlNode.t) =
                   | "id" -> id := Some (int_of_string value)
                   | "title" -> title := Some value
                   | "desc" -> desc := Some value
+                  | "init_file" -> init := load_file (dir ^ "/" ^ value)
                   | _ -> ()
                 end
               | (YamlNode.SCALAR (_, "portals"), node) -> begin
@@ -72,7 +74,8 @@ let rec parse_locations (node: YamlNode.t) =
               | _ -> () in
             List.iter parse_value values;
             try
-              ignore (Convenience.create_room (Option.get !id) (Option.get !title) (Option.get !desc) !portals);
+              let room = Convenience.create_room (Option.get !id) (Option.get !title) (Option.get !desc) !portals in
+              room # set_init !init;
               print_endline "added location"
             with Option.No_value -> ()
           end
@@ -81,13 +84,14 @@ let rec parse_locations (node: YamlNode.t) =
   | _ -> ()
 
 let load_locations () =
+  let dir = "data/locations" in
   let create_location (filename: string) =
     dlog 0 ("loading filename: " ^ filename ^ "\n");
     let p = YamlParser.make () in
     try
       let root = YamlParser.parse_string p (load_file filename) in
-      parse_locations root
+      parse_locations root dir
     with YamlParser.Error (msg) ->
       prerr_endline msg
   in
-  load_generic "data/locations" create_location
+  load_generic dir create_location

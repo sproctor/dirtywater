@@ -131,6 +131,9 @@ class simple_location (i : int) (t : string) (d : string) =
 
     method look_description looker = self#get_description looker
 
+    method set_init (script : string) : unit =
+      Script.run_location_script (self : #location :> location) script
+
     initializer
       locations#add id (self : #location :> location)
   end

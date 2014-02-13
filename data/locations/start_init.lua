@@ -1,2 +1,1 @@
-purge_all()
-add_tangible("table")
+print ("init starting room")
