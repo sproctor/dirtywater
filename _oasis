@@ -1,0 +1,13 @@
+OASISFormat:	0.3
+Name:		dirtywater
+Version:	0.1.1
+Synopsis:	MUD server
+Authors:	Sean Proctor, Mike MacHenry
+License:	LGPL-2.1 with OCaml linking exception
+Plugins:	DevFiles (0.3)
+
+Executable mud
+  Path:		src
+  BuildTools:	ocamlbuild
+  MainIs:	main.ml
+  BuildDepends:	unix, str, yaml, extlib, ocaml-lua

@@ -1,6 +1,6 @@
 (*pp camlp4o *)
 (*
- Copyright 2003 Sean Proctor, Mike MacHenry
+ Copyright 2014 Sean Proctor, Mike MacHenry
 
  This file is part of Dirty Water.
 
@@ -146,3 +146,31 @@ let option_to_list (o : 'a option) : 'a list =
   match o with
   | Some x -> [x]
   | None -> []
+
+(* Borrowed from http://rosettacode.org/wiki/Read_entire_file#OCaml *)
+let load_file f =
+  let ic = open_in f in
+  let n = in_channel_length ic in
+  let s = String.create n in
+  really_input ic s 0 n;
+  close_in ic;
+  (s)
+
+let rec print_node (depth: int) (node: YamlNode.t) =
+  for i = 1 to depth do print_string "    " done;
+  match node with
+  | YamlNode.SCALAR (uri, value) -> print_endline ("SCALAR (" ^ uri ^ ") " ^ value)
+  | YamlNode.SEQUENCE (uri, nodes) ->
+      print_endline ("SEQUENCE (" ^ uri ^ ")");
+      List.iter (print_node (depth + 1)) nodes
+  | YamlNode.MAPPING (uri, map) ->
+      print_endline ("MAPPING (" ^ uri ^ ")");
+      let print_mapping (key, value) =
+        for i = 1 to depth + 1 do print_string "    " done;
+        print_endline "MAPPING A:";
+        print_node (depth + 1) key;
+        for i = 1 to depth + 1 do print_string "    " done;
+        print_endline "MAPPING B:";
+        print_node (depth + 1) value in
+      List.iter print_mapping map
+

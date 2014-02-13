@@ -19,26 +19,22 @@
  *)
 
 (*
-   load.ml: this file contains the generic functions to load the XML files
+   load.ml: this file contains the generic function to load the data files
 *)
 
 open Unix
 
-let rec load_dynamic prefix load_function =
+let rec load_generic prefix load_function =
   let dir = opendir prefix in
   let rec get_files () =
     try
       let n = readdir dir in
       let name = Filename.concat prefix n in
-      if (stat name).st_kind = S_DIR && String.get n 0 <> '.' then
-        (load_dynamic name load_function;
-        get_files ())
-      else
-        (Filename.concat prefix n)::(get_files ())
+      name :: (get_files ())
     with End_of_file -> [] in
   let filenames = get_files () in
   let filter_name str =
     ((stat str).st_kind <> S_DIR)
-      && (Filename.check_suffix str ".cmo") in
+      && (Filename.check_suffix str ".yaml") in
   List.iter (function str -> load_function str)
     (List.filter filter_name filenames)

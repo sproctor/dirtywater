@@ -33,7 +33,7 @@ let log_channel = ref stdout
 (* ... set the log file *)
 let set_log_file (str : string) : unit =
   log_channel := open_out str;
-  print_string ("writing to " ^ str); print_newline ()
+  print_endline ("writing to " ^ str)
 
 (* log the string if if the verbosity is at least d_level *)
 let dlog (d_level : int) (str : string) =
