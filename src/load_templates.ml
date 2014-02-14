@@ -51,7 +51,7 @@ let rec parse_template (node: YamlNode.t) =
             List.iter parse_value values;
             try
               let template = new simple_template [] (Option.get !noun) (Option.get !sdesc) (Option.get !ldesc) in
-              Template_collection.templates # add (Option.get !id) template;
+              Templates.add (Option.get !id) template;
               print_endline "added item"
             with Option.No_value -> ()
           end

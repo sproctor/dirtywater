@@ -21,22 +21,14 @@
 (* template_collection.ml: contains the list of templates *)
 open Types
 
-class template_collection =
-  object (self)
-    val mutable templates : (string * tangible_template) list = []
+let templates : (string * tangible_template) list ref = ref []
 
-    method add id template =
-      templates <- (id, template)::templates
+let add id template =
+  templates := (id, template) :: !templates
 
-    method get (id : string) =
-      List.assoc id templates
+let get (id : string) =
+  List.assoc id !templates
 
-    method create_tangible (template_id : string) (con : container)
-        (where : position) : tangible =
-      let thing = (self#get template_id)#create_tangible con in
-      con#add thing where;
-      thing
-
-  end
-
-let templates = new template_collection
+let add_tangible (template_id : string) (con : container) (where : position) : unit =
+  let thing = (get template_id) # create_tangible con in
+  con # add thing where
