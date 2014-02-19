@@ -29,7 +29,7 @@
 
 open Types
 open Character
-open Debug
+open Base
 
 class simple_ai (cr : creature) =
   object (self)

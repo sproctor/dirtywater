@@ -55,16 +55,18 @@ class virtual base_tangible =
       end
   end
 
-class virtual described_tangible (a : string list) (n : string) (sd : string)
-    (ld : string) (p : container) =
+class actual_tangible (a : string list) (n : string) (sd : string)
+    (ld : string) (p : container) (cs : position list) =
   object (self)
     inherit base_tangible
+    inherit simple_container
 
     val name = n
     val adjs = a
     val short_desc = sd
     val long_desc = ld
     val mutable parent : container = p
+    val containers = cs
 
     method private set_parent p = parent <- p
 
@@ -95,31 +97,15 @@ class virtual described_tangible (a : string list) (n : string) (sd : string)
 
     method send_message msg = ()
 
-  end
-
-class simple_tangible (a : string list) (n : string) (sd : string)
-    (ld : string) (p : container) =
-  object (self)
-    inherit described_tangible a n sd ld p
-    inherit noncontainer
-
     method look_position_description looker where =
-      MudString ("The " ^ self#get_name ^ " cannot contain anything.")
-
-  end
-
-class simple_tangible_container (a : string list) (n : string) (sd : string)
-    (ld : string) (p : container) =
-  object (self)
-    inherit described_tangible a n sd ld p
-    inherit simple_container
-
-    method look_position_description looker where =
-      let things = self#view_contents looker (Some where) in
-      let descs = List.map (fun t -> t#short_description looker) things in
-      MudStringList (SeparatorNewline,
-          [MudString ("On the " ^ self#get_name ^ " you see:");
-            MudStringList (SeparatorComma, descs)])
+      if not (List.mem where containers) then
+        MudString ("The " ^ self#get_name ^ " cannot contain anything there.")
+      else
+        let things = self#view_contents looker (Some where) in
+        let descs = List.map (fun t -> t#short_description looker) things in
+        MudStringList (SeparatorNewline,
+            [MudString ("On the " ^ self#get_name ^ " you see:");
+              MudStringList (SeparatorComma, descs)])
 
   end
 

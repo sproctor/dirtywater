@@ -25,7 +25,7 @@
 *)
 
 open Helpers
-open Debug
+open Base
 open Types
 open Character_collection
 open Location_collection

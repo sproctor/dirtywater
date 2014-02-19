@@ -25,7 +25,7 @@
 *)
 
 open Types
-open Debug
+open Base
 open Character
 
 class character_collection =

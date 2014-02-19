@@ -163,3 +163,27 @@ let string_of_cmd cmd =
   | Cmd_drop _ -> "drop"
   | Cmd_inventory -> "inventory"
   | Cmd_say _ -> "say"
+
+let ignore_tangible (_ : tangible) = ()
+
+let debug_level = ref 0
+
+(* ... set the debug/verbosity level *)
+let set_debug (n : int) : unit =
+  debug_level := n
+
+let log_channel = ref stdout
+
+(* ... set the log file *)
+let set_log_file (str : string) : unit =
+  log_channel := open_out str;
+  print_endline ("writing to " ^ str)
+
+(* log the string if if the verbosity is at least d_level *)
+let dlog (d_level : int) (str : string) =
+  if d_level <= !debug_level then
+    begin
+      output_string !log_channel (str ^ "\n");
+      flush !log_channel
+    end
+

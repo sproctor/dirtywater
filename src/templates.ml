@@ -29,6 +29,7 @@ let add id template =
 let get (id : string) =
   List.assoc id !templates
 
-let add_tangible (template_id : string) (con : container) (where : position) : unit =
+let put_tangible (template_id : string) (con : container) (where : position) : tangible =
   let thing = (get template_id) # create_tangible con in
-  con # add thing where
+  con # add thing where;
+  thing

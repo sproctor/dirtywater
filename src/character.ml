@@ -30,7 +30,7 @@
  *)
 
 open Types
-open Debug
+open Base
 open Helpers
 open Creature
 open Race

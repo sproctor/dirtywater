@@ -26,7 +26,6 @@ open Types
 open Helpers
 open Base
 open Tangible
-open Debug
 open Container
 open Time
 open Events
@@ -48,7 +47,7 @@ class bodypart (t : bodypart_type) (c : container) =
   let desc = String.concat " " (adjs@[name]) in
   object (self)
 
-    inherit simple_tangible adjs name desc desc c
+    inherit actual_tangible adjs name desc desc c []
 
     val my_type : bodypart_type = t
 

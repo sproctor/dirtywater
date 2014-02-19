@@ -22,7 +22,7 @@
    load.ml: this file contains the generic function to load the data files
 *)
 
-open Debug
+open Base
 open Helpers
 open Load
 open Template
@@ -50,7 +50,7 @@ let rec parse_template (node: YamlNode.t) =
               | _ -> () in
             List.iter parse_value values;
             try
-              let template = new simple_template [] (Option.get !noun) (Option.get !sdesc) (Option.get !ldesc) in
+              let template = new tangible_template [] (Option.get !noun) (Option.get !sdesc) (Option.get !ldesc) [] in
               Templates.add (Option.get !id) template;
               print_endline "added item"
             with Option.No_value -> ()

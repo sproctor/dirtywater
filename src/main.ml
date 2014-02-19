@@ -26,7 +26,7 @@
    usage messages, versioning information, and help messages.
 *)
 
-open Debug
+open Base
 open Scheduler
 open Server
 

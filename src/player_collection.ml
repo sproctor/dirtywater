@@ -24,7 +24,7 @@
 *)
 
 open Types
-open Debug
+open Base
 
 class player_collection =
   object

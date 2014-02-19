@@ -25,7 +25,7 @@
 *)
 
 open Time
-open Debug
+open Base
 
 class timed_event_list =
   object (self)

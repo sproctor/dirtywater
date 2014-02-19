@@ -22,7 +22,6 @@
    load.ml: this file contains the generic function to load the data files
 *)
 
-open Debug
 open Helpers
 open Load
 open Template

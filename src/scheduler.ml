@@ -25,7 +25,7 @@
    The scheduler is also incharge of invoking delayed effects which are to
    be executed some time in the future. *)
 
-open Debug
+open Base
 open Time
 open Events
 open Player_collection

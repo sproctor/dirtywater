@@ -24,40 +24,15 @@ open Types
 open Tangible
 open Helpers
 
-class simple_template (a : string list) (n : string) (s : string) (l : string) =
+class tangible_template (a : string list) (n : string) (s : string) (l : string) (cs : position list) =
   object (self)
-    inherit tangible_template
-
     val adjs : string list = a
     val name : string = n
     val sdesc : string = s
     val ldesc : string = l
+    val cons = cs
 
     method create_tangible (con : container) : tangible =
-      new simple_tangible adjs name sdesc ldesc con
+      ((new actual_tangible adjs name sdesc ldesc con cons) : #tangible :> tangible)
 
-  end
-
-class container_template (a : string list) (n : string) (s : string) (l : string) =
-  object (self)
-    inherit tangible_template
-
-    val adjs : string list = a
-    val name : string = n
-    val sdesc : string = s
-    val ldesc : string = l
-
-    method create_tangible (con : container) : tangible =
-      new simple_tangible_container adjs name sdesc ldesc con
-
-  end
-
-class generic_tangible_template (f : container -> tangible) =
-  object (self)
-    inherit tangible_template
-
-    val factory = f
-
-    method create_tangible (con : container) : tangible =
-      factory con
   end
