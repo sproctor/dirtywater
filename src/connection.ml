@@ -27,9 +27,6 @@
 open Helpers
 open Debug
 open Types
-open Character
-open Player
-open Connection_collection
 open Character_collection
 open Location_collection
 
@@ -60,7 +57,7 @@ class telnet_connection s =
     method close () : unit =
       dlog 4 "closing connection...";
       Unix.close sock;
-      connections#remove (self : #connection :> connection);
+      Connections.remove (self : #connection :> connection);
       dlog 4 "closed down connection";
 
     method private step_login cmd lstate =
@@ -88,11 +85,11 @@ class telnet_connection s =
           c
         with _ -> (
             dlog 4 ("Creating character: " ^ Option.get lstate.name);
-            make_character (Option.get lstate.name) (Option.get lstate.password)
+            Player.make_character (Option.get lstate.name) (Option.get lstate.password)
             ) in
         dlog 4 "creating creature";
         let cr = ch#create_creature ((locations#get 1001) :> container) in
-        let p = new normal_player cr (self : #connection :> connection) in
+        let p = new Player.normal_player cr (self : #connection :> connection) in
         state <- Playing p
       )
     method input () : unit =
@@ -129,7 +126,7 @@ class telnet_connection s =
       (*out_buffer <- out_buffer ^ str;*)
       let len = String.length str in
       if len > 10000 then self#close ()
-      else ignore (Unix.write sock (ascii_to_telnet str) 0 len)
+      else ignore_int (Unix.write sock (ascii_to_telnet str) 0 len)
     initializer
       self#output "Welcome. What name do you go by? "
   end

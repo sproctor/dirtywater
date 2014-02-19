@@ -26,16 +26,19 @@
 
 open Types
 
-class connection_collection =
-  object
-    val mutable connections : connection list = []
-    method get_descriptors = List.map (fun x -> x#get_descriptor) connections
-    method add c = connections <- c::connections
-    method remove c = connections <- List.filter ((!=) c) connections
-    method do_input descriptors =
-      List.iter (fun x -> x#input ()) (List.filter (fun x -> List.exists
-            ((=) x#get_descriptor) descriptors) connections)
-    method disconnect_all () = List.iter (fun x -> x#close ()) connections
-  end
+let connections : connection list ref = ref []
 
-let connections = new connection_collection
+let get_descriptors () =
+  List.map (fun x -> x#get_descriptor) !connections
+
+let add c =
+  connections := c :: !connections
+
+let remove c =
+  connections := List.filter ((!=) c) !connections
+
+let do_input descriptors =
+  List.iter (fun x -> x#input ())
+    (List.filter (fun x -> List.exists ((=) x#get_descriptor) descriptors) !connections)
+
+let disconnect_all () = List.iter (fun x -> x#close ()) !connections

@@ -25,8 +25,6 @@
    get controllers and are set to control a character in the game. *)
 
 open Types
-open Connection
-open Connection_collection
 open Helpers
 open Debug
 
@@ -35,8 +33,8 @@ let max_pending = 3
 
 (* logs a user in and creates a controller of a character with the chanels *)
 let establish_connection ((sock : Unix.file_descr), (caller : Unix.sockaddr)) =
-  let conn = new telnet_connection sock in
-  connections#add (conn :> connection)
+  let conn = new Connection.telnet_connection sock in
+  Connections.add (conn :> connection)
 
 (* start up the server to accept connections *)
 let start_server port =
@@ -54,15 +52,15 @@ let start_server port =
    ones on sock, and processes the appropriate input *)
 let iterate_server sock delay =
   let (in_descriptors, _, _) =
-    Unix.select (sock::connections#get_descriptors) [] [] delay in
+    Unix.select (sock :: (Connections.get_descriptors ())) [] [] delay in
   if List.exists ((=) sock) in_descriptors then begin
     establish_connection (Unix.accept sock);
     dlog 4 "got a new connection"
   end;
-  connections#do_input in_descriptors
+  Connections.do_input in_descriptors
 
 (* disconnects all connections and stops new connections *)
 let disconnect sock =
-  connections#disconnect_all ();
+  Connections.disconnect_all ();
   Unix.close sock;
   dlog 0 "Stopping the connection server"
