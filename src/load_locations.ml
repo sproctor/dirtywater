@@ -26,6 +26,7 @@ open Helpers
 open Load
 open Template
 open Base
+open Types
 
 let rec parse_locations (node : YamlNode.t) (dir : string) =
   match node with
@@ -37,7 +38,7 @@ let rec parse_locations (node : YamlNode.t) (dir : string) =
             let id = ref None in
             let title = ref None in
             let desc = ref None in
-            let init = ref "" in
+            let init = ref None in
             let portals = ref [] in
             let parse_value = function
               | (YamlNode.SCALAR (_, key), YamlNode.SCALAR (_, value)) -> begin
@@ -45,7 +46,7 @@ let rec parse_locations (node : YamlNode.t) (dir : string) =
                   | "id" -> id := Some (int_of_string value)
                   | "title" -> title := Some value
                   | "desc" -> desc := Some value
-                  | "init_file" -> init := load_file (dir ^ "/" ^ value)
+                  | "init_file" -> init := Some (Script_file (dir ^ "/" ^ value))
                   | _ -> ()
                 end
               | (YamlNode.SCALAR (_, "portals"), node) -> begin
@@ -74,7 +75,11 @@ let rec parse_locations (node : YamlNode.t) (dir : string) =
             List.iter parse_value values;
             try
               let room = Convenience.create_room (Option.get !id) (Option.get !title) (Option.get !desc) !portals in
-              room # set_init !init;
+              (
+                match !init with
+                | Some script -> room # set_init script
+                | None -> ()
+              );
               print_endline "added location"
             with Option.No_value -> ()
           end

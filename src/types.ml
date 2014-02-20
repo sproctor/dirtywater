@@ -151,6 +151,10 @@ type 'tangible inventory' = (bodypart_type * 'tangible position'
       * 'tangible list)
     list
 
+type script =
+  | Script_string of string
+  | Script_file of string
+
 class virtual mud_object =
   object
     method virtual look_description : creature
@@ -224,7 +228,7 @@ and virtual location =
     method virtual add_portal : portal -> unit
     method virtual get_exit : tangible exit' -> portal option
     method virtual get_description : creature -> (tangible, creature) mud_string'
-    method virtual set_init : string -> unit
+    method virtual set_init : script -> unit
   end
 
 class virtual race =

@@ -18,6 +18,7 @@ let purge_location (ls : Lua.state) : int =
 
 let add_tangible (ls : Lua.state) : int =
   let argc = Lua.gettop ls in
+  dlog 0 "running add_tangible";
   if argc < 1 then (
     dlog 0 "Not enough arguments to \"add_tangible\"";
     0
@@ -31,6 +32,7 @@ let add_tangible (ls : Lua.state) : int =
   
 let container_add_on (ls : Lua.state) : int =
   let argc = Lua.gettop ls in
+  dlog 0 "running container_add_on";
   if argc < 2 then (
     dlog 0 "Not enough arguments to \"container_add_on\"";
     0
@@ -55,7 +57,7 @@ let container_add_on (ls : Lua.state) : int =
     0
   )
 
-let run_location_script (loc : location) (script : string) =
+let run_location_script (loc : location) (script : script) =
   let ls = LuaL.newstate () in
   LuaL.openlibs ls;
   Lua.register ls "purge" purge_location;
@@ -63,7 +65,15 @@ let run_location_script (loc : location) (script : string) =
   Lua.register ls "container_add_on" container_add_on;
   Lua.pushlightuserdata ls loc;
   Lua.setglobal ls "self";
-  if LuaL.dostring ls script then
+  let result =
+    match script with
+    | Script_string s -> LuaL.dostring ls s
+    | Script_file f -> LuaL.dofile ls f
+  in
+  if result then (
     dlog 4 "ran script"
-  else
-    dlog 0 ("Script failed!! script: " ^ script)
+  ) else (
+    dlog 0 "Script failed!!";
+    let error_message = Option.get (Lua.tostring ls (-1)) in
+    dlog 0 ("Error message: " ^ error_message)
+  )
