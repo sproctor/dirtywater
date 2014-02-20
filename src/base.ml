@@ -186,4 +186,3 @@ let dlog (d_level : int) (str : string) =
       output_string !log_channel (str ^ "\n");
       flush !log_channel
     end
-

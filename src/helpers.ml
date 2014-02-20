@@ -114,22 +114,25 @@ let load_file f =
   close_in ic;
   (s)
 
-let rec print_node (depth: int) (node: YamlNode.t) =
-  for i = 1 to depth do print_string "    " done;
-  match node with
-  | YamlNode.SCALAR (uri, value) -> print_endline ("SCALAR (" ^ uri ^ ") " ^ value)
-  | YamlNode.SEQUENCE (uri, nodes) ->
-      print_endline ("SEQUENCE (" ^ uri ^ ")");
-      List.iter (print_node (depth + 1)) nodes
-  | YamlNode.MAPPING (uri, map) ->
-      print_endline ("MAPPING (" ^ uri ^ ")");
-      let print_mapping (key, value) =
-        for i = 1 to depth + 1 do print_string "    " done;
-        print_endline "MAPPING A:";
-        print_node (depth + 1) key;
-        for i = 1 to depth + 1 do print_string "    " done;
-        print_endline "MAPPING B:";
-        print_node (depth + 1) value in
-      List.iter print_mapping map
+let print_node (n: YamlNode.t) =
+  let rec helper depth node =
+    for i = 1 to depth do print_string "    " done;
+    match node with
+    | YamlNode.SCALAR (uri, value) -> print_endline ("SCALAR (" ^ uri ^ ") " ^ value)
+    | YamlNode.SEQUENCE (uri, nodes) ->
+        print_endline ("SEQUENCE (" ^ uri ^ ")");
+        List.iter (helper (depth + 1)) nodes
+    | YamlNode.MAPPING (uri, map) ->
+        print_endline ("MAPPING (" ^ uri ^ ")");
+        let print_mapping (key, value) =
+          for i = 1 to depth + 1 do print_string "    " done;
+          print_endline "MAPPING A:";
+          helper (depth + 1) key;
+          for i = 1 to depth + 1 do print_string "    " done;
+          print_endline "MAPPING B:";
+          helper (depth + 1) value in
+        List.iter print_mapping map
+  in
+  helper 0 n
 
 let ignore_int (_ : int) : unit = ()

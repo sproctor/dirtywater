@@ -76,7 +76,6 @@ let load_templates () =
     let p = YamlParser.make () in
     try
       let root = YamlParser.parse_string p (load_file filename) in
-      print_node 0 root;
       parse_template root
     with YamlParser.Error (msg) ->
       prerr_endline msg
