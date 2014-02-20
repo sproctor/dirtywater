@@ -21,7 +21,7 @@
 (* template_collection.ml: contains the list of templates *)
 open Types
 
-let templates : (string * tangible_template) list ref = ref []
+let templates : (string * Template.tangible_template) list ref = ref []
 
 let add id template =
   templates := (id, template) :: !templates

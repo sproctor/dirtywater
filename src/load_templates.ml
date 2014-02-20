@@ -26,6 +26,7 @@ open Base
 open Helpers
 open Load
 open Template
+open Types
 
 let rec parse_template (node: YamlNode.t) =
   match node with
@@ -38,7 +39,9 @@ let rec parse_template (node: YamlNode.t) =
             let noun = ref None in
             let sdesc = ref None in
             let ldesc = ref None in
-            let parse_value = function
+            let containers = ref [] in
+            let parse_value = (
+              function
               | (YamlNode.SCALAR (_, key), YamlNode.SCALAR (_, value)) -> begin
                   match key with
                   | "id" -> id := Some value
@@ -47,10 +50,18 @@ let rec parse_template (node: YamlNode.t) =
                   | "ldesc" -> ldesc := Some value
                   | _ -> ()
                 end
-              | _ -> () in
+              | (YamlNode.SCALAR (_, "containers"), YamlNode.SEQUENCE (_, cs)) ->
+                  let parse_container = function
+                    | YamlNode.SCALAR (_, "on") -> containers := On :: !containers
+                    | YamlNode.SCALAR (_, "in") -> containers := In :: !containers
+                    | _ -> ()
+                  in
+                  List.iter parse_container cs
+              | _ -> ()
+            ) in
             List.iter parse_value values;
             try
-              let template = new tangible_template [] (Option.get !noun) (Option.get !sdesc) (Option.get !ldesc) [] in
+              let template = new tangible_template [] (Option.get !noun) (Option.get !sdesc) (Option.get !ldesc) !containers in
               Templates.add (Option.get !id) template;
               print_endline "added item"
             with Option.No_value -> ()
@@ -65,6 +76,7 @@ let load_templates () =
     let p = YamlParser.make () in
     try
       let root = YamlParser.parse_string p (load_file filename) in
+      print_node 0 root;
       parse_template root
     with YamlParser.Error (msg) ->
       prerr_endline msg

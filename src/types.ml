@@ -237,11 +237,6 @@ class virtual race =
     method virtual get_name : string
   end
 
-class virtual tangible_template =
-  object
-    method virtual create_tangible : container -> tangible
-  end
-
 class virtual player =
   object
     inherit controller
