@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
-<!DOCTYPE location SYSTEM "location.dtd">
-<location id="1003">
-  <title>Third Room</title>
-  <description>This is a dark, mysterious room, you can't tell much about it</description>
-  <portal direction="sw" destination="1002" />
-</location>

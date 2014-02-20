@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
-<!DOCTYPE location SYSTEM "location.dtd">
-<location id="1001">
-  <title>Starting Room</title>
-  <description>...with a simple description</description>
-  <portal direction="north" destination="1002" />
-  <tangible id="1001" />
-</location>

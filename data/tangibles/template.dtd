@@ -1,9 +1,0 @@
-<!ELEMENT object (name,adjective*,sdesc,ldesc)>
-<!ATTLIST object id CDATA #REQUIRED>
-<!ELEMENT name (#PCDATA)>
-<!ELEMENT adjective (#PCDATA)>
-<!ATTLIST adjective
-	direction CDATA #IMPLIED
-	object CDATA #IMPLIED
-	destination CDATA #REQUIRED><!ELEMENT sdesc (#PCDATA)>
-<!ELEMENT ldesc (#PCDATA)>

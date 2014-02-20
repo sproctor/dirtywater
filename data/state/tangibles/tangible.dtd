@@ -1,4 +1,0 @@
-<!ELEMENT tangible (template)>
-<!ATTLIST tangible id CDATA #REQUIRED>
-<!ELEMENT template (#PCDATA)>
-<!ATTLIST template id CDATA #REQUIRED>
