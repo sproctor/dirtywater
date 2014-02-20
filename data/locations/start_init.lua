@@ -1,4 +1,4 @@
 purge ()
 local table = add_tangible ("table")
-add_tangible ("rock")
-container_add_on (table, "plate")
+local plate = container_add_on (table, "plate")
+item_add_under (plate, "mat")
