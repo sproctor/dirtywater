@@ -55,9 +55,9 @@ let rec concat (sep: separator_type) (strs: mud_string list) : mud_string =
 let to_string (looker: creature) (str: mud_string) : string =
   let rec to_string_helper (fg: color) (bg: color) (str: mud_string) : string =
     match str with
-      | MudStringNone -> ""
-      | MudString s -> s
-      | MudStringMode (code, s) ->
+      | Mudstring_none -> ""
+      | Mudstring s -> s
+      | Mudstring_mode (code, s) ->
           let codify c = "\027[" ^ (string_of_int c) ^ "m" in
           let color_to_int color =
             match color with
@@ -76,26 +76,28 @@ let to_string (looker: creature) (str: mud_string) : string =
                 ^ (to_string_helper c bg s) ^ (codify (color_to_int fg + 30))
             | Background c -> (codify (color_to_int c + 40))
                 ^ (to_string_helper fg c s) ^ (codify (color_to_int bg + 40)))
-      | MudStringMeta (d, s) -> (match d with
-          | MetaRoomTitle -> to_string_helper fg bg (MudStringMode
-                (Foreground Green, MudStringList (SeparatorNone,
-                    [MudString "["; s; MudString "]"])))
-          | MetaRoomContents -> "Also here: " ^ (to_string_helper fg bg s)
-          | MetaRoomExits -> "Exits: " ^ (to_string_helper fg bg s)
-          | MetaPrompt -> "> " ^ (to_string_helper fg bg s)
+      | Mudstring_meta (d, s) -> (match d with
+          | Meta_room_title -> to_string_helper fg bg (Mudstring_mode
+                (Foreground Green, Mudstring_list (Separator_none,
+                    [Mudstring "["; s; Mudstring "]"])))
+          | Meta_room_contents -> "Also here: " ^ (to_string_helper fg bg s)
+          | Meta_room_exits -> "Exits: " ^ (to_string_helper fg bg s)
+          | Meta_prompt -> "> " ^ (to_string_helper fg bg s)
           | _ -> to_string_helper fg bg s)
-      | MudStringList (_, []) -> ""
-      | MudStringList (_, [s]) -> to_string_helper fg bg s
-      | MudStringList (how, s::l) -> (to_string_helper fg bg s)
-          ^ (match how with
-              | SeparatorNone -> ""
-              | SeparatorNewline -> "\r\n"
-              | SeparatorSpace -> " "
-              | SeparatorDefault -> "\r\n"
-              | SeparatorComma -> if List.length l = 1 then ", and " else ", ")
-          ^ (to_string_helper fg bg (MudStringList (how, l)))
-      | MudStringCondition (c, s1, s2) -> if looker == c
+      | Mudstring_list (_, []) -> ""
+      | Mudstring_list (_, [s]) -> to_string_helper fg bg s
+      | Mudstring_list (how, s::l) ->
+        if s = Mudstring_none then
+          to_string_helper fg bg (Mudstring_list (how, l))
+        else
+          let sep = match how with
+            | Separator_none -> ""
+            | Separator_newline -> "\r\n"
+            | Separator_space -> " "
+            | Separator_comma -> if List.length l = 1 then ", and " else ", " in
+          (to_string_helper fg bg s) ^ sep ^ (to_string_helper fg bg (Mudstring_list (how, l)))
+      | Mudstring_condition (c, s1, s2) -> if looker == c
           then to_string_helper fg bg s1
           else to_string_helper fg bg s2
-      | MudStringName o -> to_string_helper fg bg (o#short_description looker)
+      | Mudstring_name o -> to_string_helper fg bg (o#short_description looker)
     in to_string_helper Normal Normal str

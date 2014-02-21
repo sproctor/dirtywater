@@ -30,11 +30,11 @@ let direction_list = [
     (Down, "down");
     (East, "east");
     (North, "north");
-    (NorthEast, "northeast");
-    (NorthWest, "northwest");
+    (Northeast, "northeast");
+    (Northwest, "northwest");
     (South, "south");
-    (SouthEast, "southeast");
-    (SouthWest, "southwest");
+    (Southeast, "southeast");
+    (Southwest, "southwest");
     (Up, "up");
     (West, "west");
   ]
@@ -43,15 +43,15 @@ let direction_lookup_list = [
     ("down", Down);
     ("east", East);
     ("north", North);
-    ("northeast", NorthEast);
-    ("ne", NorthEast);
-    ("northwest", NorthWest);
-    ("nw", NorthWest);
+    ("northeast", Northeast);
+    ("ne", Northeast);
+    ("northwest", Northwest);
+    ("nw", Northwest);
     ("south", South);
-    ("southeast", SouthEast);
-    ("se", SouthEast);
-    ("southwest", SouthWest);
-    ("sw", SouthWest);
+    ("southeast", Southeast);
+    ("se", Southeast);
+    ("southwest", Southwest);
+    ("sw", Southwest);
     ("up", Up);
     ("west", West);
   ]
@@ -98,9 +98,9 @@ let preposition_to_position ((prep : preposition), (thing : tangible))
 
 let rec object_desc_to_string desc =
   match desc with
-      ObjectDesc (next, prep, noun) -> object_desc_to_string next ^ " "
+      Object_desc (next, prep, noun) -> object_desc_to_string next ^ " "
           ^ preposition_to_string prep ^ " " ^ noun_desc_to_string noun
-    | ObjectDescBase noun -> noun_desc_to_string noun
+    | Object_desc_base noun -> noun_desc_to_string noun
 
 let string_of_position (pos : position) =
   match pos with
@@ -139,8 +139,8 @@ let bodypart_type_of_string (part : string) (s : string option)
   else assert false
 
 let emote_lookup = [
-    ("quietly", EmoteQuietly);
-    ("loudly", EmoteLoudly);
+    ("quietly", Emote_quietly);
+    ("loudly", Emote_loudly);
   ]
 
 let string_to_emote str =

@@ -84,18 +84,18 @@ class base_creature (n : string) (c : container) =
       else if starts_with name sname then true
       else false
 
-    method short_description looker = MudString name
+    method short_description looker = Mudstring name
 
     method look_description looker =
-      MudString name (* TODO: view contents here *)
+      Mudstring name (* TODO: view contents here *)
 
     method look_position_description looker where =
-      MudString name (* TODO: implement this funtion *)
+      Mudstring name (* TODO: implement this funtion *)
 
     (* called to set some controller to be in control of this character *)
     method set_controller (c : controller) =
       ctrl <- c;
-      ctrl#send_message (MudStringMeta (MetaInit, MudStringNone))
+      ctrl#send_message (Mudstring_meta (Meta_init, Mudstring_none))
 
     (* called to pick up an object *)
     method take (thing : tangible) =
@@ -121,12 +121,12 @@ class base_creature (n : string) (c : container) =
       dlog 4 ("creature is picking up " ^ (thing#to_string));
       take_one_handed (hands :> container list);
       dlog 4 "and got it.";
-      (self#get_location)#relay_message (MudStringCondition
-          ((self: #creature :> creature), MudStringList (SeparatorNone,
-            [MudString "You pick up the "; MudStringName thing]),
-          MudStringList (SeparatorNone,
-            [MudStringName (self: #creature :> tangible);
-            MudString " picked up the "; MudStringName thing])))
+      (self#get_location)#relay_message (Mudstring_condition
+          ((self: #creature :> creature), Mudstring_list (Separator_none,
+            [Mudstring "You pick up the "; Mudstring_name thing]),
+          Mudstring_list (Separator_none,
+            [Mudstring_name (self: #creature :> tangible);
+            Mudstring " picked up the "; Mudstring_name thing])))
 
     method drop (thing : tangible) =
       (* FIXME: if two hands share a container to hold something,
@@ -141,11 +141,11 @@ class base_creature (n : string) (c : container) =
       if hand_containers = []
         then raise (Command_error "You aren't holding that.");
       thing#move (self :> creature) ((self#get_location) :> container) On;
-      (self#get_location)#relay_message (MudStringCondition
-          ((self: #creature :> creature), MudStringList (SeparatorNone,
-            [MudString "You drop the "; MudStringName thing]), MudStringList
-              (SeparatorNone, [MudStringName (self: #creature :> tangible);
-              MudString " dropped the "; MudStringName thing])))
+      (self#get_location)#relay_message (Mudstring_condition
+          ((self: #creature :> creature), Mudstring_list (Separator_none,
+            [Mudstring "You drop the "; Mudstring_name thing]), Mudstring_list
+              (Separator_none, [Mudstring_name (self: #creature :> tangible);
+              Mudstring " dropped the "; Mudstring_name thing])))
 
     method get_inventory (looker : creature) : inventory =
       let bp_inventory (bp : bodypart) =
@@ -187,15 +187,15 @@ class base_creature (n : string) (c : container) =
       dlog 3 ("someone is waiting until " ^ string_of_int end_time);
       dlog 3 ("it is now: " ^ string_of_int (get_time ()));
       let wait_thunk () =
-        self#send_message (MudStringMeta (MetaWaitDone time, MudString
+        self#send_message (Mudstring_meta (Meta_wait_done time, Mudstring
           ("After " ^ string_of_int time ^ " you grow tired of waiting."))) in
       event_list#register_event wait_thunk end_time;
-      MudString "You begin waiting."
+      Mudstring "You begin waiting."
 
     method private do_move (p : portal) : mud_string =
       if p#can_pass (self :> tangible) then
         self#move (self :> creature) (p#dest :> container) On;
-      MudStringList (SeparatorNone, [(MudString "You start walking...");
+      Mudstring_list (Separator_none, [(Mudstring "You start walking...");
         (self#do_look (self#get_location :> mud_object))])
 
     method private do_look (target : mud_object) : mud_string =
@@ -207,41 +207,41 @@ class base_creature (n : string) (c : container) =
 
     method private do_inventory () : mud_string =
       let inv_to_mud_string_list (stuff : tangible list) =
-        MudStringList (SeparatorComma, List.map
-            (function x -> MudStringName x) stuff) in
+        Mudstring_list (Separator_comma, List.map
+            (function x -> Mudstring_name x) stuff) in
       let inv : inventory = self#get_inventory (self : #creature :> creature) in
       let wearing = List.flatten (List.map (fun (_, _, x) -> x) (List.filter
             (fun (_, x, _) -> x <> In) inv)) in
       let carrying = List.flatten (List.map (fun (_, _, x) -> x)
           (List.filter (function (Hand _, In, _) -> true | _ -> false) inv)) in
       let carrying_string = if carrying <> []
-        then MudStringList (SeparatorNone, [MudString "You are carrying ";
+        then Mudstring_list (Separator_none, [Mudstring "You are carrying ";
            inv_to_mud_string_list carrying]) 
-        else MudStringNone in
-      let wearing_string = MudStringList (SeparatorNewline,
-        [MudString "You are wearing:";
+        else Mudstring_none in
+      let wearing_string = Mudstring_list (Separator_newline,
+        [Mudstring "You are wearing:";
         if wearing <> [] then inv_to_mud_string_list wearing
-          else MudString "nothing"]) in
-      MudStringList (SeparatorNewline, [carrying_string; wearing_string])
+          else Mudstring "nothing"]) in
+      Mudstring_list (Separator_newline, [carrying_string; wearing_string])
 
     method private do_take (thing : tangible) : mud_string =
-      try self#take thing; MudStringNone
+      try self#take thing; Mudstring_none
       with
-        | No_space_for _ -> MudString "Your hands are full."
-        | Cannot_add _ -> MudString "You can't hold that."
-        | Cannot_remove _ -> MudString "You cannot pick that up."
+        | No_space_for _ -> Mudstring "Your hands are full."
+        | Cannot_add _ -> Mudstring "You can't hold that."
+        | Cannot_remove _ -> Mudstring "You cannot pick that up."
 
     method private do_drop (thing : tangible) : mud_string =
-        self#drop thing; MudStringNone
+        self#drop thing; Mudstring_none
 
     method private do_say (_, _, str) : mud_string =
-      (self#get_location)#relay_message (MudStringCondition
+      (self#get_location)#relay_message (Mudstring_condition
         ((self: #creature :> creature),
-          (MudString ("You say, \"" ^ str ^ "\"")),
-          (MudStringList (SeparatorNone,
-              [MudStringName (self: #tangible :> tangible);
-              MudString (" says, \"" ^ str ^ "\"")]))));
-      MudStringNone
+          (Mudstring ("You say, \"" ^ str ^ "\"")),
+          (Mudstring_list (Separator_none,
+              [Mudstring_name (self: #tangible :> tangible);
+              Mudstring (" says, \"" ^ str ^ "\"")]))));
+      Mudstring_none
 
     (* called by the controller to give the character commands *)
     method run_command (cmd : command) : unit =

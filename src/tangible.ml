@@ -87,10 +87,29 @@ class actual_tangible (a : string list) (n : string) (sd : string)
     method get_name = name
 
     method short_description looker =
-      MudString short_desc
+      let contents_on = self # view_contents looker (Some On) in
+      let contents_in = self # view_contents looker (Some In) in
+      if contents_on = [] && contents_in = [] then
+        Mudstring short_desc
+      else
+        let get_desc c s =
+          if c = [] then
+            Mudstring_none
+          else
+            Mudstring_list (Separator_space, [
+              Mudstring_list (Separator_comma, List.map (fun o -> o # short_description looker) c);
+              Mudstring s
+            ]) in
+        Mudstring_list (Separator_space,
+          [
+            Mudstring short_desc;
+            Mudstring "with";
+            get_desc contents_in "in it";
+            get_desc contents_on "on it";
+          ])
 
     method look_description looker =
-      MudString long_desc
+      Mudstring long_desc
 
     method to_string : string =
       "tangible: " ^ short_desc
@@ -99,13 +118,13 @@ class actual_tangible (a : string list) (n : string) (sd : string)
 
     method look_position_description looker where =
       if not (List.mem where containers) then
-        MudString ("The " ^ self#get_name ^ " cannot contain anything there.")
+        Mudstring ("The " ^ self#get_name ^ " cannot contain anything there.")
       else
         let things = self#view_contents looker (Some where) in
         let descs = List.map (fun t -> t#short_description looker) things in
-        MudStringList (SeparatorNewline,
-            [MudString ("On the " ^ self#get_name ^ " you see:");
-              MudStringList (SeparatorComma, descs)])
+        Mudstring_list (Separator_newline,
+            [Mudstring ("On the " ^ self#get_name ^ " you see:");
+              Mudstring_list (Separator_comma, descs)])
 
   end
 

@@ -53,13 +53,13 @@ class direction_object (d : direction) (dst : int) (p : container) =
     method to_string = "direction_object: " ^ (List.assoc dir direction_list)
         ^ ", id: " ^ (string_of_int dest_id)
 
-    method short_description (looker : creature) = MudString "error!!"
+    method short_description (looker : creature) = Mudstring "error!!"
 
     method look_description (looker : creature) =
       (locations#get dest_id)#look_description looker
 
     method look_position_description looker where =
-      MudString ("You cannot look \"" ^ (string_of_position where) ^"\" that.")
+      Mudstring ("You cannot look \"" ^ (string_of_position where) ^"\" that.")
 
     method matches_description adjs name =
       try
@@ -101,19 +101,19 @@ class simple_location (i : int) (t : string) (d : string) =
     method get_description (looker : creature) =
       let objs = List.filter (fun t -> t#is_shown looker)
           (self#view_contents looker None) in
-      let exits = List.map (fun (_, str) -> MudString str)
-        (List.filter (fun (dir, _) -> self#get_exit (ExitDir dir) <> None)
+      let exits = List.map (fun (_, str) -> Mudstring str)
+        (List.filter (fun (dir, _) -> self#get_exit (Exit_dir dir) <> None)
         direction_list) in
-      MudStringList (SeparatorNewline,
-        [MudStringMeta (MetaRoomTitle, MudString title);
-          MudStringMeta (MetaRoomDesc, MudString desc);
-          if objs <> [] then MudStringMeta (MetaRoomContents, MudStringList
-              (SeparatorComma, (List.map (function o -> MudStringName o)
+      Mudstring_list (Separator_newline,
+        [Mudstring_meta (Meta_room_title, Mudstring title);
+          Mudstring_meta (Meta_room_desc, Mudstring desc);
+          if objs <> [] then Mudstring_meta (Meta_room_contents, Mudstring_list
+              (Separator_comma, (List.map (function o -> Mudstring_name o)
                 objs)))
-            else MudStringNone;
-          if exits <> [] then MudStringMeta (MetaRoomExits,
-              MudStringList (SeparatorComma, exits))
-            else MudString "none"])
+            else Mudstring_none;
+          if exits <> [] then Mudstring_meta (Meta_room_exits,
+              Mudstring_list (Separator_comma, exits))
+            else Mudstring "none"])
 
     method add_portal (p : portal) =
       portals <- p::portals
@@ -160,8 +160,8 @@ class direction_portal (d : direction) (d_id : int) (p : container) =
 
     method has_exit (e : exit) : bool =
       match e with
-        | ExitDir d -> (dir = d)
-        | ExitObj o -> (obj == o)
+        | Exit_dir d -> (dir = d)
+        | Exit_obj o -> (obj == o)
   end
 
 (* TODO: implement this when we need doors
@@ -172,6 +172,6 @@ class object_portal (o : tangible) (d_id : int) =
     val obj = 
     method has_exit (e : exit) : bool =
       match e with
-      | ExitDir _ -> false
-      | ExitObj o -> (obj == o)
+      | Exit_dir _ -> false
+      | Exit_obj o -> (obj == o)
   end*)

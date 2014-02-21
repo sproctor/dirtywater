@@ -53,9 +53,9 @@ class normal_player (cr : creature) (co : connection) =
     (* called by scheduler *)
     method send_message (msg: mud_string) : unit = 
       dlog 5 "start player->send message";
-      conn#output (Mud_string.to_string (controllee :> creature)
-          (MudStringList (SeparatorNewline,
-            [msg; MudStringMeta (MetaPrompt, MudStringNone)])));
+      conn#output (Mudstring.to_string (controllee :> creature)
+          (Mudstring_list (Separator_newline,
+            [msg; Mudstring_meta (Meta_prompt, Mudstring_none)])));
       dlog 5 "end player->send message";
 
     method private translate_command (pcmd : player_command) : command =
@@ -72,11 +72,11 @@ class normal_player (cr : creature) (co : connection) =
           let room = controllee#get_location in
           let (exit_obj, error) =
             match ed with
-            | ExitDescDir dir -> (ExitDir dir, Direction_not_valid dir)
-            | ExitDescObj desc ->
+            | Exit_desc_dir dir -> (Exit_dir dir, Direction_not_valid dir)
+            | Exit_desc_obj desc ->
                 let obj = Container.find (controllee :> creature)
                   (room :> container) None desc in
-                (ExitObj obj, Object_not_exit obj) in
+                (Exit_obj obj, Object_not_exit obj) in
                 let portal_opt = room#get_exit exit_obj in
                 let portal = (match portal_opt with Some y -> y
                     | None -> raise error) in
@@ -111,17 +111,17 @@ class normal_player (cr : creature) (co : connection) =
 	      let cmd = self#translate_command pcmd in
 	      controllee#run_command cmd
 	      with
-	        | Object_not_found (desc, _) -> self#send_message (MudString
+	        | Object_not_found (desc, _) -> self#send_message (Mudstring
 		    ("I couldn't find the " ^ object_desc_to_string desc ^ "."))
-                | Object_not_exit o -> self#send_message (MudString
+                | Object_not_exit o -> self#send_message (Mudstring
                     ("You cannot go into the " ^ o#get_name ^ "."))
-                | Direction_not_valid dir -> self#send_message (MudString
+                | Direction_not_valid dir -> self#send_message (Mudstring
 		    ("You can't go " ^ string_of_direction dir ^ " here."))
-                | Bad_command str -> self#send_message (MudString
+                | Bad_command str -> self#send_message (Mudstring
                     ("Bad command: " ^ str))
-                | Command_error str -> self#send_message (MudString str)
+                | Command_error str -> self#send_message (Mudstring str)
 		| Quit -> self#logout ()
-		| x -> self#send_message (MudString ("Unhandled exception: "
+		| x -> self#send_message (Mudstring ("Unhandled exception: "
                       ^ Printexc.to_string x))
 	    end
         | [] -> ()
@@ -130,7 +130,7 @@ class normal_player (cr : creature) (co : connection) =
       controllee#set_controller (new Ai.simple_ai controllee);
       dlog 4 "logging out";
       current_players#remove (self : #player :> player);
-      conn#output "\r\nFarewell.\r\n";
+      conn#output "\r\n_farewell.\r\n";
       conn#close ();
 
     method enqueue_command (str : string) : unit =

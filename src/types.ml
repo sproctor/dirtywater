@@ -38,33 +38,33 @@ type ('tangible) position' =
   | Behind of 'tangible
 
 type object_desc =
-  | ObjectDesc of (object_desc * preposition * noun_desc)
-  | ObjectDescBase of noun_desc
+  | Object_desc of (object_desc * preposition * noun_desc)
+  | Object_desc_base of noun_desc
 
 (* the ways to get out of a room *)
 type direction =
   | North
-  | NorthEast
+  | Northeast
   | East
-  | SouthEast
+  | Southeast
   | South
-  | SouthWest
+  | Southwest
   | West
-  | NorthWest
+  | Northwest
   | Up
   | Down
 
 type 'tangible exit' =
-    ExitDir of direction
-  | ExitObj of 'tangible
+  | Exit_dir of direction
+  | Exit_obj of 'tangible
 
 type exit_desc =
-    ExitDescDir of direction
-  | ExitDescObj of object_desc
+  | Exit_desc_dir of direction
+  | Exit_desc_obj of object_desc
 
 type emote =
-  | EmoteQuietly
-  | EmoteLoudly
+  | Emote_quietly
+  | Emote_loudly
 
 (* player wait is the result of parsing the input string a player sends,
    it needs to be turned into a real command before being sent to the
@@ -94,13 +94,13 @@ type ('mud_object, 'tangible, 'creature, 'portal) command' =
   | Cmd_say of (emote list * 'creature list * string)
 
 type 'creature mud_meta' =
-  | MetaInit
-  | MetaWaitDone of int
-  | MetaPrompt
-  | MetaRoomTitle
-  | MetaRoomDesc
-  | MetaRoomContents
-  | MetaRoomExits
+  | Meta_init
+  | Meta_wait_done of int
+  | Meta_prompt
+  | Meta_room_title
+  | Meta_room_desc
+  | Meta_room_contents
+  | Meta_room_exits
 
 type color =
   | Black
@@ -119,23 +119,21 @@ type graphics_mode =
   | Background of color
 
 type separator_type =
-  | SeparatorNewline
-  | SeparatorNone
-  | SeparatorSpace
-  | SeparatorComma
-  | SeparatorDefault
+  | Separator_newline
+  | Separator_none
+  | Separator_space
+  | Separator_comma
 
 type ('tangible, 'creature) mud_string' =
-  | MudStringNone
-  | MudString of string
-  | MudStringMode of (graphics_mode * ('tangible, 'creature) mud_string')
-  | MudStringMeta of ('creature mud_meta'
-      * ('tangible, 'creature) mud_string')
-  | MudStringList of (separator_type
+  | Mudstring_none
+  | Mudstring of string
+  | Mudstring_mode of (graphics_mode * ('tangible, 'creature) mud_string')
+  | Mudstring_meta of ('creature mud_meta' * ('tangible, 'creature) mud_string')
+  | Mudstring_list of (separator_type
         * ('tangible, 'creature) mud_string' list)
-  | MudStringCondition of ('creature * ('tangible, 'creature) mud_string'
+  | Mudstring_condition of ('creature * ('tangible, 'creature) mud_string'
       * ('tangible, 'creature) mud_string')
-  | MudStringName of 'tangible
+  | Mudstring_name of 'tangible
 
 type side = Left | Right
 

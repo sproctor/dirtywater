@@ -57,36 +57,36 @@ attack:
   | WITH obj_phrase EOF          { Player_attack (None, Some $2)        }
 ;
 north:
-    EOF           { Player_move (ExitDescDir North)      }
+    EOF           { Player_move (Exit_desc_dir North)      }
 ;
 east:
-    EOF            { Player_move (ExitDescDir East)       }
+    EOF            { Player_move (Exit_desc_dir East)       }
 ;
 south:
-    EOF           { Player_move (ExitDescDir South)      }
+    EOF           { Player_move (Exit_desc_dir South)      }
 ;
 west:
-    EOF            { Player_move (ExitDescDir West)       }
+    EOF            { Player_move (Exit_desc_dir West)       }
 northeast:
-    EOF       { Player_move (ExitDescDir NorthEast)  }
+    EOF       { Player_move (Exit_desc_dir Northeast)  }
 ;
 northwest:
-    EOF       { Player_move (ExitDescDir NorthWest)  }
+    EOF       { Player_move (Exit_desc_dir Northwest)  }
 ;
 southeast:
-    EOF       { Player_move (ExitDescDir SouthEast)  }
+    EOF       { Player_move (Exit_desc_dir Southeast)  }
 ;
 southwest:
-    EOF       { Player_move (ExitDescDir SouthWest)  }
+    EOF       { Player_move (Exit_desc_dir Southwest)  }
 ;
 up:
-    EOF              { Player_move (ExitDescDir Up)         }
+    EOF              { Player_move (Exit_desc_dir Up)         }
 ;
 down:
-    EOF            { Player_move (ExitDescDir Down)       }
+    EOF            { Player_move (Exit_desc_dir Down)       }
 ;
 go:
-    obj_phrase EOF   { dlog 0 "got go result"; Player_move (ExitDescObj $1) }
+    obj_phrase EOF   { dlog 0 "got go result"; Player_move (Exit_desc_obj $1) }
   | EOF              { raise (Bad_command "Go where?") }
 ;
 inventory:
@@ -114,8 +114,8 @@ wait:
   | NUMBER EOF     { Player_wait (Some $1)                }
 ;
 obj_phrase:
-    obj_phrase preposition noun_phrase	{ ObjectDesc ($1, $2, $3) }
-  | noun_phrase				{ ObjectDescBase $1 }
+    obj_phrase preposition noun_phrase	{ Object_desc ($1, $2, $3) }
+  | noun_phrase				{ Object_desc_base $1 }
 ;
 noun_phrase:
     article ord adjs WORD               { ($2, $3, $4) }

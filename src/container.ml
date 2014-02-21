@@ -119,7 +119,7 @@ let rec find (looker : creature) (lookee : container) (p : position option)
     (desc : object_desc) : tangible =
   let items = view_contents_recursive lookee p looker in
   match desc with
-    | ObjectDesc (od, p, (n, adjs, name)) ->
+    | Object_desc (od, p, (n, adjs, name)) ->
         begin
           let matched_items = filter_contents adjs name items in
           try
@@ -137,7 +137,7 @@ let rec find (looker : creature) (lookee : container) (p : position option)
             end
           with Failure "nth" -> raise (dlog 4 "object not found"; Object_not_found (desc, List.length matched_items))
         end
-    | ObjectDescBase (n, adjs, name) ->
+    | Object_desc_base (n, adjs, name) ->
         let matched_items = filter_contents adjs name items in
         begin
           try
