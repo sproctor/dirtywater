@@ -118,13 +118,33 @@ class actual_tangible (a : string list) (n : string) (sd : string)
 
     method look_position_description looker where =
       if not (List.mem where containers) then
-        Mudstring ("The " ^ self#get_name ^ " cannot contain anything there.")
+        Mudstring ("The " ^ self # get_name ^ " cannot contain anything there.")
       else
-        let things = self#view_contents looker (Some where) in
-        let descs = List.map (fun t -> t#short_description looker) things in
+        let things = self # view_contents looker (Some where) in
+        let get_desc thing =
+          let contents_behind = self # view_contents looker (Some (Behind thing)) in
+          let contents_under = self # view_contents looker (Some (Under thing)) in
+          let get_desc_ext c s =
+            if c = [] then
+              Mudstring_none
+            else
+              Mudstring_list (Separator_space, [
+                Mudstring_list (Separator_comma, List.map (fun o -> o # short_description looker) c);
+                Mudstring s
+              ]) in
+          let desc = thing # short_description looker in
+          if contents_behind = [] && contents_under = [] then
+            desc
+          else
+            Mudstring_list (Separator_space, [
+              desc;
+              Mudstring "with";
+              get_desc_ext contents_behind "behind it";
+              get_desc_ext contents_under "under it";
+            ]) in
         Mudstring_list (Separator_newline,
-            [Mudstring ("On the " ^ self#get_name ^ " you see:");
-              Mudstring_list (Separator_comma, descs)])
+            [Mudstring ("On the " ^ self # get_name ^ " you see:");
+              Mudstring_list (Separator_comma, List.map get_desc things)])
 
   end
 

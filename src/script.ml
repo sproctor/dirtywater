@@ -76,7 +76,7 @@ let item_add_under (ls : Lua.state) : int =
       let id = Option.get (Lua.tostring ls 2) in
       try
         dlog 0 "got string";
-        let thing = Templates.put_tangible id container (Behind target) in
+        let thing = Templates.put_tangible id container (Under target) in
         dlog 0 "added thing";
         Lua.newuserdata ls thing;
         1
