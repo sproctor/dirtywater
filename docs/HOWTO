@@ -1,8 +1,0 @@
-How to add a command: (a command is something the mud user may type to
-                       cause his character to do something)
-  add a command token to parser.mly (the %token part, you'll see other
-    commands there)
-  add a string and token pair to lexer.mll in cmd_list
-  add a command grammar to parser.mly, you need to know how to do this
-  add the proper stuff to "command" in parser.mly, should be obvious from what's
-    already there

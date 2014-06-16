@@ -1,9 +1,0 @@
----
-item:
-  id: table
-  noun: table
-  sdesc: a table
-  ldesc: A rickety-looking table.
-  containers:
-    - on
-...
