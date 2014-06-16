@@ -14,11 +14,34 @@ loop sock = do
     loop sock
    where
     body h = do
-        hPutStr h msg
-        client_loop h
+        client_play_game h
         putStrLn "Disconnecting a client."
         hFlush h
         hClose h
+
+client_play_game h = do
+    hPutStrLn h "Welcome to Dirty Water, friend."
+    name <- client_query_name h
+    client_loop h
+
+client_query_name h = do
+    hPutStrLn h "What name would you like to be referred to by?"
+    line <- hGetLine h
+    let name = unpack $ strip $ pack line
+    hPutStrLn h $ "Ah, " ++ name ++ ", an excellent name! Are you sure that is what you want to go by? (y/n)"
+    confirm_name name
+   where
+    confirm_name name = do
+        line <- hGetLine h
+        case line of
+            'y' : _ -> name
+            'n' : _ -> do
+                hPutStrLn h "Changed your mind already, eh?"
+                client_query_name h
+            _ -> do
+                hPutStrLn h $ "I said, \"(y/n),\" not whatever crap you typed."
+                hPutStrLn h $ "Let's try this again. Are you sure you want to go by " ++ name ++ "?"
+                confirm_name name
 
 client_loop h = do
     result <- try $ hWaitForInput h 1000 :: IO (Either IOError Bool)
@@ -36,5 +59,3 @@ client_loop h = do
             else do
                 putStrLn "Waiting for input"
                 client_loop h
-
-msg = "Welcome to dirty water\n"
