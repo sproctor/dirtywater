@@ -50,22 +50,13 @@ clientQueryName h = do
 clientLoop :: Handle -> IO ()
 clientLoop h = do
   hPutStr h ">"
-  result <- try $ clientGetLine h :: IO (Either IOError String)
+  result <- try $ hGetLine h :: IO (Either IOError String)
   case result of
     Left _ -> putStrLn "Client disconnected"
     Right line ->
-      let str = unpack $ strip $ pack line
+      let str = unpack $ strip $ pack line in
       if str == "exit"
         then hPutStrLn h "Good bye"
         else do
           hPutStrLn h $ "I don't understand \"" ++ str ++ "\""
           clientLoop h
-
-clientGetLine :: Handle -> IO String
-clientGetLine h = do
-  ready <- hWaitForInput h 1000
-  if ready
-    then hGetLine h
-    else do
-      putStrLn "Waiting for input"
-      getLine h
