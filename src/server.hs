@@ -8,42 +8,47 @@ main = withSocketsDo $ do
     sock <- listenOn $ PortNumber 4000
     loop sock
 
+loop :: Socket -> IO ()
 loop sock = do
     (h, _, _) <- accept sock
     forkIO $ body h
     loop sock
    where
     body h = do
-        client_play_game h
+        clientPlayGame h
         putStrLn "Disconnecting a client."
         hFlush h
         hClose h
 
-client_play_game h = do
+clientPlayGame :: Handle -> IO ()
+clientPlayGame h = do
     hPutStrLn h "Welcome to Dirty Water, friend."
-    name <- client_query_name h
-    client_loop h
+    name <- clientQueryName h
+    clientLoop h
 
-client_query_name h = do
+clientQueryName :: Handle -> IO String
+clientQueryName h = do
     hPutStrLn h "What name would you like to be referred to by?"
     line <- hGetLine h
     let name = unpack $ strip $ pack line
     hPutStrLn h $ "Ah, " ++ name ++ ", an excellent name! Are you sure that is what you want to go by? (y/n)"
-    confirm_name name
+    confirmName name
    where
-    confirm_name name = do
+    confirmName :: String -> IO String
+    confirmName name = do
         line <- hGetLine h
         case line of
-            'y' : _ -> name
+            'y' : _ -> return name
             'n' : _ -> do
                 hPutStrLn h "Changed your mind already, eh?"
-                client_query_name h
+                clientQueryName h
             _ -> do
                 hPutStrLn h $ "I said, \"(y/n),\" not whatever crap you typed."
                 hPutStrLn h $ "Let's try this again. Are you sure you want to go by " ++ name ++ "?"
-                confirm_name name
+                confirmName name
 
-client_loop h = do
+clientLoop :: Handle -> IO ()
+clientLoop h = do
     result <- try $ hWaitForInput h 1000 :: IO (Either IOError Bool)
     case result of
         Left _ -> putStrLn "Client disconnected"
@@ -55,7 +60,7 @@ client_loop h = do
                     hPutStr h "Good bye\n"
                 else do
                     hPutStr h $ "I don't understand \"" ++ str ++ "\"\n"
-                    client_loop h
+                    clientLoop h
             else do
                 putStrLn "Waiting for input"
-                client_loop h
+                clientLoop h
