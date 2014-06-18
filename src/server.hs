@@ -9,16 +9,15 @@ main = withSocketsDo $ do
   loop sock
 
 loop :: Socket -> IO ()
-loop sock = do
+loop sock = forever $ do
   (h, _, _) <- accept sock
-  forkIO $ body h
-  loop sock
-  where
-    body h = do
-      clientPlayGame h
-      putStrLn "Disconnecting a client."
-      hFlush h
-      hClose h
+  forkFinally (clientPlayGame h)  (cleanupClient h)
+
+cleanupClient :: Handle -> (Either SomeException ()) -> IO ()
+cleanupClient h _ = do
+  putStrLn "Disconnecting a client."
+  hFlush h
+  hClose h
 
 clientPlayGame :: Handle -> IO ()
 clientPlayGame h = do
@@ -50,13 +49,9 @@ clientQueryName h = do
 clientLoop :: Handle -> IO ()
 clientLoop h = do
   hPutStr h ">"
-  result <- try $ hGetLine h :: IO (Either IOError String)
-  case result of
-    Left _ -> putStrLn "Client disconnected"
-    Right line ->
-      let str = unpack $ strip $ pack line in
-      if str == "exit"
-        then hPutStrLn h "Good bye"
-        else do
-          hPutStrLn h $ "I don't understand \"" ++ str ++ "\""
+  line <- hGetLine h
+  let str = unpack $ strip $ pack line
+  if str == "exit"
+  then hPutStrLn h "Good bye"
+  else do hPutStrLn h $ "I don't understand \"" ++ str ++ "\""
           clientLoop h
