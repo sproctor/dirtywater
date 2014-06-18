@@ -1,17 +1,16 @@
 import Network
 import Control.Concurrent
 import Control.Exception
+import Control.Monad
 import System.IO
 import Data.Text
 
+main :: IO ()
 main = withSocketsDo $ do
   sock <- listenOn $ PortNumber 4000
-  loop sock
-
-loop :: Socket -> IO ()
-loop sock = forever $ do
-  (h, _, _) <- accept sock
-  forkFinally (clientPlayGame h)  (cleanupClient h)
+  forever $ do
+    (h, _, _) <- accept sock
+    forkFinally (clientPlayGame h)  (cleanupClient h)
 
 cleanupClient :: Handle -> (Either SomeException ()) -> IO ()
 cleanupClient h _ = do
