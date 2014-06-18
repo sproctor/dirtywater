@@ -1,7 +1,6 @@
 import Network
 import Control.Concurrent
 import Control.Exception
-import Control.Monad
 import System.IO
 import Data.Text
 import Control.Monad
