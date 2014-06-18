@@ -4,6 +4,7 @@ import Control.Exception
 import Control.Monad
 import System.IO
 import Data.Text
+import Control.Monad
 
 main :: IO ()
 main = withSocketsDo $ do
