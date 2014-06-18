@@ -3,6 +3,7 @@ import Control.Concurrent
 import Control.Exception
 import System.IO
 import Data.Text
+import Control.Monad
 
 main = withSocketsDo $ do
   sock <- listenOn $ PortNumber 4000
