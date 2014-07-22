@@ -1,9 +1,9 @@
-import Network
 import Control.Concurrent
 import Control.Exception
-import System.IO
-import Data.Text
 import Control.Monad
+import Data.Text
+import Network
+import System.IO
 
 main :: IO ()
 main = withSocketsDo $ do
@@ -51,6 +51,7 @@ clientLoop h = do
   line <- hGetLine h
   let str = unpack $ strip $ pack line
   if str == "exit"
-  then hPutStrLn h "Good bye"
-  else do hPutStrLn h $ "I don't understand \"" ++ str ++ "\""
-          clientLoop h
+    then hPutStrLn h "Good bye"
+    else do
+      hPutStrLn h $ "I don't understand \"" ++ str ++ "\""
+      clientLoop h
