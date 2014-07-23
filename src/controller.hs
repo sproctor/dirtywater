@@ -1,8 +1,15 @@
+import Control.Concurrent.Chan
+import Control.Concurrent.STM.TBQueue
+import Control.Monad
+import System.IO
+
 data Command = Look | Exit | Move Direction
 
 data Direction = North | East | South | West
 
-data Connection = Connection { handle :: Handle, queue :: TBQueue Command, character :: Character }
+data Character = Pc | Npc
+
+data Connection = Connection { handle :: Handle, queue :: TBQueue Command , character :: Character }
 
 data GameState = Running | Stopping
 
@@ -25,13 +32,14 @@ connectedControlers :: Chan Controller
 mainServer gameState = do
   let c = readChan connectedControlers
   cmd <- getCommand c
-  let newGameState =
-    case cmd of
-      Just realCommand -> do
-        print ((getCharacter c), realCommand)
-        when isGameCmd $ doACommand (getCharacter c) realCommand gameState
-        when (cmd /= Exit) $ writeChan connectedControlers c
-      Nothing -> gameState
+  let
+    newGameState =
+      case cmd of
+        Just realCommand -> do
+          print ((getCharacter c), realCommand)
+          when isGameCmd $ doACommand (getCharacter c) realCommand gameState
+          when (cmd /= Exit) $ writeChan connectedControlers c
+        Nothing -> gameState
   mainServer controllers newGameState
 
 doACommand :: Character -> Command -> GameState -> GameState
