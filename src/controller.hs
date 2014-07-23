@@ -11,7 +11,9 @@ data Character = Pc | Npc
 
 data Connection = Connection { handle :: Handle, queue :: TBQueue Command , character :: Character }
 
-data GameState = Running | Stopping
+data ServerStatus = Running | Stopping
+
+data GameState = GameState { controllers :: [Controller], status :: ServerStatus }
 
 class Controller c where
   getCommand :: c -> IO (Maybe Command)
@@ -27,19 +29,22 @@ instance Controller Connection where
     hPutStr handle
   getCharacter (Connection _ _ c) = c
 
-connectedControlers :: Chan Controller
-
 mainServer gameState = do
-  let c = readChan connectedControlers
-  cmd <- getCommand c
+  let controller : remainingControllers = gameState.controllers
+  cmd <- getCommand controller
   let
+    newControllers :: [Controller]
+    newControllers =
+      if cmd == Exit
+        then remainingControllers
+        else remainingControllers ++ controller
+    intermediateGameState = GameState newControllers status
     newGameState =
       case cmd of
         Just realCommand -> do
-          print ((getCharacter c), realCommand)
-          when isGameCmd $ doACommand (getCharacter c) realCommand gameState
-          when (cmd /= Exit) $ writeChan connectedControlers c
-        Nothing -> gameState
+          print ((getCharacter controller), realCommand)
+          doACommand (getCharacter controller) realCommand intermediateGameState
+        Nothing -> intermediateGameState
   mainServer controllers newGameState
 
 doACommand :: Character -> Command -> GameState -> GameState
