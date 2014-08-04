@@ -1,15 +1,22 @@
 import Control.Concurrent
+import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
 import Data.Text
 import Network
 import System.IO
 
+import Controller
+
 main :: IO ()
 main = withSocketsDo $ do
   sock <- listenOn $ PortNumber 4000
+  connections <- newTVar []
   forever $ do
     (h, _, _) <- accept sock
+    queue <- atomically $ newTBQueue 10
+    let connection = Connection h queue Pc
+    addConnection connections connection
     forkFinally (clientPlayGame h)  (cleanupClient h)
 
 cleanupClient :: Handle -> (Either SomeException ()) -> IO ()

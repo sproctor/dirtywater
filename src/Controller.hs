@@ -1,4 +1,9 @@
-import Control.Concurrent.Chan
+module Controller
+(
+  Connection,
+  addConnection
+) where
+
 import Control.Concurrent.STM
 import Control.Monad
 import System.IO
@@ -58,6 +63,12 @@ removeConnection connections connection =
     currentConnections <- readTVar connections
     let newConnections = filter (/= connection) currentConnections
     writeTVar connections newConnections
+
+addConnection :: TVar [Connection] -> Connection -> STM ()
+addConnection connections connection =
+  do
+    currentConnections <- readTVar connections
+    writeTVar connections (connection : currentConnections)
 
 doCommand :: Character -> Command -> GameState -> GameState
 doCommand _ _ gs = gs
