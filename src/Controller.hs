@@ -1,6 +1,7 @@
 module Controller
 (
-  Connection,
+  Connection(Connection),
+  Character(Pc, Npc),
   addConnection
 ) where
 
