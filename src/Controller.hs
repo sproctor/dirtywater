@@ -47,7 +47,7 @@ mainServer connections gameState = do
           do
             when (realCommand == Exit) $ atomically $ removeConnection connections connection
               --print ((getCharacter connection), realCommand)
-            return $ doCommand (character connection) realCommand gameState
+            return $ doCommand connection realCommand gameState
         Nothing -> return gameState
   mainServer connections newGameState
 
@@ -71,5 +71,16 @@ addConnection connections connection =
     currentConnections <- readTVar connections
     writeTVar connections (connection : currentConnections)
 
-doCommand :: Character -> Command -> GameState -> GameState
-doCommand _ _ gs = gs
+doCommand :: Connection -> Command -> GameState -> GameState
+doCommand connection command gs =
+  do
+    let h = handle connection
+    let
+      _ =
+        case command of
+          Exit -> do
+            hPutStrLn h "Good Bye!"
+            hClose h
+          Look ->
+            hPutStrLn h "There's nothing to see here, move along."
+    gs
