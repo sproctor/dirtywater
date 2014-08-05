@@ -10,14 +10,19 @@ import Controller
 
 main :: IO ()
 main = withSocketsDo $ do
-  sock <- listenOn $ PortNumber 4000
+  putStrLn "Starting server."
+  let port = 4000
+  sock <- listenOn $ PortNumber port
+  putStrLn $ "Listening on port " ++ (show port) ++ "."
   connections <- atomically $ newTVar []
+  forkIO (mainServer (return (GameState connections Running)))
   forever $ do
     (h, _, _) <- accept sock
+    putStrLn "Got a new connection."
     queue <- atomically $ newTBQueue 10
-    let connection = Connection h queue Pc
-    atomically $ addConnection connections connection
-    forkFinally (clientPlayGame h)  (cleanupClient h)
+    let conn = Connection h queue Pc
+    atomically $ addConnection connections conn
+    forkFinally (clientPlayGame conn)  (cleanupClient h)
 
 cleanupClient :: Handle -> (Either SomeException ()) -> IO ()
 cleanupClient h _ = do
@@ -25,11 +30,11 @@ cleanupClient h _ = do
   hFlush h
   hClose h
 
-clientPlayGame :: Handle -> IO ()
-clientPlayGame h = do
-  hPutStrLn h "Welcome to Dirty Water, friend."
-  name <- clientQueryName h
-  clientLoop h
+clientPlayGame :: Connection -> IO ()
+clientPlayGame conn = do
+  hPutStrLn (connectionHandle conn) "Welcome to Dirty Water, friend."
+  name <- clientQueryName (connectionHandle conn)
+  clientLoop conn
 
 clientQueryName :: Handle -> IO String
 clientQueryName h = do
@@ -52,13 +57,30 @@ clientQueryName h = do
           hPutStrLn h $ "Let's try this again. Are you sure you want to go by " ++ name ++ "?"
           confirmName name
 
-clientLoop :: Handle -> IO ()
-clientLoop h = do
-  hPutStr h ">"
-  line <- hGetLine h
+commandList =
+  [
+    ("exit", Exit),
+    ("look", Look)
+  ]
+
+lookupCommand :: String -> Maybe Command
+lookupCommand name =
+  let
+    helper [] = Nothing
+    helper ((str, command) : rest) =
+      if str == name
+        then Just command
+        else helper rest
+  in
+    helper commandList
+
+clientLoop :: Connection -> IO ()
+clientLoop conn = do
+  hPutStr (connectionHandle conn) ">"
+  line <- hGetLine (connectionHandle conn)
   let str = unpack $ strip $ pack line
-  if str == "exit"
-    then hPutStrLn h "Good bye"
-    else do
-      hPutStrLn h $ "I don't understand \"" ++ str ++ "\""
-      clientLoop h
+  let command = lookupCommand str
+  case command of
+    Just cmd -> atomically $ writeTBQueue (connectionQueue conn) cmd
+    Nothing -> return ()
+  clientLoop conn

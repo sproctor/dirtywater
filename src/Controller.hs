@@ -1,10 +1,16 @@
 module Controller
 (
-  Connection(Connection),
   Character(Pc, Npc),
-  addConnection
+  Connection(Connection, connectionHandle, connectionQueue, connectionCharacter),
+  Command(Look, Exit, Move),
+  Direction(North, East, South, West),
+  GameState(GameState),
+  ServerStatus(Running, Stopping),
+  addConnection,
+  mainServer
 ) where
 
+import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Monad
 import System.IO
@@ -15,11 +21,15 @@ data Direction = North | East | South | West deriving (Show, Eq)
 
 data Character = Pc | Npc deriving (Show, Eq)
 
-data Connection = Connection { handle :: Handle, queue :: TBQueue Command, character :: Character } deriving Eq
+data Connection = Connection {
+      connectionHandle :: Handle,
+      connectionQueue :: TBQueue Command,
+      connectionCharacter :: Character
+    } deriving Eq
 
 data ServerStatus = Running | Stopping
 
-data GameState = GameState { status :: ServerStatus }
+data GameState = GameState { gameConnections :: TVar [Connection], gameStatus :: ServerStatus }
 
 {- class Controller c where
   getCommand :: c -> IO (Maybe Command)
@@ -37,26 +47,30 @@ putOutput (Connection h _ _) =
 -- getCharacter :: Connection -> Character
 -- getCharacter (Connection _ _ c) = c
 
-mainServer :: TVar [Connection] -> GameState -> IO ()
-mainServer connections gameState = do
-  connection <- atomically $ getConnection connections
+mainServer :: IO GameState -> IO ()
+mainServer gameState = do
+  putStrLn "running server loop"
+  gs <- gameState
+  conns <- atomically $ readTVar (gameConnections gs)
+  let newGameState = processCommands conns gameState
+  threadDelay 1000000
+  mainServer newGameState
+
+processCommands :: [Connection] -> IO GameState -> IO GameState
+processCommands [] gs = gs
+processCommands (connection : remainingConnections) gameState = do
   cmd <- getCommand connection
-  newGameState <-
+  gs <- gameState
+  let
+    newGameState =
       case cmd of
         Just realCommand ->
           do
-            when (realCommand == Exit) $ atomically $ removeConnection connections connection
+            when (realCommand == Exit) $ atomically $ removeConnection (gameConnections gs) connection
               --print ((getCharacter connection), realCommand)
-            return $ doCommand connection realCommand gameState
-        Nothing -> return gameState
-  mainServer connections newGameState
-
-getConnection :: TVar [Connection] -> STM Connection
-getConnection connections =
-    do
-      (connection : remainingConnections) <- readTVar connections
-      writeTVar connections (remainingConnections ++ [connection])
-      return connection
+            doCommand connection realCommand gameState
+        Nothing -> gameState
+  processCommands remainingConnections newGameState
 
 removeConnection :: TVar [Connection] -> Connection -> STM ()
 removeConnection connections connection =
@@ -71,16 +85,14 @@ addConnection connections connection =
     currentConnections <- readTVar connections
     writeTVar connections (connection : currentConnections)
 
-doCommand :: Connection -> Command -> GameState -> GameState
+doCommand :: Connection -> Command -> IO GameState -> IO GameState
 doCommand connection command gs =
   do
-    let h = handle connection
-    let
-      _ =
-        case command of
-          Exit -> do
-            hPutStrLn h "Good Bye!"
-            hClose h
-          Look ->
-            hPutStrLn h "There's nothing to see here, move along."
+    let h = connectionHandle connection
+    case command of
+      Exit -> do
+        hPutStrLn h "Good Bye!"
+        hClose h
+      Look ->
+        hPutStrLn h "There's nothing to see here, move along."
     gs
