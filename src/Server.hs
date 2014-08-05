@@ -27,7 +27,6 @@ main = withSocketsDo $ do
 cleanupClient :: Handle -> (Either SomeException ()) -> IO ()
 cleanupClient h _ = do
   putStrLn "Disconnecting a client."
-  hFlush h
   hClose h
 
 clientPlayGame :: Connection -> IO ()
