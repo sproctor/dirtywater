@@ -14,7 +14,7 @@ main = withSocketsDo $ do
   putStrLn "Starting server."
   let port = 4000
   sock <- listenOn $ PortNumber port
-  putStrLn $ "Listening on port " ++ (show port) ++ "."
+  putStrLn $ "Listening on port " ++ show port ++ "."
   connections <- atomically $ newTVar []
   forkIO (mainServer (return (GameState connections Running)))
   forever $ do
@@ -28,7 +28,7 @@ main = withSocketsDo $ do
     id <- forkFinally (clientPlayGame conn)  (cleanupClient h)
     putMVar idVar id
 
-cleanupClient :: Handle -> (Either SomeException ()) -> IO ()
+cleanupClient :: Handle -> Either SomeException () -> IO ()
 cleanupClient h _ = do
   putStrLn "Disconnecting a client."
   hClose h
@@ -56,7 +56,7 @@ clientQueryName h = do
           hPutStrLn h "Changed your mind already, eh?"
           clientQueryName h
         _ -> do
-          hPutStrLn h $ "I said, \"(y/n),\" not whatever crap you typed."
+          hPutStrLn h "I said, \"(y/n),\" not whatever crap you typed."
           hPutStrLn h $ "Let's try this again. Are you sure you want to go by " ++ name ++ "?"
           confirmName name
 
@@ -80,17 +80,15 @@ lookupCommand name =
 clientLoop :: Connection -> IO ()
 clientLoop conn = do
   closed <- atomically $ readTVar (connectionClosed conn)
-  if closed
-    then return ()
-    else do
-      hPutStr (connectionHandle conn) ">"
-      l <- tryJust (guard . isExitException) $ hGetLine (connectionHandle conn)
-      case l of
-        Left _ -> return ()
-        Right line -> do
-          let str = unpack $ strip $ pack line
-          let command = lookupCommand str
-          case command of
-            Just cmd -> atomically $ writeTBQueue (connectionQueue conn) cmd
-            Nothing -> return ()
-      clientLoop conn
+  unless closed $ do
+    hPutStr (connectionHandle conn) ">"
+    l <- tryJust (guard . isExitException) $ hGetLine (connectionHandle conn)
+    case l of
+      Left _ -> return ()
+      Right line -> do
+        let str = unpack $ strip $ pack line
+        let command = lookupCommand str
+        case command of
+          Just cmd -> atomically $ writeTBQueue (connectionQueue conn) cmd
+          Nothing -> return ()
+    clientLoop conn
