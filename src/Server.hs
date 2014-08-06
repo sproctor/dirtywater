@@ -5,6 +5,7 @@ import Control.Monad
 import Data.Text
 import Network
 import System.IO
+import System.Timeout
 
 import Controller
 
@@ -76,10 +77,13 @@ lookupCommand name =
 clientLoop :: Connection -> IO ()
 clientLoop conn = do
   hPutStr (connectionHandle conn) ">"
-  line <- hGetLine (connectionHandle conn)
-  let str = unpack $ strip $ pack line
-  let command = lookupCommand str
-  case command of
-    Just cmd -> atomically $ writeTBQueue (connectionQueue conn) cmd
+  mLine <- timeout 1000 $ hGetLine (connectionHandle conn)
+  case mLine of
+    Just line -> do
+      let str = unpack $ strip $ pack line
+      let command = lookupCommand str
+      case command of
+        Just cmd -> atomically $ writeTBQueue (connectionQueue conn) cmd
+        Nothing -> return ()
     Nothing -> return ()
   clientLoop conn
