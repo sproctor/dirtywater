@@ -16,9 +16,33 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 executable dirtywater
-  main-is:             Main.hs
-  -- other-modules:       
-  other-extensions:    DeriveDataTypeable
-  build-depends:       base >=4.6 && <4.7, stm >=2.4 && <2.5, text >=0.11 && <0.12, network >=2.4 && <2.5
-  hs-source-dirs:      src
-  default-language:    Haskell2010
+  main-is:
+    Main.hs
+  other-extensions:
+    DeriveDataTypeable
+  build-depends:
+    base >=4.6 && <4.7,
+    stm >=2.4 && <2.5,
+    text >=0.11 && <0.12,
+    network >=2.4 && <2.5
+  hs-source-dirs:
+    src
+  default-language:
+    Haskell2010
+
+test-suite spec
+  type:
+    exitcode-stdio-1.0
+  ghc-options:
+    -Wall -Werror
+  hs-source-dirs:
+    tests
+  main-is:
+    Spec.hs
+  build-depends:
+    base == 4.*,
+    --dirtywater,
+    hspec >= 1.3
+  default-language:
+    Haskell2010
+
