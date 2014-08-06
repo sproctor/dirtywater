@@ -21,9 +21,12 @@ main = withSocketsDo $ do
     (h, _, _) <- accept sock
     putStrLn "Got a new connection."
     queue <- atomically $ newTBQueue 10
-    let conn = Connection h queue Pc
+    idVar <- newEmptyMVar
+    closed <- atomically $ newTVar False
+    let conn = Connection h queue closed Pc idVar
     atomically $ addConnection connections conn
-    forkFinally (clientPlayGame conn)  (cleanupClient h)
+    id <- forkFinally (clientPlayGame conn)  (cleanupClient h)
+    putMVar idVar id
 
 cleanupClient :: Handle -> (Either SomeException ()) -> IO ()
 cleanupClient h _ = do
@@ -76,14 +79,18 @@ lookupCommand name =
 
 clientLoop :: Connection -> IO ()
 clientLoop conn = do
-  hPutStr (connectionHandle conn) ">"
-  mLine <- timeout 1000 $ hGetLine (connectionHandle conn)
-  case mLine of
-    Just line -> do
-      let str = unpack $ strip $ pack line
-      let command = lookupCommand str
-      case command of
-        Just cmd -> atomically $ writeTBQueue (connectionQueue conn) cmd
-        Nothing -> return ()
-    Nothing -> return ()
-  clientLoop conn
+  closed <- atomically $ readTVar (connectionClosed conn)
+  if closed
+    then return ()
+    else do
+      hPutStr (connectionHandle conn) ">"
+      l <- tryJust (guard . isExitException) $ hGetLine (connectionHandle conn)
+      case l of
+        Left _ -> return ()
+        Right line -> do
+          let str = unpack $ strip $ pack line
+          let command = lookupCommand str
+          case command of
+            Just cmd -> atomically $ writeTBQueue (connectionQueue conn) cmd
+            Nothing -> return ()
+      clientLoop conn

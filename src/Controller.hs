@@ -1,18 +1,23 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Controller
 (
   Character(Pc, Npc),
-  Connection(Connection, connectionHandle, connectionQueue, connectionCharacter),
+  Connection(Connection, connectionHandle, connectionQueue, connectionClosed, connectionCharacter, connectionThreadId),
   Command(Look, Exit, Move),
   Direction(North, East, South, West),
+  ExitException(ExitException),
   GameState(GameState),
   ServerStatus(Running, Stopping),
   addConnection,
+  isExitException,
   mainServer
 ) where
 
 import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Exception
 import Control.Monad
+import Data.Typeable
 import System.IO
 
 data Command = Look | Exit | Move Direction deriving (Show, Eq)
@@ -24,12 +29,22 @@ data Character = Pc | Npc deriving (Show, Eq)
 data Connection = Connection {
       connectionHandle :: Handle,
       connectionQueue :: TBQueue Command,
-      connectionCharacter :: Character
+      connectionClosed :: TVar Bool,
+      connectionCharacter :: Character,
+      connectionThreadId :: MVar ThreadId
     } deriving Eq
 
 data ServerStatus = Running | Stopping
 
 data GameState = GameState { gameConnections :: TVar [Connection], gameStatus :: ServerStatus }
+
+data ExitException = ExitException deriving (Show, Typeable)
+
+instance Exception ExitException
+
+isExitException :: ExitException -> Bool
+isExitException e =
+  typeOf e == typeOf ExitException
 
 {- class Controller c where
   getCommand :: c -> IO (Maybe Command)
@@ -39,10 +54,10 @@ data GameState = GameState { gameConnections :: TVar [Connection], gameStatus ::
 instance Controller Connection where
 -}
 getCommand :: Connection -> IO (Maybe Command)
-getCommand (Connection _ q _) =
+getCommand (Connection _ q _ _ _) =
   atomically (tryReadTBQueue q)
 putOutput :: Connection -> String -> IO ()
-putOutput (Connection h _ _) =
+putOutput (Connection h _ _ _ _) =
   hPutStr h
 -- getCharacter :: Connection -> Character
 -- getCharacter (Connection _ _ c) = c
@@ -92,7 +107,11 @@ doCommand connection command gs =
     case command of
       Exit -> do
         hPutStrLn h "Good Bye!"
-        hClose h
+        atomically $ writeTVar (connectionClosed connection) True
+        tId <- readMVar (connectionThreadId connection)
+        throwTo tId ExitException
       Look ->
         hPutStrLn h "There's nothing to see here, move along."
+      _ ->
+        hPutStrLn h "That command is not yet implemented. Sorry."
     gs
