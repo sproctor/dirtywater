@@ -2,7 +2,7 @@
 module Controller
 (
   Character(Pc, Npc),
-  Connection(Connection, connectionHandle, connectionQueue, connectionClosed, connectionCharacter, connectionThreadId),
+  ClientConnection(ClientConnection, connectionHandle, connectionQueue, connectionClosed, connectionCharacter, connectionThreadId),
   Command(Look, Exit, Move),
   Direction(North, East, South, West),
   ExitException(ExitException),
@@ -18,6 +18,7 @@ import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
 import Data.Typeable
+import Database.HDBC.Sqlite3
 import System.IO
 
 data Command = Look | Exit | Move Direction deriving (Show, Eq)
@@ -26,7 +27,7 @@ data Direction = North | East | South | West deriving (Show, Eq)
 
 data Character = Pc | Npc deriving (Show, Eq)
 
-data Connection = Connection {
+data ClientConnection = ClientConnection {
       connectionHandle :: Handle,
       connectionQueue :: TBQueue Command,
       connectionClosed :: TVar Bool,
@@ -36,7 +37,12 @@ data Connection = Connection {
 
 data ServerStatus = Running | Stopping
 
-data GameState = GameState { gameConnections :: TVar [Connection], gameStatus :: ServerStatus }
+data GameState =
+  GameState {
+    gameConnections :: TVar [ClientConnection],
+    gameStatus :: ServerStatus,
+    sqlConnection :: Connection
+  }
 
 data ExitException = ExitException deriving (Show, Typeable)
 
@@ -51,67 +57,63 @@ isExitException e =
   putOutput :: c -> String -> IO ()
   getCharacter :: c -> Character
 
-instance Controller Connection where
+instance Controller ClientConnection where
 -}
-getCommand :: Connection -> IO (Maybe Command)
-getCommand (Connection _ q _ _ _) =
+getCommand :: ClientConnection -> IO (Maybe Command)
+getCommand (ClientConnection _ q _ _ _) =
   atomically (tryReadTBQueue q)
-putOutput :: Connection -> String -> IO ()
-putOutput (Connection h _ _ _ _) =
+putOutput :: ClientConnection -> String -> IO ()
+putOutput (ClientConnection h _ _ _ _) =
   hPutStr h
--- getCharacter :: Connection -> Character
--- getCharacter (Connection _ _ c) = c
+-- getCharacter :: ClientConnection -> Character
+-- getCharacter (ClientConnection _ _ c) = c
 
-mainServer :: IO GameState -> IO ()
+mainServer :: GameState -> IO ()
 mainServer gameState = do
   putStrLn "running server loop"
-  gs <- gameState
-  conns <- atomically $ readTVar (gameConnections gs)
-  let newGameState = processCommands conns gameState
+  conns <- atomically $ readTVar (gameConnections gameState)
+  newGameState <- processCommands conns gameState
   threadDelay 1000000
   mainServer newGameState
 
-processCommands :: [Connection] -> IO GameState -> IO GameState
-processCommands [] gs = gs
-processCommands (connection : remainingConnections) gameState = do
-  cmd <- getCommand connection
-  gs <- gameState
-  let
-    newGameState =
-      case cmd of
-        Just realCommand ->
-          do
-            when (realCommand == Exit) $ atomically $ removeConnection (gameConnections gs) connection
-              --print ((getCharacter connection), realCommand)
-            doCommand connection realCommand gameState
-        Nothing -> gameState
+processCommands :: [ClientConnection] -> GameState -> IO GameState
+processCommands [] gs = return gs
+processCommands (conn : remainingConnections) gameState = do
+  cmd <- getCommand conn
+  newGameState <-
+    case cmd of
+      Just realCommand -> do
+        when (realCommand == Exit) $ atomically $ removeConnection (gameConnections gameState) conn
+        --print ((getCharacter conn), realCommand)
+        doCommand conn realCommand gameState
+      Nothing -> return gameState
   processCommands remainingConnections newGameState
 
-removeConnection :: TVar [Connection] -> Connection -> STM ()
-removeConnection connections connection =
+removeConnection :: TVar [ClientConnection] -> ClientConnection -> STM ()
+removeConnection connections conn =
   do
     currentConnections <- readTVar connections
-    let newConnections = filter (/= connection) currentConnections
+    let newConnections = filter (/= conn) currentConnections
     writeTVar connections newConnections
 
-addConnection :: TVar [Connection] -> Connection -> STM ()
-addConnection connections connection =
+addConnection :: TVar [ClientConnection] -> ClientConnection -> STM ()
+addConnection connections conn =
   do
     currentConnections <- readTVar connections
-    writeTVar connections (connection : currentConnections)
+    writeTVar connections (conn : currentConnections)
 
-doCommand :: Connection -> Command -> IO GameState -> IO GameState
-doCommand connection command gs =
+doCommand :: ClientConnection -> Command -> GameState -> IO GameState
+doCommand conn command gs =
   do
-    let h = connectionHandle connection
+    let h = connectionHandle conn
     case command of
       Exit -> do
         hPutStrLn h "Good Bye!"
-        atomically $ writeTVar (connectionClosed connection) True
-        tId <- readMVar (connectionThreadId connection)
+        atomically $ writeTVar (connectionClosed conn) True
+        tId <- readMVar (connectionThreadId conn)
         throwTo tId ExitException
       Look ->
         hPutStrLn h "There's nothing to see here, move along."
       _ ->
         hPutStrLn h "That command is not yet implemented. Sorry."
-    gs
+    return gs

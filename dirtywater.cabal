@@ -23,8 +23,10 @@ executable dirtywater
   build-depends:
     base >=4.6 && <4.7,
     stm >=2.4 && <2.5,
-    text >=0.11 && <0.12,
-    network >=2.4 && <2.5
+    text >=0.11 && <1.2,
+    network >=2.4 && <2.6,
+    HDBC >= 2.4 && <2.5,
+    HDBC-sqlite3 >= 2.3 && <2.4
   hs-source-dirs:
     src
   default-language:

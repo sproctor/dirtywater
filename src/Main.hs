@@ -3,37 +3,40 @@ import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
 import Data.Text
+import Database.HDBC
+import Database.HDBC.Sqlite3
 import Network
 import System.IO
-import System.Timeout
 
 import Controller
 
 main :: IO ()
 main = withSocketsDo $ do
+  dbconn <- connectSqlite3 "mud.db"
+  initDatabase dbconn
   putStrLn "Starting server."
   let port = 4000
   sock <- listenOn $ PortNumber port
   putStrLn $ "Listening on port " ++ show port ++ "."
   connections <- atomically $ newTVar []
-  forkIO (mainServer (return (GameState connections Running)))
+  _ <- forkIO (mainServer (GameState connections Running dbconn))
   forever $ do
     (h, _, _) <- accept sock
     putStrLn "Got a new connection."
     queue <- atomically $ newTBQueue 10
     idVar <- newEmptyMVar
     closed <- atomically $ newTVar False
-    let conn = Connection h queue closed Pc idVar
+    let conn = ClientConnection h queue closed Pc idVar
     atomically $ addConnection connections conn
-    id <- forkFinally (clientPlayGame conn)  (cleanupClient h)
-    putMVar idVar id
+    tId <- forkFinally (clientPlayGame conn)  (cleanupClient h)
+    putMVar idVar tId
 
 cleanupClient :: Handle -> Either SomeException () -> IO ()
 cleanupClient h _ = do
   putStrLn "Disconnecting a client."
   hClose h
 
-clientPlayGame :: Connection -> IO ()
+clientPlayGame :: ClientConnection -> IO ()
 clientPlayGame conn = do
   hPutStrLn (connectionHandle conn) "Welcome to Dirty Water, friend."
   name <- clientQueryName (connectionHandle conn)
@@ -77,7 +80,7 @@ lookupCommand name =
   in
     helper commandList
 
-clientLoop :: Connection -> IO ()
+clientLoop :: ClientConnection -> IO ()
 clientLoop conn = do
   closed <- atomically $ readTVar (connectionClosed conn)
   unless closed $ do
@@ -92,3 +95,12 @@ clientLoop conn = do
           Just cmd -> atomically $ writeTBQueue (connectionQueue conn) cmd
           Nothing -> return ()
     clientLoop conn
+
+initDatabase :: Connection -> IO ()
+initDatabase dbconn = do
+  tables <- getTables dbconn
+  unless (elem "characters" tables) $ do
+    _ <- run dbconn "CREATE TABLE characters (name VARCHAR(255), password VARCHAR(255))" []
+    commit dbconn
+    putStrLn "Created table"
+    return ()
