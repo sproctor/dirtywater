@@ -8,18 +8,18 @@ import Database.HDBC.Sqlite3
 import Network
 import System.IO
 
-import Controller
+import Connection
+import State
 
 main :: IO ()
 main = withSocketsDo $ do
-  dbconn <- connectSqlite3 "mud.db"
-  initDatabase dbconn
   putStrLn "Starting server."
   let port = 4000
   sock <- listenOn $ PortNumber port
   putStrLn $ "Listening on port " ++ show port ++ "."
-  connections <- atomically $ newTVar []
-  _ <- forkIO (mainServer (GameState connections Running dbconn))
+  connections <- newConnectionList
+  gameState <- newGameState "mud.db" connections
+  _ <- forkIO (mainServer gameState)
   forever $ do
     (h, _, _) <- accept sock
     putStrLn "Got a new connection."
@@ -30,6 +30,13 @@ main = withSocketsDo $ do
     atomically $ addConnection connections conn
     tId <- forkFinally (clientPlayGame conn)  (cleanupClient h)
     putMVar idVar tId
+
+mainServer :: GameState -> IO ()
+mainServer gameState = do
+  putStrLn "running server loop"
+  newGameState <- processCommands gameState
+  threadDelay 1000000
+  mainServer newGameState
 
 cleanupClient :: Handle -> Either SomeException () -> IO ()
 cleanupClient h _ = do
@@ -92,15 +99,6 @@ clientLoop conn = do
         let str = unpack $ strip $ pack line
         let command = lookupCommand str
         case command of
-          Just cmd -> atomically $ writeTBQueue (connectionQueue conn) cmd
+          Just cmd -> queueCommand conn cmd
           Nothing -> return ()
     clientLoop conn
-
-initDatabase :: Connection -> IO ()
-initDatabase dbconn = do
-  tables <- getTables dbconn
-  unless (elem "characters" tables) $ do
-    _ <- run dbconn "CREATE TABLE characters (name VARCHAR(255), password VARCHAR(255))" []
-    commit dbconn
-    putStrLn "Created table"
-    return ()
