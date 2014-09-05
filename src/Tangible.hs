@@ -1,16 +1,27 @@
 module Tangible
 (
+  Tangible(getLocation, getContainer, move, matchesDesc, viewShortDesc, viewLongDesc)
 ) where
 
-import Location
+import Container
+import Character
+import Item
 
-data Container = ContainerTangible Tangible | ContainerLocation Location
+class TangibleClass where
+  getLocation :: (Tangible a) => a -> Location
+  getContainer :: (Tangible a, Container b) => a -> b
+  move :: (Tangible a, Container b) => a -> b -> STM ()
+  -- matchesDesc :: (Tangible a) => a -> [String] -> String -> Bool
+  -- viewShortDesc :: (Tangible a) => a -> Character -> String
+  -- viewLongDesc :: (Tangible a) => a -> Character -> String
 
-data Tangible =
-    Tangible {
-      tangibleName :: String,
-      tangibleAdjs :: [String],
-      tangibleSDesc :: String,
-      tangibleLDesc :: String,
-      tangibleParent :: Container,
-    }
+data Tangible = TangibleItem Item | TangibleCharacter Character
+
+instance TangibleClass Tangible where
+  getLocation (TangibleItem i) = getLocation i
+  getLocation (TangibleCharacter c) = getLocation c
+  getContainer (TangibleItem i) = getContainer i
+  getContainer (TangibleCharacter c) = getContainer c
+  move (TangibleItem i) con = move i con
+  move (TangibleCharacter c) con = move c con
+  -- matchesDesc (Tangible)
