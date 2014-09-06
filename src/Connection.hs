@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Connection
 (
-  Character(Pc, Npc),
   ClientConnection(ClientConnection, connectionHandle, connectionClosed, connectionCharacter, connectionThreadId),
   ClientConnectionList,
   Command(Look, Exit, Move),
@@ -21,17 +20,16 @@ import Control.Concurrent.STM
 import Control.Exception
 import Data.Typeable
 import System.IO
-import Types
+
+import Location
 
 data Command = Look | Exit | Move Direction deriving (Show, Eq)
-
-data Character = Pc | Npc deriving (Show, Eq)
 
 data ClientConnection = ClientConnection {
       connectionHandle :: Handle,
       connectionQueue :: TBQueue Command,
       connectionClosed :: TVar Bool,
-      connectionCharacter :: Character,
+      -- connectionCharacter :: Character,
       connectionThreadId :: MVar ThreadId
     } deriving Eq
 

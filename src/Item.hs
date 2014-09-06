@@ -9,7 +9,7 @@ data Item =
       itemName :: String,
       itemAdjs :: [String],
       itemContainers :: [(Position, Int)]
-      itemContents :: [(Position, Containable)]
+      itemContents :: [(Position, Tangible)]
     }
 
 instance Container Item where
