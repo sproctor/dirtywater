@@ -11,3 +11,6 @@ data Character =
       leftHand :: Item,
       rightHand :: Item
     }
+
+instance Tangible Character where
+  
