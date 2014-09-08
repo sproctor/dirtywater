@@ -18,13 +18,13 @@ newLocation name desc = do
 getLocationDesc :: Location -> Character -> STM String
 getLocationDesc l char = do
   chars <- readTVar $ locationChars l
-  charDescs <- viewShortDescs chars char
+  charDescs <- sequence $ map (\ t -> viewShortDesc t char) chars
   let
     charStr = if null chars
       then ""
       else "People here: " ++ (intercalate ", " charDescs) ++ ".\r\n"
   items <- readTVar $ locationItems l
-  itemDescs <- viewShortDescs items char
+  itemDescs <- sequence $ map (\ t -> viewShortDesc t char) items
   let
     itemStr = if null items
       then ""
