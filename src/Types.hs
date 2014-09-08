@@ -21,7 +21,7 @@ data Item =
 data Character =
     Character {
       charContainer :: TVar Container,
-      charName :: String
+      charName :: TVar String
       --leftHand :: Item,
       --rightHand :: Item
     } deriving Eq

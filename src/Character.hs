@@ -18,14 +18,20 @@ instance Tangible Character where
 
   move self = writeTVar (charContainer self)
 
-  matchesDesc self [] name =
-    isPrefixOf name (charName self)
-  matchesDesc _ _ _ = False
+  matchesDesc self [] name = do
+    myName <- readTVar (charName self)
+    return $ isPrefixOf name myName
+  matchesDesc _ _ _ = return False
     
-  viewShortDesc _ _ = ""
-  viewLongDesc _ _ = ""
+  viewShortDesc _ _ = return ""
+  viewLongDesc _ _ = return ""
 
 newCharacter :: String -> Container -> STM Character
 newCharacter name con = do
   container <- newTVar con
-  return $ Character container name
+  newName <- newTVar name
+  return $ Character container newName
+
+changeName :: Character -> String -> STM ()
+changeName self newName =
+  writeTVar (charName self) newName

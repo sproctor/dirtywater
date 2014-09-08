@@ -22,10 +22,10 @@ instance Tangible Item where
   move self = writeTVar (itemContainer self)
 
   matchesDesc self adjs name =
-    isPrefixOf name (itemName self) && findAdjs adjs (itemAdjs self) []
+    return $ isPrefixOf name (itemName self) && findAdjs adjs (itemAdjs self) []
     
-  viewShortDesc _ _ = ""
-  viewLongDesc _ _ = ""
+  viewShortDesc _ _ = return ""
+  viewLongDesc _ _ = return ""
 
 canAdd :: Item -> Character -> Position -> Bool
 canAdd item _ pos =

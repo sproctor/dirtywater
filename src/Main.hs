@@ -12,6 +12,7 @@ import Character
 import Connection
 import Location
 import State
+import Types
 
 main :: IO ()
 main = withSocketsDo $ do
@@ -29,7 +30,7 @@ main = withSocketsDo $ do
     idVar <- newEmptyMVar
     closed <- atomically $ newTVar False
     startLoc <- atomically $ newLocation "Starting Area" "Insert description here"
-    char <- atomically $ newCharacter name startLoc
+    char <- atomically $ newCharacter "New Character" (ContainerLocation startLoc)
     let conn = ClientConnection h queue closed char idVar
     atomically $ addConnection connections conn
     tId <- forkFinally (clientPlayGame conn)  (cleanupClient h)
@@ -51,6 +52,7 @@ clientPlayGame :: ClientConnection -> IO ()
 clientPlayGame conn = do
   hPutStrLn (connectionHandle conn) "Welcome to Dirty Water, friend."
   name <- clientQueryName (connectionHandle conn)
+  atomically $ changeName (connectionCharacter conn) name
   clientLoop conn
 
 clientQueryName :: Handle -> IO String
