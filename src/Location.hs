@@ -1,32 +1,14 @@
-module Location
-(
-  Direction(..),
-  Location
-) where
+module Location where
+
+import Control.Concurrent.STM
 
 import Item
 import Character
+import Types
 
-data Direction =
-    North
-  | Northeast
-  | East
-  | Southeast
-  | South
-  | Southwest
-  | West
-  | Northwest
-  deriving (Show, Eq)
-
-data Location =
-  Location {
-    locationTitle :: String,
-    locationDesc :: String,
-    locationPortals :: [Portal],
-    locationCharacters :: [Character],
-    locationItems :: [Item],
-  }
-
-data Portal =
-    ItemPortal { portalItem :: Item, portalDest :: Location }
-  | DirectionPortal { directionDest :: Location, directionDir :: Direction }
+newLocation :: String -> String -> STM Location
+newLocation name desc = do
+  ps <- newTVar []
+  cs <- newTVar []
+  is <- newTVar []
+  return $ Location name desc ps cs is

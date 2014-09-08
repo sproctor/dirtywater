@@ -8,7 +8,9 @@ import Database.HDBC.Sqlite3
 import Network
 import System.IO
 
+import Character
 import Connection
+import Location
 import State
 
 main :: IO ()
@@ -26,7 +28,9 @@ main = withSocketsDo $ do
     queue <- atomically $ newTBQueue 10
     idVar <- newEmptyMVar
     closed <- atomically $ newTVar False
-    let conn = ClientConnection h queue closed Pc idVar
+    startLoc <- atomically $ newLocation "Starting Area" "Insert description here"
+    char <- atomically $ newCharacter name startLoc
+    let conn = ClientConnection h queue closed char idVar
     atomically $ addConnection connections conn
     tId <- forkFinally (clientPlayGame conn)  (cleanupClient h)
     putMVar idVar tId

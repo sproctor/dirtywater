@@ -21,15 +21,14 @@ import Control.Exception
 import Data.Typeable
 import System.IO
 
-import Location
-
-data Command = Look | Exit | Move Direction deriving (Show, Eq)
+import Types
+import Character
 
 data ClientConnection = ClientConnection {
       connectionHandle :: Handle,
       connectionQueue :: TBQueue Command,
       connectionClosed :: TVar Bool,
-      -- connectionCharacter :: Character,
+      connectionCharacter :: Character,
       connectionThreadId :: MVar ThreadId
     } deriving Eq
 

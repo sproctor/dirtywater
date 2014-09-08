@@ -3,8 +3,9 @@ module Tangible
   Tangible(..)
 ) where
 
-import Container
-import Character
+import Control.Concurrent.STM
+
+import Types
 
 class Tangible t where
   getLocation :: t -> STM Location
