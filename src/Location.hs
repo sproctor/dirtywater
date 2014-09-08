@@ -1,10 +1,11 @@
 module Location
 (
-  Direction(North, Northeast, East, Southeast, South, Southwest, West, Northwest),
+  Direction(..),
   Location
 ) where
 
-import Tangible
+import Item
+import Character
 
 data Direction =
     North
@@ -17,8 +18,15 @@ data Direction =
   | Northwest
   deriving (Show, Eq)
 
-data Location = Location { locationTitle :: String, locationDesc :: String, locationPortals :: [Portal] }
+data Location =
+  Location {
+    locationTitle :: String,
+    locationDesc :: String,
+    locationPortals :: [Portal],
+    locationCharacters :: [Character],
+    locationItems :: [Item],
+  }
 
 data Portal =
-    TangiblePortal { portalTangible :: Tangible, portalDest :: Location }
+    ItemPortal { portalItem :: Item, portalDest :: Location }
   | DirectionPortal { directionDest :: Location, directionDir :: Direction }
