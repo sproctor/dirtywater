@@ -13,6 +13,8 @@ import Database.HDBC.Sqlite3
 import System.IO
 
 import Connection
+import Location
+import Tangible
 
 data ServerStatus = Running | Stopping
 
@@ -45,14 +47,17 @@ doCommand :: ClientConnection -> Command -> GameState -> IO GameState
 doCommand conn command gs =
   do
     let h = connectionHandle conn
+    let char = connectionCharacter conn
     case command of
       Exit -> do
         hPutStrLn h "Good Bye!"
         atomically $ writeTVar (connectionClosed conn) True
         tId <- readMVar (connectionThreadId conn)
         throwTo tId ExitException
-      Look ->
-        hPutStrLn h "There's nothing to see here, move along."
+      Look -> do
+        loc <- atomically $ getLocation char
+        locDesc <- atomically $ getLocationDesc loc char
+        hPutStrLn h locDesc
       _ ->
         hPutStrLn h "That command is not yet implemented. Sorry."
     return gs

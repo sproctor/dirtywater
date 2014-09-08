@@ -44,7 +44,7 @@ data Location =
     locationTitle :: String,
     locationDesc :: String,
     locationPortals :: TVar [Portal],
-    locationCharacters :: TVar [Character],
+    locationChars :: TVar [Character],
     locationItems :: TVar [Item]
   }
 

@@ -1,6 +1,7 @@
 module Tangible
 (
-  Tangible(..)
+  Tangible(..),
+  viewShortDescs
 ) where
 
 import Control.Concurrent.STM
@@ -14,3 +15,10 @@ class Tangible t where
   matchesDesc :: t -> [String] -> String -> STM Bool
   viewShortDesc :: t -> Character -> STM String
   viewLongDesc :: t -> Character -> STM String
+
+viewShortDescs :: (Tangible t) => [t] -> Character -> STM [String]
+viewShortDescs [] _ = return []
+viewShortDescs (x:xs) c = do
+  rest <- viewShortDescs xs c
+  desc <- viewShortDesc x c
+  return $ desc:rest
