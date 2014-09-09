@@ -38,9 +38,8 @@ main = withSocketsDo $ do
 
 mainServer :: GameState -> IO ()
 mainServer gameState = do
-  putStrLn "running server loop"
   newGameState <- processCommands gameState
-  threadDelay 1000000
+  threadDelay 100000
   mainServer newGameState
 
 cleanupClient :: Handle -> Either SomeException () -> IO ()
@@ -97,7 +96,6 @@ clientLoop :: ClientConnection -> IO ()
 clientLoop conn = do
   closed <- atomically $ readTVar (connectionClosed conn)
   unless closed $ do
-    hPutStr (connectionHandle conn) ">"
     l <- tryJust (guard . isExitException) $ hGetLine (connectionHandle conn)
     case l of
       Left _ -> return ()

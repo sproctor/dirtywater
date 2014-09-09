@@ -36,7 +36,10 @@ processCommands gameState =
           Just realCommand -> do
             when (realCommand == Exit) $ atomically $ removeConnection (gameClients gs) conn
             --print ((getCharacter conn), realCommand)
-            doCommand conn realCommand gs
+            newGS <- doCommand conn realCommand gs
+            prompt <- isEmptyCommandQueue conn
+            when prompt $ putOutput conn ">"
+            return newGS
           Nothing -> return gameState
       processCommand remainingConnections updatedGameState
   in do

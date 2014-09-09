@@ -6,6 +6,7 @@ module Connection
   Command(Look, Exit, Move),
   ExitException(ExitException),
   addConnection,
+  isEmptyCommandQueue,
   isExitException,
   getCommand,
   getConnections,
@@ -42,21 +43,17 @@ isExitException :: ExitException -> Bool
 isExitException e =
   typeOf e == typeOf ExitException
 
-{- class Controller c where
-  getCommand :: c -> IO (Maybe Command)
-  putOutput :: c -> String -> IO ()
-  getCharacter :: c -> Character
-
-instance Controller ClientConnection where
--}
 getCommand :: ClientConnection -> IO (Maybe Command)
 getCommand (ClientConnection _ q _ _ _) =
   atomically (tryReadTBQueue q)
+
+isEmptyCommandQueue :: ClientConnection -> IO Bool
+isEmptyCommandQueue conn =
+  atomically $ isEmptyTBQueue $ connectionQueue conn
+
 putOutput :: ClientConnection -> String -> IO ()
 putOutput (ClientConnection h _ _ _ _) =
   hPutStr h
--- getCharacter :: ClientConnection -> Character
--- getCharacter (ClientConnection _ _ c) = c
 
 addConnection :: ClientConnectionList -> ClientConnection -> STM ()
 addConnection connections conn =

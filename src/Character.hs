@@ -22,8 +22,9 @@ instance Tangible Character where
     myName <- readTVar (charName self)
     return $ isPrefixOf name myName
   matchesDesc _ _ _ = return False
-    
+
   viewShortDesc _ _ = return ""
+
   viewLongDesc _ _ = return ""
 
 newCharacter :: String -> Container -> STM Character
