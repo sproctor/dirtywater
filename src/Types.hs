@@ -2,11 +2,51 @@ module Types where
 
 import Control.Concurrent.STM
 
-data Command = Look | Exit | Move Direction deriving (Show, Eq)
+data NounOrd
+  = NounAny
+  | NounOrd Int
+  deriving (Show, Eq)
+
+newtype AdjectiveList = AdjectiveList [String] deriving (Show, Eq)
+
+newtype Noun = Noun String deriving (Show, Eq)
+
+newtype NounDesc = NounDesc (NounOrd, AdjectiveList, Noun) deriving (Show, Eq)
+
+data Preposition
+  = PrepOn
+  | PrepIn
+  | PrepBehind
+  | PrepUnder
+  | PrepAny
+  deriving (Show, Eq)
+
+data ObjectDesc
+  = ObjectDesc (ObjectDesc, Preposition, NounDesc)
+  | ObjectDescBase NounDesc
+  deriving (Show, Eq)
+
+data ExitDesc
+  = ExitDirection Direction
+  | ExitObject ObjectDesc
+
+data Command
+  = CmdNoArgs String
+  | CmdObjectDesc (String, ObjectDesc)
+  | CmdBadCommand
+  deriving (Show, Eq)
+
+data PlayerCommand
+  = PlayerMove ExitDesc
+  | PlayerLook
+  | PlayerLookAt ObjectDesc
+  | PlayerQuit
+  | PlayerSay String
+  | PlayerBadCmd
 
 data Position = In | On deriving Eq
 
-data Volume = Int deriving (Ord, Eq, Show, Read)
+newtype Volume = Volume Int deriving (Ord, Eq, Show, Read)
 
 data Item =
     Item {

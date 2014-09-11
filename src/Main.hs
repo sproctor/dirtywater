@@ -9,6 +9,7 @@ import Network
 import System.IO
 
 import Character
+import Command
 import Connection
 import Location
 import State
@@ -75,34 +76,17 @@ clientQueryName h = do
           hPutStrLn h $ "Let's try this again. Are you sure you want to go by " ++ name ++ "?"
           confirmName name
 
-commandList =
-  [
-    ("exit", Exit),
-    ("look", Look)
-  ]
-
-lookupCommand :: String -> Maybe Command
-lookupCommand name =
-  let
-    helper [] = Nothing
-    helper ((str, command) : rest) =
-      if str == name
-        then Just command
-        else helper rest
-  in
-    helper commandList
-
 clientLoop :: ClientConnection -> IO ()
 clientLoop conn = do
   closed <- atomically $ readTVar (connectionClosed conn)
+  let h = connectionHandle conn
   unless closed $ do
-    l <- tryJust (guard . isExitException) $ hGetLine (connectionHandle conn)
+    l <- tryJust (guard . isExitException) $ hGetLine h
     case l of
       Left _ -> return ()
       Right line -> do
         let str = unpack $ strip $ pack line
-        let command = lookupCommand str
-        case command of
-          Just cmd -> queueCommand conn cmd
-          Nothing -> return ()
+        case parseCommand str of
+          Left _ -> hPutStrLn h "Parse error"
+          Right cmd -> queueCommand conn cmd
     clientLoop conn

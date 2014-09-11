@@ -15,6 +15,7 @@ import System.IO
 import Connection
 import Location
 import Tangible
+import Types
 
 data ServerStatus = Running | Stopping
 
@@ -34,7 +35,6 @@ processCommands gameState =
       updatedGameState <-
         case cmd of
           Just realCommand -> do
-            when (realCommand == Exit) $ atomically $ removeConnection (gameClients gs) conn
             --print ((getCharacter conn), realCommand)
             newGS <- doCommand conn realCommand gs
             prompt <- isEmptyCommandQueue conn
@@ -52,15 +52,18 @@ doCommand conn command gs =
     let h = connectionHandle conn
     let char = connectionCharacter conn
     case command of
-      Exit -> do
+      CmdNoArgs "exit" -> do
         hPutStrLn h "Good Bye!"
+        atomically $ removeConnection (gameClients gs) conn
         atomically $ writeTVar (connectionClosed conn) True
         tId <- readMVar (connectionThreadId conn)
         throwTo tId ExitException
-      Look -> do
+      CmdNoArgs "look" -> do
         loc <- atomically $ getLocation char
         locDesc <- atomically $ getLocationDesc loc char
         hPutStrLn h locDesc
+      CmdBadCommand ->
+        hPutStrLn h "Bad command! What are you trying to pull?"
       _ ->
         hPutStrLn h "That command is not yet implemented. Sorry."
     return gs

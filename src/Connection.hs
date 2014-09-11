@@ -3,8 +3,7 @@ module Connection
 (
   ClientConnection(ClientConnection, connectionHandle, connectionClosed, connectionCharacter, connectionThreadId),
   ClientConnectionList,
-  Command(Look, Exit, Move),
-  ExitException(ExitException),
+  ExitException(..),
   addConnection,
   isEmptyCommandQueue,
   isExitException,
