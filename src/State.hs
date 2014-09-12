@@ -17,15 +17,6 @@ import Location
 import Tangible
 import Types
 
-data ServerStatus = Running | Stopping
-
-data GameState =
-  GameState {
-    gameClients :: ClientConnectionList,
-    gameStatus :: ServerStatus,
-    sqlConnection :: Connection
-  }
-
 processCommands :: GameState -> IO GameState
 processCommands gameState =
   let
@@ -47,25 +38,14 @@ processCommands gameState =
     processCommand conns gameState
 
 doCommand :: ClientConnection -> Command -> GameState -> IO GameState
-doCommand conn command gs =
+doCommand conn (command, args) gs =
   do
     let h = connectionHandle conn
     let char = connectionCharacter conn
     case command of
-      CmdNoArgs "exit" -> do
-        hPutStrLn h "Good Bye!"
-        atomically $ removeConnection (gameClients gs) conn
-        atomically $ writeTVar (connectionClosed conn) True
-        tId <- readMVar (connectionThreadId conn)
-        throwTo tId ExitException
-      CmdNoArgs "look" -> do
-        loc <- atomically $ getLocation char
-        locDesc <- atomically $ getLocationDesc loc char
-        hPutStrLn h locDesc
-      CmdBadCommand ->
+      Command (_, _, f) -> atomically $ f gs conn args
+      BadCommand ->
         hPutStrLn h "Bad command! What are you trying to pull?"
-      _ ->
-        hPutStrLn h "That command is not yet implemented. Sorry."
     return gs
 
 newGameState :: String -> ClientConnectionList -> IO GameState

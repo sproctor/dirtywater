@@ -1,6 +1,9 @@
 module Types where
 
+import Control.Concurrent
 import Control.Concurrent.STM
+import Database.HDBC.Sqlite3
+import System.IO
 
 data NounOrd
   = NounAny
@@ -30,19 +33,20 @@ data ExitDesc
   = ExitDirection Direction
   | ExitObject ObjectDesc
 
-data Command
-  = CmdNoArgs String
-  | CmdObjectDesc (String, ObjectDesc)
-  | CmdBadCommand
+data CommandType
+  = CmdTypeNoArgs
+  | CmdTypeObjectDescOpt
+  | CmdTypeObjectDesc
   deriving (Show, Eq)
 
-data PlayerCommand
-  = PlayerMove ExitDesc
-  | PlayerLook
-  | PlayerLookAt ObjectDesc
-  | PlayerQuit
-  | PlayerSay String
-  | PlayerBadCmd
+data CommandArgs
+  = CmdNoArgs
+  | CmdObjectDesc ObjectDesc
+  deriving (Show, Eq)
+
+data Command
+  = Command (String, CommandType, GameState -> ClientConnection -> CommandArgs -> STM GameState)
+  | BadCommand
 
 data Position = In | On deriving Eq
 
@@ -91,3 +95,23 @@ data Location =
 data Portal =
     ItemPortal { portalItem :: Item, portalDest :: Location }
   | DirectionPortal { directionDest :: Location, directionDir :: Direction }
+
+data ServerStatus = Running | Stopping
+
+data GameState =
+  GameState
+  { gameClients :: ClientConnectionList
+  , gameStatus :: ServerStatus
+  , sqlConnection :: Connection
+  , commandList :: TVar [Command]
+  }
+
+data ClientConnection = ClientConnection {
+      connectionHandle :: Handle,
+      connectionQueue :: TBQueue (Command, CommandArgs),
+      connectionClosed :: TVar Bool,
+      connectionCharacter :: Character,
+      connectionThreadId :: MVar ThreadId
+    } deriving Eq
+
+newtype ClientConnectionList = ClientConnectionList (TVar [ClientConnection])
