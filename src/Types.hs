@@ -45,7 +45,7 @@ data CommandArgs
   deriving (Show, Eq)
 
 data Command
-  = Command (String, CommandType, GameState -> ClientConnection -> CommandArgs -> STM GameState)
+  = Command (String, CommandType, GameState -> ClientConnection -> CommandArgs -> IO GameState)
   | BadCommand
 
 data Position = In | On deriving Eq

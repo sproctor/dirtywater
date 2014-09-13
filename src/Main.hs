@@ -21,7 +21,7 @@ main = withSocketsDo $ do
   let port = 4000
   sock <- listenOn $ PortNumber port
   putStrLn $ "Listening on port " ++ show port ++ "."
-  connections <- newConnectionList
+  connections <- atomically $ newConnectionList
   gameState <- newGameState "mud.db" connections
   _ <- forkIO (mainServer gameState)
   forever $ do
@@ -34,7 +34,7 @@ main = withSocketsDo $ do
     char <- atomically $ newCharacter "New Character" (ContainerLocation startLoc)
     let conn = ClientConnection h queue closed char idVar
     atomically $ addConnection connections conn
-    tId <- forkFinally (clientPlayGame conn)  (cleanupClient h)
+    tId <- forkFinally (clientPlayGame gameState conn)  (cleanupClient h)
     putMVar idVar tId
 
 mainServer :: GameState -> IO ()
@@ -48,12 +48,12 @@ cleanupClient h _ = do
   putStrLn "Disconnecting a client."
   hClose h
 
-clientPlayGame :: ClientConnection -> IO ()
-clientPlayGame conn = do
+clientPlayGame :: GameState -> ClientConnection -> IO ()
+clientPlayGame gs conn = do
   hPutStrLn (connectionHandle conn) "Welcome to Dirty Water, friend."
   name <- clientQueryName (connectionHandle conn)
   atomically $ changeName (connectionCharacter conn) name
-  clientLoop conn
+  clientLoop gs conn
 
 clientQueryName :: Handle -> IO String
 clientQueryName h = do
@@ -76,8 +76,8 @@ clientQueryName h = do
           hPutStrLn h $ "Let's try this again. Are you sure you want to go by " ++ name ++ "?"
           confirmName name
 
-clientLoop :: ClientConnection -> IO ()
-clientLoop conn = do
+clientLoop :: GameState -> ClientConnection -> IO ()
+clientLoop gs conn = do
   closed <- atomically $ readTVar (connectionClosed conn)
   let h = connectionHandle conn
   unless closed $ do
@@ -86,7 +86,8 @@ clientLoop conn = do
       Left _ -> return ()
       Right line -> do
         let str = unpack $ strip $ pack line
-        case parseCommand str of
+        cl <- atomically $ readTVar $ commandList gs
+        case parseCommand cl str of
           Left _ -> hPutStrLn h "Parse error"
-          Right cmd -> queueCommand conn cmd
-    clientLoop conn
+          Right cmd -> atomically $ queueCommand conn cmd
+    clientLoop gs conn

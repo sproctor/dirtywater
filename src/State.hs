@@ -12,6 +12,7 @@ import Database.HDBC
 import Database.HDBC.Sqlite3
 import System.IO
 
+import Command
 import Connection
 import Location
 import Tangible
@@ -22,37 +23,38 @@ processCommands gameState =
   let
     processCommand [] gs = return gs
     processCommand (conn : remainingConnections) gs = do
-      cmd <- getCommand conn
+      mcmd <- atomically $ getCommand conn
       updatedGameState <-
-        case cmd of
-          Just realCommand -> do
+        case mcmd of
+          Just cmd -> do
             --print ((getCharacter conn), realCommand)
-            newGS <- doCommand conn realCommand gs
-            prompt <- isEmptyCommandQueue conn
+            newGS <- doCommand conn cmd gs
+            prompt <- atomically $ isEmptyCommandQueue conn
             when prompt $ putOutput conn ">"
             return newGS
           Nothing -> return gameState
       processCommand remainingConnections updatedGameState
   in do
-    conns <- getConnections (gameClients gameState)
+    conns <- atomically $ getConnections (gameClients gameState)
     processCommand conns gameState
 
-doCommand :: ClientConnection -> Command -> GameState -> IO GameState
+doCommand :: ClientConnection -> (Command, CommandArgs) -> GameState -> IO GameState
 doCommand conn (command, args) gs =
   do
     let h = connectionHandle conn
     let char = connectionCharacter conn
     case command of
-      Command (_, _, f) -> atomically $ f gs conn args
-      BadCommand ->
+      Command (_, _, f) -> f gs conn args
+      BadCommand -> do
         hPutStrLn h "Bad command! What are you trying to pull?"
-    return gs
+        return gs
 
 newGameState :: String -> ClientConnectionList -> IO GameState
 newGameState dbfilename connections = do
   dbconn <- connectSqlite3 dbfilename
   initDatabase dbconn
-  return $ GameState connections Running dbconn
+  q <- atomically $ newTVar [Command ("look", CmdTypeNoArgs, cmdLook), Command ("exit", CmdTypeNoArgs, cmdExit)]
+  return $ GameState connections Running dbconn q
 
 initDatabase :: Connection -> IO ()
 initDatabase dbconn = do
