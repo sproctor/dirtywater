@@ -22,34 +22,36 @@ lookupCommand str cl =
   in
     helper cl
 
-parseCommand :: [Command] -> String -> Either ParseError (Command, CommandArgs)
+parseCommand :: [Command] -> String -> Either ParseError (Command, [CommandArg])
 parseCommand cl input = parse (playerCommand cl) "(unknown)" input
 
-playerCommand :: [Command] -> GenParser Char st (Command, CommandArgs)
+playerCommand :: [Command] -> GenParser Char st (Command, [CommandArg])
 playerCommand cl = do
   cmdName <- word
   let cmd = lookupCommand cmdName cl
   case cmd of
-    Command (_, CmdTypeNoArgs, _) -> return (cmd, CmdNoArgs)
-    Command _ -> return (cmd, CmdNoArgs)
-    BadCommand -> return (BadCommand, CmdNoArgs)
+    Command (_, [], _) -> return (cmd, [])
+    Command _ -> return (cmd, [])
+    BadCommand -> return (BadCommand, [])
 
 word :: GenParser Char st String
 word = many $ oneOf ['a'..'z']
 
-cmdExit :: GameState -> ClientConnection -> CommandArgs -> IO GameState
+cmdExit :: GameState -> ClientConnection -> [CommandArg] -> IO GameState
 cmdExit gs conn _ = do
   hPutStrLn (connectionHandle conn) "Good Bye!"
-  atomically $ removeConnection (gameClients gs) conn
-  atomically $ writeTVar (connectionClosed conn) True
+  atomically $ do
+    removeConnection (gameClients gs) conn
+    writeTVar (connectionClosed conn) True
   tId <- readMVar (connectionThreadId conn)
   throwTo tId ExitException
   return gs
 
-cmdLook :: GameState -> ClientConnection -> CommandArgs -> IO GameState
+cmdLook :: GameState -> ClientConnection -> [CommandArg] -> IO GameState
 cmdLook gs conn _ = do
   let char = connectionCharacter conn
-  loc <- atomically $ getLocation char
-  locDesc <- atomically $ getLocationDesc loc char
+  locDesc <- atomically $ do
+    loc <- getLocation char
+    getLocationDesc loc char
   hPutStrLn (connectionHandle conn) locDesc
   return gs

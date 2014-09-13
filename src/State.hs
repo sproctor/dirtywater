@@ -38,7 +38,7 @@ processCommands gameState =
     conns <- atomically $ getConnections (gameClients gameState)
     processCommand conns gameState
 
-doCommand :: ClientConnection -> (Command, CommandArgs) -> GameState -> IO GameState
+doCommand :: ClientConnection -> (Command, [CommandArg]) -> GameState -> IO GameState
 doCommand conn (command, args) gs =
   do
     let h = connectionHandle conn
@@ -53,7 +53,7 @@ newGameState :: String -> ClientConnectionList -> IO GameState
 newGameState dbfilename connections = do
   dbconn <- connectSqlite3 dbfilename
   initDatabase dbconn
-  q <- atomically $ newTVar [Command ("look", CmdTypeNoArgs, cmdLook), Command ("exit", CmdTypeNoArgs, cmdExit)]
+  q <- atomically $ newTVar [Command ("look", [], cmdLook), Command ("exit", [], cmdExit)]
   return $ GameState connections Running dbconn q
 
 initDatabase :: Connection -> IO ()
