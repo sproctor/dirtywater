@@ -37,7 +37,7 @@ playerCommand cl = do
 word :: GenParser Char st String
 word = many $ oneOf ['a'..'z']
 
-cmdExit :: GameState -> ClientConnection -> [CommandArg] -> IO GameState
+cmdExit :: GameState -> ClientConnection -> [CommandArg] -> IO ()
 cmdExit gs conn _ = do
   hPutStrLn (connectionHandle conn) "Good Bye!"
   atomically $ do
@@ -45,13 +45,11 @@ cmdExit gs conn _ = do
     writeTVar (connectionClosed conn) True
   tId <- readMVar (connectionThreadId conn)
   throwTo tId ExitException
-  return gs
 
-cmdLook :: GameState -> ClientConnection -> [CommandArg] -> IO GameState
+cmdLook :: GameState -> ClientConnection -> [CommandArg] -> IO ()
 cmdLook gs conn _ = do
   let char = connectionCharacter conn
   locDesc <- atomically $ do
     loc <- getLocation char
     getLocationDesc loc char
   hPutStrLn (connectionHandle conn) locDesc
-  return gs

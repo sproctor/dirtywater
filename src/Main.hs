@@ -39,9 +39,9 @@ main = withSocketsDo $ do
 
 mainServer :: GameState -> IO ()
 mainServer gameState = do
-  newGameState <- processCommands gameState
+  processCommands gameState
   threadDelay 100000
-  mainServer newGameState
+  mainServer gameState
 
 cleanupClient :: Handle -> Either SomeException () -> IO ()
 cleanupClient h _ = do

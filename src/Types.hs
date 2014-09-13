@@ -44,7 +44,7 @@ data CommandArg
   deriving (Show, Eq)
 
 data Command
-  = Command (String, [CommandArgType], GameState -> ClientConnection -> [CommandArg] -> IO GameState)
+  = Command (String, [CommandArgType], GameState -> ClientConnection -> [CommandArg] -> IO ())
   | BadCommand
 
 data Position = In | On deriving Eq
