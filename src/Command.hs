@@ -25,7 +25,7 @@ lookupCommand str cl =
 parseCommand :: GameState -> String -> STM (Either ParseError (Command, CommandArgs))
 parseCommand gs input = do
   cl <- readTVar $ commandList gs
-  parse (playerCommand gs) "(unknown)" input
+  return $ parse (playerCommand cl) "(unknown)" input
 
 playerCommand :: [Command] -> GenParser Char st (Command, CommandArgs)
 playerCommand gs = do
@@ -44,12 +44,15 @@ cmdExit gs conn _ = do
   liftIO $ hPutStrLn (connectionHandle conn) "Good Bye!"
   removeConnection (gameClients gs) conn
   writeTVar (connectionClosed conn) True
-  tId <- readMVar (connectionThreadId conn)
-  throwTo tId ExitException
+  tId <- liftIO $ readMVar (connectionThreadId conn)
+  liftIO $ throwTo tId ExitException
+  return gs
 
 cmdLook :: GameState -> ClientConnection -> CommandArgs -> STM GameState
 cmdLook gs conn _ = do
+  let char = connectionCharacter conn
   loc <- getLocation char
-  locDesc <- getLocationDesc loc char
-  liftIO $ hPutStrLn (connectionHandle conn) locDesc
-
+  liftIO $ do 
+              locDesc <- atomically $ getLocationDesc loc char
+              hPutStrLn (connectionHandle conn) locDesc
+  return gs
