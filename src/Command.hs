@@ -14,13 +14,9 @@ import Tangible
 import Types
 
 lookupCommand :: String -> [Command] -> Command
-lookupCommand str cl =
-  let
-    helper [] = BadCommand
-    helper (command@(Command (name, _, _)):_) | isPrefixOf str name = command
-    helper (_:rest) = helper rest
-  in
-    helper cl
+lookupCommand _ [] = BadCommand
+lookupCommand str (command@(Command (name, _, _)):_) | isPrefixOf str name = command
+lookupCommand str (_:rest) = lookupCommand str rest
 
 parseCommand :: [Command] -> String -> Either ParseError (Command, [CommandArg])
 parseCommand cl input = parse (playerCommand cl) "(unknown)" input
