@@ -37,7 +37,7 @@ commandArgs (CommandDef (name, CmdTypeString:rest, f)) =
   do
     str <- anyString
     return $ Command (name, CmdArgsString str, f)
-  -- <|> commandArgs $ CommandDef (name, rest, f)
+  <|> ( commandArgs (CommandDef (name, rest, f)) )
 
 word :: GenParser Char st String
 word = many1 $ oneOf ['a'..'z']
