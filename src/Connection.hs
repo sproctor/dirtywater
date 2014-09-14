@@ -31,7 +31,7 @@ isExitException :: ExitException -> Bool
 isExitException e =
   typeOf e == typeOf ExitException
 
-getCommand :: ClientConnection -> STM (Maybe (Command, [CommandArg]))
+getCommand :: ClientConnection -> STM (Maybe Command)
 getCommand (ClientConnection _ q _ _ _) =
   tryReadTBQueue q
 
@@ -65,6 +65,6 @@ newConnectionList = do
   l <- newTVar []
   return $ ClientConnectionList l
 
-queueCommand :: ClientConnection -> (Command, [CommandArg]) -> STM ()
+queueCommand :: ClientConnection -> Command -> STM ()
 queueCommand conn cmd =
   writeTBQueue (connectionQueue conn) cmd

@@ -13,27 +13,44 @@ import Location
 import Tangible
 import Types
 
-lookupCommand :: String -> [Command] -> Command
-lookupCommand _ [] = BadCommand
-lookupCommand str (command@(Command (name, _, _)):_) | isPrefixOf str name = command
-lookupCommand str (_:rest) = lookupCommand str rest
+lookupCommand :: String -> [CommandDef] -> Maybe CommandDef
+lookupCommand str =
+  let
+    helper (commandDef@(CommandDef(name, _, _))) = isPrefixOf str name
+  in
+    find helper
 
-parseCommand :: [Command] -> String -> Either ParseError (Command, [CommandArg])
+parseCommand :: [CommandDef] -> String -> Either ParseError Command
 parseCommand cl input = parse (playerCommand cl) "(unknown)" input
 
-playerCommand :: [Command] -> GenParser Char st (Command, [CommandArg])
+playerCommand :: [CommandDef] -> GenParser Char st Command
 playerCommand cl = do
   cmdName <- word
-  let cmd = lookupCommand cmdName cl
-  case cmd of
-    Command (_, [], _) -> return (cmd, [])
-    Command _ -> return (cmd, [])
-    BadCommand -> return (BadCommand, [])
+  case lookupCommand cmdName cl of
+    Just cmdDef -> commandArgs cmdDef
+    Nothing -> return $ BadCommand $ "What are you stupid? You can't " ++ cmdName ++ "."
+
+commandArgs :: CommandDef -> GenParser Char st Command
+commandArgs (CommandDef (name, [], _)) = return $ BadCommand $ "That's not how you " ++ name ++ "."
+commandArgs (CommandDef (name, CmdTypeNone:_, f)) = return $ Command (name, CmdArgsNone, f)
+commandArgs (CommandDef (name, CmdTypeString:rest, f)) =
+  do
+    str <- anyString
+    return $ Command (name, CmdArgsString str, f)
+  -- <|> commandArgs $ CommandDef (name, rest, f)
 
 word :: GenParser Char st String
-word = many $ oneOf ['a'..'z']
+word = many1 $ oneOf ['a'..'z']
 
-cmdExit :: GameState -> ClientConnection -> [CommandArg] -> IO ()
+anyString :: GenParser Char st String
+anyString =
+  many1 $ noneOf "\r\n"
+
+whitespace :: GenParser Char st String
+whitespace =
+  many1 space
+
+cmdExit :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdExit gs conn _ = do
   hPutStrLn (connectionHandle conn) "Good Bye!"
   atomically $ do
@@ -42,7 +59,7 @@ cmdExit gs conn _ = do
   tId <- readMVar (connectionThreadId conn)
   throwTo tId ExitException
 
-cmdLook :: GameState -> ClientConnection -> [CommandArg] -> IO ()
+cmdLook :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdLook gs conn _ = do
   let char = connectionCharacter conn
   locDesc <- atomically $ do

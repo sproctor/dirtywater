@@ -33,19 +33,23 @@ data ExitDesc
   = ExitDirection Direction
   | ExitObject ObjectDesc
 
-data CommandArgType
+data CommandArgsType
   = CmdTypeObjectDesc
   | CmdTypeString
+  | CmdTypeNone
   deriving (Show, Eq)
 
-data CommandArg
-  = CmdObjectDesc ObjectDesc
-  | CmdString String
+data CommandArgs
+  = CmdArgsObjectDesc ObjectDesc
+  | CmdArgsString String
+  | CmdArgsNone
   deriving (Show, Eq)
 
 data Command
-  = Command (String, [CommandArgType], GameState -> ClientConnection -> [CommandArg] -> IO ())
-  | BadCommand
+  = Command (String, CommandArgs, GameState -> ClientConnection -> CommandArgs -> IO ())
+  | BadCommand String
+
+newtype CommandDef = CommandDef (String, [CommandArgsType], GameState -> ClientConnection -> CommandArgs -> IO ())
 
 data Position = In | On deriving Eq
 
@@ -102,15 +106,15 @@ data GameState =
   { gameClients :: ClientConnectionList
   , gameStatus :: ServerStatus
   , sqlConnection :: Connection
-  , commandList :: TVar [Command]
+  , commandList :: TVar [CommandDef]
   }
 
-data ClientConnection = ClientConnection {
-      connectionHandle :: Handle,
-      connectionQueue :: TBQueue (Command, [CommandArg]),
-      connectionClosed :: TVar Bool,
-      connectionCharacter :: Character,
-      connectionThreadId :: MVar ThreadId
+data ClientConnection = ClientConnection
+    { connectionHandle :: Handle
+    , connectionQueue :: TBQueue Command
+    , connectionClosed :: TVar Bool
+    , connectionCharacter :: Character
+    , connectionThreadId :: MVar ThreadId
     } deriving Eq
 
 newtype ClientConnectionList = ClientConnectionList (TVar [ClientConnection])
