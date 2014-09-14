@@ -53,6 +53,7 @@ newGameState dbfilename connections = do
   q <- atomically $ newTVar
     [ CommandDef ("look", [CmdTypeNone], cmdLook)
     , CommandDef ("exit", [CmdTypeNone], cmdExit)
+    , CommandDef ("say", [CmdTypeString], cmdSay)
     ]
   return $ GameState connections Running dbconn q
 

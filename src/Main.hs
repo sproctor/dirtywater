@@ -88,6 +88,6 @@ clientLoop gs conn = do
         let str = unpack $ strip $ pack line
         cl <- atomically $ readTVar $ commandList gs
         case parseCommand cl str of
-          Left _ -> hPutStrLn h "Parse error"
+          Left e -> hPutStrLn h $ "Parse error: " ++ (show e)
           Right cmd -> atomically $ queueCommand conn cmd
     clientLoop gs conn

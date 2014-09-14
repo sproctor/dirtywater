@@ -25,7 +25,7 @@ parseCommand cl input = parse (playerCommand cl) "(unknown)" input
 
 playerCommand :: [CommandDef] -> GenParser Char st Command
 playerCommand cl = do
-  cmdName <- word
+  cmdName <- word <?> "command"
   case lookupCommand cmdName cl of
     Just cmdDef -> commandArgs cmdDef
     Nothing -> return $ BadCommand $ "What are you stupid? You can't " ++ cmdName ++ "."
@@ -35,20 +35,21 @@ commandArgs (CommandDef (name, [], _)) = return $ BadCommand $ "That's not how y
 commandArgs (CommandDef (name, CmdTypeNone:_, f)) = return $ Command (name, CmdArgsNone, f)
 commandArgs (CommandDef (name, CmdTypeString:rest, f)) =
   do
-    str <- anyString
+    whitespace <?> "whitespace"
+    str <- anyString <?> "arg string"
     return $ Command (name, CmdArgsString str, f)
   <|> ( commandArgs (CommandDef (name, rest, f)) )
 
 word :: GenParser Char st String
-word = many1 $ oneOf ['a'..'z']
+word = (many1 $ oneOf ['a'..'z']) <?> "word"
 
 anyString :: GenParser Char st String
 anyString =
-  many1 $ noneOf "\r\n"
+  (many1 $ noneOf "\r\n") <?> "anystring"
 
-whitespace :: GenParser Char st String
+whitespace :: GenParser Char st ()
 whitespace =
-  many1 space
+  skipMany1 space <?> "space"
 
 cmdExit :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdExit gs conn _ = do
@@ -66,3 +67,7 @@ cmdLook gs conn _ = do
     loc <- getLocation char
     getLocationDesc loc char
   hPutStrLn (connectionHandle conn) locDesc
+
+cmdSay :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdSay gs conn (CmdArgsString str) =
+  hPutStrLn (connectionHandle conn) $ "You say, \"" ++ str ++ "\""
