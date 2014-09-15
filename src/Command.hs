@@ -21,7 +21,7 @@ lookupCommand str =
     find helper
 
 parseCommand :: [CommandDef] -> String -> Either ParseError Command
-parseCommand cl input = parse (playerCommand cl) "(unknown)" input
+parseCommand cl input = parse (playerCommand cl) "" input
 
 playerCommand :: [CommandDef] -> GenParser Char st Command
 playerCommand cl = do
