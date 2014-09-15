@@ -1,6 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Location where
 
+import Control.Applicative
 import Control.Concurrent.STM
+import Data.Yaml
 import Data.List
 
 import Character
@@ -8,12 +11,12 @@ import Item
 import Types
 import Tangible
 
-newLocation :: String -> String -> STM Location
-newLocation name desc = do
-  ps <- newTVar []
+newLocation :: String -> String -> String -> [Portal] -> STM Location
+newLocation id name desc portals = do
+  ps <- newTVar portals
   cs <- newTVar []
   is <- newTVar []
-  return $ Location name desc ps cs is
+  return $ Location id name desc ps cs is
 
 getLocationDesc :: Location -> Character -> STM String
 getLocationDesc l char = do
@@ -31,3 +34,9 @@ getLocationDesc l char = do
       else "Items here: " ++ (intercalate ", " itemDescs) ++ ".\r\n"
   let desc = (locationTitle l) ++ "\r\n" ++ (locationDesc l) ++ "\r\n" ++ charStr ++ itemStr
   return desc
+
+instance FromJSON Location where
+  parseJSON (Object o) = newLocation
+    <$> o .: "id"
+    <*> o .: "title"
+    <*> o .: "desc"

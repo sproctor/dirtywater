@@ -88,6 +88,7 @@ data Direction =
 
 data Location =
   Location {
+    locationId :: Int,
     locationTitle :: String,
     locationDesc :: String,
     locationPortals :: TVar [Portal],

@@ -1,0 +1,10 @@
+---
+location:
+    id: 1001
+    title: Starting Room
+    desc: ...with a simple description
+    portals:
+        - dir: north
+          dest: 1002
+    init_file: start_init.lua
+...
