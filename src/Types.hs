@@ -98,7 +98,7 @@ data Location =
 
 data Portal =
     ItemPortal { portalItem :: Item, portalDest :: Location }
-  | DirectionPortal { directionDest :: Location, directionDir :: Direction }
+  | DirectionPortal { directionDir :: Direction, directionDest :: Location }
 
 data ServerStatus = Running | Stopping
 

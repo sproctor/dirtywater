@@ -11,7 +11,7 @@ import Item
 import Types
 import Tangible
 
-newLocation :: String -> String -> String -> [Portal] -> STM Location
+newLocation :: Int -> String -> String -> [Portal] -> STM Location
 newLocation id name desc portals = do
   ps <- newTVar portals
   cs <- newTVar []
@@ -40,3 +40,9 @@ instance FromJSON Location where
     <$> o .: "id"
     <*> o .: "title"
     <*> o .: "desc"
+    <*> o .: "portals"
+
+instance FromJSON Portal where
+  parseJSON (Object o) = ItemPortal
+    <$> o .: "dir"
+    <*> o .: "dest"
