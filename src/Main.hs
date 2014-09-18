@@ -30,7 +30,7 @@ main = withSocketsDo $ do
     queue <- atomically $ newTBQueue 10
     idVar <- newEmptyMVar
     closed <- atomically $ newTVar False
-    startLoc <- atomically $ newLocation "Starting Area" "Insert description here"
+    startLoc <- atomically $ newLocation 1 "Starting Area" "Insert description here" []
     char <- atomically $ newCharacter "New Character" (ContainerLocation startLoc)
     let conn = ClientConnection h queue closed char idVar
     atomically $ addConnection connections conn

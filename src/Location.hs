@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Location where
 
 import Control.Applicative
@@ -35,14 +36,15 @@ getLocationDesc l char = do
   let desc = (locationTitle l) ++ "\r\n" ++ (locationDesc l) ++ "\r\n" ++ charStr ++ itemStr
   return desc
 
-instance FromJSON Location where
-  parseJSON (Object o) = newLocation
+instance FromJSON LocationDef where
+  parseJSON (Object o) = LocationDef
     <$> o .: "id"
     <*> o .: "title"
     <*> o .: "desc"
     <*> o .: "portals"
 
-instance FromJSON Portal where
-  parseJSON (Object o) = ItemPortal
-    <$> o .: "dir"
+instance FromJSON PortalDef where
+  parseJSON (Object o) = PortalDef
+    <$> o .:? "item"
+    <*> o .:? "dir"
     <*> o .: "dest"
