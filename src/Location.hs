@@ -4,8 +4,10 @@ module Location where
 
 import Control.Applicative
 import Control.Concurrent.STM
-import Data.Yaml
+import qualified Data.ByteString.Char8 as BS
 import Data.List
+import Data.Maybe
+import Data.Yaml
 
 import Character
 import Item
@@ -13,11 +15,17 @@ import Types
 import Tangible
 
 newLocation :: Int -> String -> String -> [Portal] -> STM Location
-newLocation id name desc portals = do
+newLocation id title desc portals = do
   ps <- newTVar portals
   cs <- newTVar []
   is <- newTVar []
-  return $ Location id name desc ps cs is
+  return $ Location id title desc ps cs is
+
+loadLocation :: String -> IO Location
+loadLocation file = do
+  yamlData <- BS.readFile file
+  let l = fromJust $ decode yamlData :: LocationDef
+  atomically $ newLocation (ldId l) (ldTitle l) (ldDesc l) []
 
 getLocationDesc :: Location -> Character -> STM String
 getLocationDesc l char = do
