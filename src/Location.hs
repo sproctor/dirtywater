@@ -14,6 +14,22 @@ import Item
 import Types
 import Tangible
 
+data LocationDef =
+  LocationDef
+    { ldId :: Int
+    , ldTitle :: String
+    , ldDesc :: String
+    , ldPortals :: [PortalDef]
+    , ldInitFile :: Maybe String
+    }
+
+data PortalDef =
+  PortalDef
+    { pdItemId :: Maybe Int
+    , pdDirId :: Maybe String
+    , pdDestId :: Int
+    }
+
 newLocation :: Int -> String -> String -> [Portal] -> STM Location
 newLocation id title desc portals = do
   ps <- newTVar portals
@@ -23,8 +39,7 @@ newLocation id title desc portals = do
 
 loadLocation :: String -> IO Location
 loadLocation file = do
-  yamlData <- BS.readFile file
-  let l = fromJust $ decode yamlData :: LocationDef
+  l <- either (error . show) id <$> decodeFileEither file
   atomically $ newLocation (ldId l) (ldTitle l) (ldDesc l) []
 
 getLocationDesc :: Location -> Character -> STM String
@@ -50,9 +65,13 @@ instance FromJSON LocationDef where
     <*> o .: "title"
     <*> o .: "desc"
     <*> o .: "portals"
+    <*> o .:? "init_file"
+  parseJSON _ = error "Can't parse LocationDef from YAML/JSON"
 
 instance FromJSON PortalDef where
   parseJSON (Object o) = PortalDef
     <$> o .:? "item"
     <*> o .:? "dir"
     <*> o .: "dest"
+  parseJSON _ = error "Can't parse PortalDef from YAML/JSON"
+

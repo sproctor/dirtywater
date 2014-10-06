@@ -23,6 +23,7 @@ main = withSocketsDo $ do
   putStrLn $ "Listening on port " ++ show port ++ "."
   connections <- atomically $ newConnectionList
   gameState <- newGameState "mud.db" connections
+  startLoc <- loadLocation "/home/sproctor/dirtywater/data/locations/start.yaml"
   _ <- forkIO (mainServer gameState)
   forever $ do
     (h, _, _) <- accept sock
@@ -30,7 +31,6 @@ main = withSocketsDo $ do
     queue <- atomically $ newTBQueue 10
     idVar <- newEmptyMVar
     closed <- atomically $ newTVar False
-    startLoc <- loadLocation "data/locations/start.yaml"
     char <- atomically $ newCharacter "New Character" (ContainerLocation startLoc)
     let conn = ClientConnection h queue closed char idVar
     atomically $ addConnection connections conn

@@ -96,24 +96,9 @@ data Location =
     locationItems :: TVar [Item]
   }
 
-data LocationDef =
-  LocationDef
-    { ldId :: Int
-    , ldTitle :: String
-    , ldDesc :: String
-    , ldPortals :: [PortalDef]
-    }
-
 data Portal
   = ItemPortal { portalItem :: Item, portalDest :: Location }
   | DirectionPortal { directionDir :: Direction, directionDest :: Location }
-
-data PortalDef =
-  PortalDef
-    { pdItemId :: Maybe Int
-    , pdDirId :: Maybe Int
-    , pdDestId :: Int
-    }
 
 data ServerStatus = Running | Stopping
 
