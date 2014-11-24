@@ -108,6 +108,7 @@ data GameState =
   , gameStatus :: ServerStatus
   , sqlConnection :: Connection
   , commandList :: TVar [CommandDef]
+  , gameLocations :: TVar [Location]
   }
 
 data ClientConnection = ClientConnection

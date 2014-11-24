@@ -6,6 +6,7 @@ import Data.Text
 import Database.HDBC
 import Database.HDBC.Sqlite3
 import Network
+import System.Directory
 import System.IO
 
 import Character
@@ -23,15 +24,16 @@ main = withSocketsDo $ do
   putStrLn $ "Listening on port " ++ show port ++ "."
   connections <- atomically $ newConnectionList
   gameState <- newGameState "mud.db" connections
-  startLoc <- loadLocation "/home/sproctor/dirtywater/data/locations/start.yaml"
+  -- Process game commands and update game state in a new thread
   _ <- forkIO (mainServer gameState)
+  -- Accept incoming connections
   forever $ do
     (h, _, _) <- accept sock
     putStrLn "Got a new connection."
     queue <- atomically $ newTBQueue 10
     idVar <- newEmptyMVar
     closed <- atomically $ newTVar False
-    char <- atomically $ newCharacter "New Character" (ContainerLocation startLoc)
+    char <- atomically $ newCharacter gameState
     let conn = ClientConnection h queue closed char idVar
     atomically $ addConnection connections conn
     tId <- forkFinally (clientPlayGame gameState conn)  (cleanupClient h)
@@ -53,6 +55,8 @@ clientPlayGame gs conn = do
   hPutStrLn (connectionHandle conn) "Welcome to Dirty Water, friend."
   name <- clientQueryName (connectionHandle conn)
   atomically $ changeName (connectionCharacter conn) name
+  cmdLook gs conn CmdArgsNone
+  putOutput conn ">"
   clientLoop gs conn
 
 clientQueryName :: Handle -> IO String
@@ -79,8 +83,8 @@ clientQueryName h = do
 clientLoop :: GameState -> ClientConnection -> IO ()
 clientLoop gs conn = do
   closed <- atomically $ readTVar (connectionClosed conn)
-  let h = connectionHandle conn
   unless closed $ do
+    let h = connectionHandle conn
     l <- tryJust (guard . isExitException) $ hGetLine h
     case l of
       Left _ -> return ()
@@ -91,3 +95,4 @@ clientLoop gs conn = do
           Left e -> hPutStrLn h $ "Parse error at " ++ (show e)
           Right cmd -> atomically $ queueCommand conn cmd
     clientLoop gs conn
+

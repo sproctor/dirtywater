@@ -27,12 +27,6 @@ instance Tangible Character where
 
   viewLongDesc _ _ = return ""
 
-newCharacter :: String -> Container -> STM Character
-newCharacter name con = do
-  container <- newTVar con
-  newName <- newTVar name
-  return $ Character container newName
-
 changeName :: Character -> String -> STM ()
 changeName self newName =
   writeTVar (charName self) newName

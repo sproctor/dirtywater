@@ -8,6 +8,8 @@ import qualified Data.ByteString.Char8 as BS
 import Data.List
 import Data.Maybe
 import Data.Yaml
+import System.Directory (getDirectoryContents)
+import System.FilePath (takeExtension, pathSeparator)
 
 import Character
 import Item
@@ -37,7 +39,7 @@ newLocation id title desc portals = do
   is <- newTVar []
   return $ Location id title desc ps cs is
 
-loadLocation :: String -> IO Location
+loadLocation :: FilePath -> IO Location
 loadLocation file = do
   l <- either (error . show) id <$> decodeFileEither file
   atomically $ newLocation (ldId l) (ldTitle l) (ldDesc l) []
@@ -75,3 +77,13 @@ instance FromJSON PortalDef where
     <*> o .: "dest"
   parseJSON _ = error "Can't parse PortalDef from YAML/JSON"
 
+loadLocations :: FilePath -> IO [Location]
+loadLocations path = do
+  files <- getDirectoryContents path
+  let yamlFiles = filter ((== ".yaml") . takeExtension) files
+  mapM (\f -> loadLocation (path ++ (pathSeparator : f))) yamlFiles
+
+lookupLocation :: Int -> GameState -> STM (Maybe Location)
+lookupLocation id gs = do
+  locations <- readTVar $ gameLocations gs
+  return $ find ((== id) . locationId) locations

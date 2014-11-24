@@ -1,6 +1,7 @@
 module State
 (
   GameState,
+  newCharacter,
   newGameState,
   processCommands
 ) where
@@ -49,13 +50,15 @@ doCommand conn command gs =
 newGameState :: String -> ClientConnectionList -> IO GameState
 newGameState dbfilename connections = do
   dbconn <- connectSqlite3 dbfilename
+  locations <- loadLocations "../data/locations"
+  locTVar <- atomically $ newTVar locations
   initDatabase dbconn
   q <- atomically $ newTVar
     [ CommandDef ("look", [CmdTypeNone], cmdLook)
     , CommandDef ("exit", [CmdTypeNone], cmdExit)
     , CommandDef ("say", [CmdTypeString], cmdSay)
     ]
-  return $ GameState connections Running dbconn q
+  return $ GameState connections Running dbconn q locTVar
 
 initDatabase :: Connection -> IO ()
 initDatabase dbconn = do
@@ -64,3 +67,14 @@ initDatabase dbconn = do
     _ <- run dbconn "CREATE TABLE characters (name VARCHAR(255), password VARCHAR(255))" []
     commit dbconn
     putStrLn "Created table"
+
+newCharacter :: GameState -> STM Character
+newCharacter gameState = do
+  startLoc <- lookupLocation 1001 gameState
+  case startLoc of
+    Just loc -> do
+      newName <- newTVar "New Character"
+      container <- newTVar (ContainerLocation loc)
+      return $ Character container newName
+    Nothing -> do
+      fail "Start location could not be found!"
