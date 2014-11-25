@@ -74,7 +74,8 @@ newCharacter gameState = do
   case startLoc of
     Just loc -> do
       newName <- newTVar "New Character"
+      password <- newTVar ""
       container <- newTVar (ContainerLocation loc)
-      return $ Character container newName
+      return $ Character container newName password
     Nothing -> do
       fail "Start location could not be found!"

@@ -30,3 +30,7 @@ instance Tangible Character where
 changeName :: Character -> String -> STM ()
 changeName self newName =
   writeTVar (charName self) newName
+
+changePassword :: Character -> String -> STM ()
+changePassword self newPassword =
+  writeTVar (charPassword self) newPassword

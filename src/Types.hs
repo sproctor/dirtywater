@@ -68,7 +68,8 @@ data Item =
 data Character =
     Character {
       charContainer :: TVar Container,
-      charName :: TVar String
+      charName :: TVar String,
+      charPassword :: TVar String
       --leftHand :: Item,
       --rightHand :: Item
     } deriving Eq

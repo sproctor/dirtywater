@@ -52,9 +52,13 @@ cleanupClient h _ = do
 
 clientPlayGame :: GameState -> ClientConnection -> IO ()
 clientPlayGame gs conn = do
-  hPutStrLn (connectionHandle conn) "Welcome to Dirty Water, friend."
-  name <- clientQueryName (connectionHandle conn)
-  atomically $ changeName (connectionCharacter conn) name
+  let h = connectionHandle conn
+  let char = connectionCharacter conn
+  hPutStrLn h "Welcome to Dirty Water, friend."
+  name <- clientQueryName h
+  atomically $ changeName char name
+  password <- clientQueryPassword h
+  atomically $ changePassword char password
   cmdLook gs conn CmdArgsNone
   putOutput conn ">"
   clientLoop gs conn
@@ -79,6 +83,20 @@ clientQueryName h = do
           hPutStrLn h "I said, \"(y/n),\" not whatever crap you typed."
           hPutStrLn h $ "Let's try this again. Are you sure you want to go by " ++ name ++ "?"
           confirmName name
+
+clientQueryPassword :: Handle -> IO String
+clientQueryPassword h = do
+  hPutStrLn h "Please enter a password."
+  line <- hGetLine h
+  let password = unpack $ strip $ pack line
+  hPutStrLn h "Please re-enter your password to verify."
+  line <- hGetLine h
+  let password2 = unpack $ strip $ pack line
+  if password == password2
+    then return password
+    else do
+      hPutStrLn h "Your passwords did not match. Let's try this again."
+      clientQueryPassword h
 
 clientLoop :: GameState -> ClientConnection -> IO ()
 clientLoop gs conn = do
