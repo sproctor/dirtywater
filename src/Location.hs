@@ -4,7 +4,6 @@ module Location where
 
 import Control.Applicative
 import Control.Concurrent.STM
-import qualified Data.ByteString.Char8 as BS
 import Data.List
 import Data.Maybe
 import Data.Yaml
