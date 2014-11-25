@@ -3,11 +3,11 @@ module Connection
 (
   ClientConnectionList,
   ExitException(..),
-  addConnection,
   isEmptyCommandQueue,
   isExitException,
   getCommand,
   getConnections,
+  newConnection,
   newConnectionList,
   putOutput,
   removeConnection,
@@ -42,6 +42,14 @@ isEmptyCommandQueue conn =
 putOutput :: ClientConnection -> String -> IO ()
 putOutput (ClientConnection h _ _ _ _) =
   hPutStr h
+
+newConnection :: GameState -> Handle -> Character -> MVar ThreadId -> STM ClientConnection
+newConnection gs h char id = do
+  queue <- newTBQueue 10
+  closed <- newTVar False
+  let conn = ClientConnection h queue closed char id
+  addConnection (gameClients gs) conn
+  return conn
 
 addConnection :: ClientConnectionList -> ClientConnection -> STM ()
 addConnection (ClientConnectionList connections) conn =

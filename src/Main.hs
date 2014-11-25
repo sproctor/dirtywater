@@ -30,13 +30,8 @@ main = withSocketsDo $ do
   forever $ do
     (h, _, _) <- accept sock
     putStrLn "Got a new connection."
-    queue <- atomically $ newTBQueue 10
     idVar <- newEmptyMVar
-    closed <- atomically $ newTVar False
-    char <- atomically $ newCharacter gameState
-    let conn = ClientConnection h queue closed char idVar
-    atomically $ addConnection connections conn
-    tId <- forkFinally (clientPlayGame gameState conn)  (cleanupClient h)
+    tId <- forkFinally (clientPlayGame gameState h idVar)  (cleanupClient h)
     putMVar idVar tId
 
 mainServer :: GameState -> IO ()
@@ -50,22 +45,57 @@ cleanupClient h _ = do
   putStrLn "Disconnecting a client."
   hClose h
 
-clientPlayGame :: GameState -> ClientConnection -> IO ()
-clientPlayGame gs conn = do
-  let h = connectionHandle conn
-  let char = connectionCharacter conn
-  hPutStrLn h "Welcome to Dirty Water, friend."
-  name <- clientQueryName h
-  atomically $ changeName char name
-  password <- clientQueryPassword h
-  atomically $ changePassword char password
+clientPlayGame :: GameState -> Handle -> MVar ThreadId -> IO ()
+clientPlayGame gs h idVar = do
+  char <- clientHandshakeChar gs h
+  conn <- atomically $ newConnection gs h char idVar
   cmdLook gs conn CmdArgsNone
   putOutput conn ">"
   clientLoop gs conn
 
+clientHandshakeChar :: GameState -> Handle -> IO Character
+clientHandshakeChar gs h = do
+  name <- clientQueryName h
+  case name of
+    "new" -> do
+      newName <- clientCreateName h
+      password <- clientCreatePassword h
+      atomically $ newCharacter gs name password
+    _ -> do
+      chars <- atomically $ readTVar $ gameCharacters gs
+      mc <- atomically $ findCharacter name gs
+      case mc of
+        Just c -> do
+          clientQueryPassword h c
+          return c
+        Nothing -> do
+          hPutStrLn h $ "You must be mistaken. There is no one named \"" ++ name ++ ".\" Let's try this again."
+          clientHandshakeChar gs h
+
+
 clientQueryName :: Handle -> IO String
 clientQueryName h = do
-  hPutStrLn h "What name would you like to be referred to by?"
+  hPutStrLn h "Welcome to Dirty Water, friend. What name do you go by? If you are new here, type \"new\"."
+  line <- hGetLine h
+  let name = unpack $ strip $ pack line
+  return name
+
+clientQueryPassword :: Handle -> Character -> IO ()
+clientQueryPassword h char = do
+  name <- atomically $ readTVar $ charName char
+  password <- atomically $ readTVar $ charPassword char
+  hPutStrLn h $ "Welcome back, " ++ name ++ ". Please enter your password."
+  line <- hGetLine h
+  let supposedPassword = unpack $ strip $ pack line
+  if password == supposedPassword
+    then return ()
+    else do
+      hPutStrLn h $ "What are you trying to pull here, \"" ++ name ++ "?\" Maybe I should call you liar instead? Let's start this over."
+      clientQueryPassword h char
+
+clientCreateName :: Handle -> IO String
+clientCreateName h = do
+  hPutStrLn h "Would name would you like to be referred to by?"
   line <- hGetLine h
   let name = unpack $ strip $ pack line
   hPutStrLn h $ "Ah, " ++ name ++ ", an excellent name! Are you sure that is what you want to go by? (y/n)"
@@ -84,8 +114,8 @@ clientQueryName h = do
           hPutStrLn h $ "Let's try this again. Are you sure you want to go by " ++ name ++ "?"
           confirmName name
 
-clientQueryPassword :: Handle -> IO String
-clientQueryPassword h = do
+clientCreatePassword :: Handle -> IO String
+clientCreatePassword h = do
   hPutStrLn h "Please enter a password."
   line <- hGetLine h
   let password = unpack $ strip $ pack line
@@ -96,7 +126,7 @@ clientQueryPassword h = do
     then return password
     else do
       hPutStrLn h "Your passwords did not match. Let's try this again."
-      clientQueryPassword h
+      clientCreatePassword h
 
 clientLoop :: GameState -> ClientConnection -> IO ()
 clientLoop gs conn = do

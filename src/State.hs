@@ -1,20 +1,17 @@
-module State
-(
-  GameState,
-  newCharacter,
-  newGameState,
-  processCommands
-) where
+module State where
 
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Monad
+import Data.List
+import Data.Maybe
 import Database.HDBC
 import Database.HDBC.Sqlite3
 import System.IO
 
 import Command
 import Connection
+import Helpers
 import Location
 import Tangible
 import Types
@@ -58,7 +55,8 @@ newGameState dbfilename connections = do
     , CommandDef ("exit", [CmdTypeNone], cmdExit)
     , CommandDef ("say", [CmdTypeString], cmdSay)
     ]
-  return $ GameState connections Running dbconn q locTVar
+  charsTVar <- atomically $ newTVar []
+  return $ GameState connections Running dbconn q locTVar charsTVar
 
 initDatabase :: Connection -> IO ()
 initDatabase dbconn = do
@@ -66,16 +64,36 @@ initDatabase dbconn = do
   unless (elem "characters" tables) $ do
     _ <- run dbconn "CREATE TABLE characters (name VARCHAR(255), password VARCHAR(255))" []
     commit dbconn
-    putStrLn "Created table"
+    putStrLn "Created characters table"
 
-newCharacter :: GameState -> STM Character
-newCharacter gameState = do
-  startLoc <- lookupLocation 1001 gameState
+newCharacter :: GameState -> String -> String -> STM Character
+newCharacter gs name password = do
+  startLoc <- lookupLocation 1001 gs
   case startLoc of
     Just loc -> do
-      newName <- newTVar "New Character"
-      password <- newTVar ""
+      nameVar <- newTVar name
+      passwordVar <- newTVar password
       container <- newTVar (ContainerLocation loc)
-      return $ Character container newName password
+      let char = Character container nameVar passwordVar
+      addCharacter gs char
+      return char
     Nothing -> do
       fail "Start location could not be found!"
+
+findCharacter :: String -> GameState -> STM (Maybe Character)
+findCharacter name gs = do
+  chars <- readTVar (gameCharacters gs)
+  findM hasName chars
+  where
+    hasName :: Character -> STM (Maybe Character)
+    hasName c = do
+      cName <- readTVar $ charName c
+      if cName == name
+        then return $ Just c
+        else return Nothing
+
+addCharacter :: GameState -> Character -> STM ()
+addCharacter gs char = do
+  let charsTVar = gameCharacters gs
+  chars <- readTVar charsTVar
+  writeTVar charsTVar (char : chars)

@@ -56,20 +56,20 @@ data Position = In | On deriving Eq
 newtype Volume = Volume Int deriving (Ord, Eq, Show, Read)
 
 data Item =
-    Item {
-      itemContainer :: TVar Container,
-      itemName :: String,
-      itemAdjs :: [String],
-      itemContainers :: [(Position, Volume)],
-      itemContainedItems :: [(Position, Item)],
-      itemContainedChars :: [(Position, Character)]
+  Item
+    { itemContainer :: TVar Container
+    , itemName :: String
+    , itemAdjs :: [String]
+    , itemContainers :: [(Position, Volume)]
+    , itemContainedItems :: [(Position, Item)]
+    , itemContainedChars :: [(Position, Character)]
     } deriving Eq
 
 data Character =
-    Character {
-      charContainer :: TVar Container,
-      charName :: TVar String,
-      charPassword :: TVar String
+  Character
+    { charContainer :: TVar Container
+    , charName :: TVar String
+    , charPassword :: TVar String
       --leftHand :: Item,
       --rightHand :: Item
     } deriving Eq
@@ -88,13 +88,13 @@ data Direction
   deriving (Show, Eq)
 
 data Location =
-  Location {
-    locationId :: Int,
-    locationTitle :: String,
-    locationDesc :: String,
-    locationPortals :: TVar [Portal],
-    locationChars :: TVar [Character],
-    locationItems :: TVar [Item]
+  Location
+  { locationId :: Int
+  , locationTitle :: String
+  , locationDesc :: String
+  , locationPortals :: TVar [Portal]
+  , locationChars :: TVar [Character]
+  , locationItems :: TVar [Item]
   }
 
 data Portal
@@ -110,6 +110,7 @@ data GameState =
   , sqlConnection :: Connection
   , commandList :: TVar [CommandDef]
   , gameLocations :: TVar [Location]
+  , gameCharacters :: TVar [Character]
   }
 
 data ClientConnection = ClientConnection
