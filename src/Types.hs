@@ -74,7 +74,9 @@ data Character =
       --rightHand :: Item
     } deriving Eq
 
-data Container = ContainerLocation Location | ContainerItem Item
+data Container
+  = ContainerLocation Location
+  | ContainerItem Item
 
 data Direction
   = North

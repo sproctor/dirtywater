@@ -2,10 +2,16 @@ module Character where
 
 import Control.Concurrent.STM
 import Data.List
+import System.IO.Unsafe
 
 import Types
 import Tangible
 import Item
+
+instance Show Character where
+  show char =
+    let name = unsafePerformIO $ atomically $ readTVar $ charName char in
+    "name: " ++ name
 
 instance Tangible Character where
   getLocation self = do
