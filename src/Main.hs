@@ -35,10 +35,12 @@ main = withSocketsDo $ do
     putMVar idVar tId
 
 mainServer :: GameState -> IO ()
-mainServer gameState = do
-  processCommands gameState
-  threadDelay 100000
-  mainServer gameState
+mainServer gs =
+  let dbconn = sqlConnection gs in
+  forever $ do
+    processCommands gs
+    commit dbconn
+    threadDelay 100000
 
 cleanupClient :: Handle -> Either SomeException () -> IO ()
 cleanupClient h _ = do
@@ -60,7 +62,7 @@ clientHandshakeChar gs h = do
     "new" -> do
       newName <- clientCreateName h
       password <- clientCreatePassword h
-      atomically $ newCharacter gs newName password
+      newCharacter gs newName password
     _ -> do
       chars <- atomically $ readTVar $ gameCharacters gs
       mc <- atomically $ findCharacter name gs

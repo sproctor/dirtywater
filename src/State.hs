@@ -55,25 +55,26 @@ newGameState dbfilename connections = do
     , CommandDef ("exit", [CmdTypeNone], cmdExit)
     , CommandDef ("say", [CmdTypeString], cmdSay)
     ]
-  charsTVar <- atomically $ newTVar []
+  chars <- loadCharacters dbconn locations
+  charsTVar <- atomically $ newTVar chars
   return $ GameState connections Running dbconn q locTVar charsTVar
 
 initDatabase :: Connection -> IO ()
 initDatabase dbconn = do
   tables <- getTables dbconn
   unless (elem "characters" tables) $ do
-    _ <- run dbconn "CREATE TABLE characters (name VARCHAR(255), password VARCHAR(255))" []
+    _ <- run dbconn "CREATE TABLE characters (conId INTEGER, name VARCHAR(255), password VARCHAR(255))" []
     commit dbconn
     putStrLn "Created characters table"
 
-newCharacter :: GameState -> String -> String -> STM Character
+newCharacter :: GameState -> String -> String -> IO Character
 newCharacter gs name password = do
-  startLoc <- lookupLocation 1001 gs
+  startLoc <- atomically $ lookupLocation 1001 gs
   case startLoc of
     Just loc -> do
-      nameVar <- newTVar name
-      passwordVar <- newTVar password
-      container <- newTVar (ContainerLocation loc)
+      nameVar <- atomically $ newTVar name
+      passwordVar <- atomically $ newTVar password
+      container <- atomically $ newTVar (ContainerLocation loc)
       let char = Character container nameVar passwordVar
       addCharacter gs char
       return char
@@ -92,8 +93,45 @@ findCharacter name gs = do
         then return $ Just c
         else return Nothing
 
-addCharacter :: GameState -> Character -> STM ()
+addCharacter :: GameState -> Character -> IO ()
 addCharacter gs char = do
   let charsTVar = gameCharacters gs
-  chars <- readTVar charsTVar
-  writeTVar charsTVar (char : chars)
+  chars <- atomically $ readTVar charsTVar
+  atomically $ writeTVar charsTVar (char : chars)
+  let dbconn = sqlConnection gs
+  addSqlCharacter dbconn char
+
+addSqlCharacter :: Connection -> Character -> IO ()
+addSqlCharacter dbconn char = do
+  container <- atomically $ readTVar $ charContainer char
+  let
+    id = case container of
+      ContainerLocation l -> locationId l
+      ContainerItem i -> itemId i
+  name <- atomically $ readTVar $ charName char
+  password <- atomically $ readTVar $ charPassword char
+  void $ run dbconn "INSERT INTO characters VALUES (?, ?, ?)" [toSql id, toSql name, toSql password]
+
+loadCharacters :: Connection -> [Location] -> IO [Character]
+loadCharacters dbconn locations = do
+  stmt <- prepare dbconn "SELECT conId, name, password FROM characters"
+  execute stmt []
+  results <- fetchAllRowsAL stmt
+  mapM loadSqlCharacter results
+  where
+    loadSqlCharacter :: [(String, SqlValue)] -> IO Character
+    loadSqlCharacter [("conId", sId), ("name", sName), ("password", sPassword)] = do
+      let conId = fromSql sId
+      let name = fromSql sName
+      let password = fromSql sPassword
+      let loc = findLocation (fromInteger conId) locations
+      case loc of
+        Just l -> do
+          locVar <- atomically $ newTVar $ ContainerLocation l
+          nameVar <- atomically $ newTVar name
+          passwordVar <- atomically $ newTVar password
+          return $ Character locVar nameVar passwordVar
+        Nothing -> fail $ "Non-existant location (" ++ (show conId) ++ ") for character: " ++ name
+    loadSqlCharacter x = do
+      print x
+      fail "Bad result loading Character"

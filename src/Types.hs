@@ -57,7 +57,8 @@ newtype Volume = Volume Int deriving (Ord, Eq, Show, Read)
 
 data Item =
   Item
-    { itemContainer :: TVar Container
+    { itemId :: Int
+    , itemContainer :: TVar Container
     , itemName :: String
     , itemAdjs :: [String]
     , itemContainers :: [(Position, Volume)]

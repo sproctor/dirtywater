@@ -85,4 +85,8 @@ loadLocations path = do
 lookupLocation :: Int -> GameState -> STM (Maybe Location)
 lookupLocation id gs = do
   locations <- readTVar $ gameLocations gs
-  return $ find ((== id) . locationId) locations
+  return $ findLocation id locations
+
+findLocation :: Int -> [Location] -> Maybe Location
+findLocation id locations =
+  find ((== id) . locationId) locations
