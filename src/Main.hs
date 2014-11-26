@@ -60,7 +60,7 @@ clientHandshakeChar gs h = do
     "new" -> do
       newName <- clientCreateName h
       password <- clientCreatePassword h
-      atomically $ newCharacter gs name password
+      atomically $ newCharacter gs newName password
     _ -> do
       chars <- atomically $ readTVar $ gameCharacters gs
       mc <- atomically $ findCharacter name gs
