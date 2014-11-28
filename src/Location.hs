@@ -45,8 +45,7 @@ loadLocation file = do
   where
     genPortals :: [PortalDef] -> [Portal]
     genPortals ((PortalDef _ (Just dirId) destId) : rest) =
-      DirectionPortal (stringToDir dirId) (LocationId destId) : genPortals rest
-    genPortals (_ : rest) = genPortals rest
+      Portal (stringToDir dirId) (LocationId destId) : genPortals rest
     genPortals [] = []
 
 getLocationDesc :: Location -> Character -> STM String
@@ -63,7 +62,13 @@ getLocationDesc l char = do
     itemStr = if null items
       then ""
       else "Items here: " ++ (intercalate ", " itemDescs) ++ ".\r\n"
-  let desc = (locationTitle l) ++ "\r\n" ++ (locationDesc l) ++ "\r\n" ++ charStr ++ itemStr
+  portals <- readTVar $ locationPortals l
+  let portalDescs = map (\ p -> dirToString (portalDir p)) portals
+  let
+    portalStr = if null portals
+      then ""
+      else "Directions here: " ++ (intercalate ", " portalDescs) ++ ".\r\n"
+  let desc = (locationTitle l) ++ "\r\n" ++ (locationDesc l) ++ "\r\n" ++ charStr ++ itemStr ++ portalStr
   return desc
 
 instance FromJSON LocationDef where
@@ -102,13 +107,12 @@ findDirDest gs dir loc = do
   portals <- readTVar $ locationPortals loc
   let portal = find (portalHasDir dir) portals
   case portal of
-    Just (DirectionPortal _ dest) -> lookupLocation dest gs
-    _ -> return Nothing
+    Just (Portal _ dest) -> lookupLocation dest gs
+    Nothing -> return Nothing
 
 portalHasDir :: Direction -> Portal -> Bool
-portalHasDir d (DirectionPortal pd _) =
+portalHasDir d (Portal pd _) =
   pd == d
-portalHasDir _ _ = False
 
 fromLocationId :: LocationId -> Int
 fromLocationId (LocationId id) = id

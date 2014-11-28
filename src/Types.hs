@@ -64,6 +64,7 @@ data Item =
     , itemContainers :: [(Position, Volume)]
     , itemContainedItems :: [(Position, Item)]
     , itemContainedChars :: [(Position, Character)]
+    , itemDest :: Maybe Location
     } deriving Eq
 
 data Character =
@@ -100,11 +101,10 @@ data Location =
   , locationPortals :: TVar [Portal]
   , locationChars :: TVar [Character]
   , locationItems :: TVar [Item]
-  }
+  } deriving Eq
 
 data Portal
-  = ItemPortal { portalItem :: Item, portalDest :: LocationId }
-  | DirectionPortal { directionDir :: Direction, directionDest :: LocationId }
+  = Portal { portalDir :: Direction, portalDest :: LocationId }
 
 data ServerStatus = Running | Stopping
 
