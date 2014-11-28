@@ -54,6 +54,7 @@ newGameState dbfilename connections = do
     [ CommandDef ("look", [CmdTypeNone], cmdLook)
     , CommandDef ("exit", [CmdTypeNone], cmdExit)
     , CommandDef ("say", [CmdTypeString], cmdSay)
+    , CommandDef ("north", [CmdTypeNone], cmdNorth)
     ]
   chars <- loadCharacters dbconn locations
   charsTVar <- atomically $ newTVar chars
@@ -69,7 +70,7 @@ initDatabase dbconn = do
 
 newCharacter :: GameState -> String -> String -> IO Character
 newCharacter gs name password = do
-  startLoc <- atomically $ lookupLocation 1001 gs
+  startLoc <- atomically $ lookupLocation (LocationId 1001) gs
   case startLoc of
     Just loc -> do
       nameVar <- atomically $ newTVar name
@@ -106,7 +107,7 @@ addSqlCharacter dbconn char = do
   container <- atomically $ readTVar $ charContainer char
   let
     id = case container of
-      ContainerLocation l -> locationId l
+      ContainerLocation l -> fromLocationId $ locationId l
       ContainerItem i -> itemId i
   name <- atomically $ readTVar $ charName char
   password <- atomically $ readTVar $ charPassword char
@@ -124,7 +125,7 @@ loadCharacters dbconn locations = do
       let conId = fromSql sId
       let name = fromSql sName
       let password = fromSql sPassword
-      let loc = findLocation (fromInteger conId) locations
+      let loc = findLocation (LocationId (fromInteger conId)) locations
       case loc of
         Just l -> do
           locVar <- atomically $ newTVar $ ContainerLocation l

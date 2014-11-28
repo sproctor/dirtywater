@@ -90,9 +90,11 @@ data Direction
   | Northwest
   deriving (Show, Eq)
 
+newtype LocationId = LocationId Int deriving (Show, Eq, Read)
+
 data Location =
   Location
-  { locationId :: Int
+  { locationId :: LocationId
   , locationTitle :: String
   , locationDesc :: String
   , locationPortals :: TVar [Portal]
@@ -101,8 +103,8 @@ data Location =
   }
 
 data Portal
-  = ItemPortal { portalItem :: Item, portalDest :: Location }
-  | DirectionPortal { directionDir :: Direction, directionDest :: Location }
+  = ItemPortal { portalItem :: Item, portalDest :: LocationId }
+  | DirectionPortal { directionDir :: Direction, directionDest :: LocationId }
 
 data ServerStatus = Running | Stopping
 

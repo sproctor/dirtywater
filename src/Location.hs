@@ -31,7 +31,7 @@ data PortalDef =
     , pdDestId :: Int
     }
 
-newLocation :: Int -> String -> String -> [Portal] -> STM Location
+newLocation :: LocationId -> String -> String -> [Portal] -> STM Location
 newLocation id title desc portals = do
   ps <- newTVar portals
   cs <- newTVar []
@@ -41,7 +41,13 @@ newLocation id title desc portals = do
 loadLocation :: FilePath -> IO Location
 loadLocation file = do
   l <- either (error . show) id <$> decodeFileEither file
-  atomically $ newLocation (ldId l) (ldTitle l) (ldDesc l) []
+  atomically $ newLocation (LocationId (ldId l)) (ldTitle l) (ldDesc l) (genPortals (ldPortals l))
+  where
+    genPortals :: [PortalDef] -> [Portal]
+    genPortals ((PortalDef _ (Just dirId) destId) : rest) =
+      DirectionPortal (stringToDir dirId) (LocationId destId) : genPortals rest
+    genPortals (_ : rest) = genPortals rest
+    genPortals [] = []
 
 getLocationDesc :: Location -> Character -> STM String
 getLocationDesc l char = do
@@ -82,11 +88,37 @@ loadLocations path = do
   let yamlFiles = filter ((== ".yaml") . takeExtension) files
   mapM (\f -> loadLocation (path ++ (pathSeparator : f))) yamlFiles
 
-lookupLocation :: Int -> GameState -> STM (Maybe Location)
+lookupLocation :: LocationId -> GameState -> STM (Maybe Location)
 lookupLocation id gs = do
   locations <- readTVar $ gameLocations gs
   return $ findLocation id locations
 
-findLocation :: Int -> [Location] -> Maybe Location
+findLocation :: LocationId -> [Location] -> Maybe Location
 findLocation id locations =
   find ((== id) . locationId) locations
+
+findDirDest :: GameState -> Direction -> Location -> STM (Maybe Location)
+findDirDest gs dir loc = do
+  portals <- readTVar $ locationPortals loc
+  let portal = find (portalHasDir dir) portals
+  case portal of
+    Just (DirectionPortal _ dest) -> lookupLocation dest gs
+    _ -> return Nothing
+
+portalHasDir :: Direction -> Portal -> Bool
+portalHasDir d (DirectionPortal pd _) =
+  pd == d
+portalHasDir _ _ = False
+
+fromLocationId :: LocationId -> Int
+fromLocationId (LocationId id) = id
+
+stringToDir :: String -> Direction
+stringToDir "north" = North
+stringToDir "northeast" = Northeast
+stringToDir "east" = East
+stringToDir "southeast" = Southeast
+stringToDir "south" = South
+stringToDir "southwest" = Southwest
+stringToDir "west" = West
+stringToDir "northwest" = Northwest

@@ -51,6 +51,22 @@ whitespace :: GenParser Char st ()
 whitespace =
   skipMany1 space <?> "space"
 
+{-
+cmdGo :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdGo gs conn (CmdArgsObjectDesc target) = do
+  -}
+
+cmdNorth :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdNorth gs conn _ = do
+  let char = connectionCharacter conn
+  loc <- atomically $ getLocation char
+  dest <- atomically $ findDirDest gs North loc
+  case dest of
+    Just d -> do
+      atomically $ move char (ContainerLocation d)
+      cmdLook gs conn CmdArgsNone
+    Nothing -> hPutStrLn (connectionHandle conn) "You can't go north from here!"
+
 cmdExit :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdExit gs conn _ = do
   hPutStrLn (connectionHandle conn) "Good Bye!"

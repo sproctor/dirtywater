@@ -1,0 +1,8 @@
+---
+id: 1003
+title: A Dark Room
+desc: This room is dark and mysterious. You can't tell what has gone on here.
+portals:
+    - dir: southwest
+      dest: 1002
+...
