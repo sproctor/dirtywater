@@ -80,15 +80,15 @@ data Container
   | ContainerItem Item
 
 data Direction
-  = North
+  = East
+  | North
   | Northeast
-  | East
-  | Southeast
+  | Northwest
   | South
+  | Southeast
   | Southwest
   | West
-  | Northwest
-  deriving (Show, Eq)
+  deriving (Eq, Enum)
 
 newtype LocationId = LocationId Int deriving (Show, Eq, Read)
 

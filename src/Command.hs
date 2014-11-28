@@ -56,16 +56,16 @@ cmdGo :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdGo gs conn (CmdArgsObjectDesc target) = do
   -}
 
-cmdNorth :: GameState -> ClientConnection -> CommandArgs -> IO ()
-cmdNorth gs conn _ = do
+cmdGoDir :: Direction -> GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdGoDir dir gs conn _ = do
   let char = connectionCharacter conn
   loc <- atomically $ getLocation char
-  dest <- atomically $ findDirDest gs North loc
+  dest <- atomically $ findDirDest gs dir loc
   case dest of
     Just d -> do
       atomically $ move char (ContainerLocation d)
       cmdLook gs conn CmdArgsNone
-    Nothing -> hPutStrLn (connectionHandle conn) "You can't go north from here!"
+    Nothing -> hPutStrLn (connectionHandle conn) $ "You can't go " ++ (dirToString dir) ++ " from here!"
 
 cmdExit :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdExit gs conn _ = do

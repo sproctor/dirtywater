@@ -122,3 +122,13 @@ stringToDir "south" = South
 stringToDir "southwest" = Southwest
 stringToDir "west" = West
 stringToDir "northwest" = Northwest
+
+dirToString :: Direction -> String
+dirToString North = "north"
+dirToString Northeast = "northeast"
+dirToString East = "east"
+dirToString Southeast = "southeast"
+dirToString South = "south"
+dirToString Southwest = "southwest"
+dirToString West = "west"
+dirToString Northwest = "northwest"

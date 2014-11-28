@@ -50,12 +50,12 @@ newGameState dbfilename connections = do
   locations <- loadLocations "../data/locations"
   locTVar <- atomically $ newTVar locations
   initDatabase dbconn
-  q <- atomically $ newTVar
+  q <- atomically $ newTVar $
     [ CommandDef ("look", [CmdTypeNone], cmdLook)
     , CommandDef ("exit", [CmdTypeNone], cmdExit)
+    , CommandDef ("quit", [CmdTypeNone], cmdExit)
     , CommandDef ("say", [CmdTypeString], cmdSay)
-    , CommandDef ("north", [CmdTypeNone], cmdNorth)
-    ]
+    ] ++ (map (\d -> CommandDef (dirToString d, [CmdTypeNone], cmdGoDir d)) [North ..])
   chars <- loadCharacters dbconn locations
   charsTVar <- atomically $ newTVar chars
   return $ GameState connections Running dbconn q locTVar charsTVar
