@@ -76,6 +76,11 @@ data Character =
       --rightHand :: Item
     } deriving Eq
 
+data Object
+  = ObjectItem Item
+  | ObjectCharacter Character
+  | ObjectDirection Direction Portal
+
 data Container
   = ContainerLocation Location
   | ContainerItem Item
@@ -98,13 +103,11 @@ data Location =
   { locationId :: LocationId
   , locationTitle :: String
   , locationDesc :: String
-  , locationPortals :: TVar [Portal]
-  , locationChars :: TVar [Character]
-  , locationItems :: TVar [Item]
+  , locationObjects :: TVar [Object]
   } deriving Eq
 
 data Portal
-  = Portal { portalDir :: Direction, portalDest :: LocationId }
+  = Portal { portalDestA :: LocationId, portalDestB :: LocationId }
 
 data ServerStatus = Running | Stopping
 

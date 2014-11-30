@@ -6,7 +6,8 @@ import Control.Applicative
 import Control.Concurrent.STM
 import Data.List
 import Data.Maybe
-import Data.Yaml
+import qualified Data.Yaml as Yaml
+import Data.Yaml ((.:), (.:?))
 import System.Directory (getDirectoryContents)
 import System.FilePath (takeExtension, pathSeparator)
 
@@ -26,53 +27,52 @@ data LocationDef =
 
 data PortalDef =
   PortalDef
-    { pdItemId :: Maybe Int
-    , pdDirId :: Maybe String
+    { pdDirId :: String
     , pdDestId :: Int
     }
 
-newLocation :: LocationId -> String -> String -> [Portal] -> STM Location
+newLocation :: LocationId -> String -> String -> [Object] -> STM Location
 newLocation id title desc portals = do
-  ps <- newTVar portals
-  cs <- newTVar []
-  is <- newTVar []
-  return $ Location id title desc ps cs is
+  objs <- newTVar portals
+  return $ Location id title desc objs
 
 loadLocation :: FilePath -> IO Location
 loadLocation file = do
-  l <- either (error . show) id <$> decodeFileEither file
-  atomically $ newLocation (LocationId (ldId l)) (ldTitle l) (ldDesc l) (genPortals (ldPortals l))
+  l <- either (error . show) id <$> Yaml.decodeFileEither file
+  let locId = LocationId (ldId l)
+  atomically $ newLocation locId (ldTitle l) (ldDesc l) (genPortals locId (ldPortals l))
   where
-    genPortals :: [PortalDef] -> [Portal]
-    genPortals ((PortalDef _ (Just dirId) destId) : rest) =
-      Portal (stringToDir dirId) (LocationId destId) : genPortals rest
-    genPortals [] = []
+    genPortals :: LocationId -> [PortalDef] -> [Object]
+    genPortals locId ((PortalDef dirId destId) : rest) =
+      let p = Portal locId (LocationId destId) in
+      ObjectDirection (stringToDir dirId) p : genPortals locId rest
+    genPortals _ [] = []
 
 getLocationDesc :: Location -> Character -> STM String
 getLocationDesc l char = do
-  chars <- readTVar $ locationChars l
+  chars <- getLocationChars l
   charDescs <- sequence $ map (\ t -> viewShortDesc t char) chars
   let
     charStr = if null chars
       then ""
       else "People here: " ++ (intercalate ", " charDescs) ++ ".\r\n"
-  items <- readTVar $ locationItems l
+  items <- getLocationItems l
   itemDescs <- sequence $ map (\ t -> viewShortDesc t char) items
   let
     itemStr = if null items
       then ""
       else "Items here: " ++ (intercalate ", " itemDescs) ++ ".\r\n"
-  portals <- readTVar $ locationPortals l
-  let portalDescs = map (\ p -> dirToString (portalDir p)) portals
+  directions <- getLocationDirections l
+  let directionDescs = map dirToString directions
   let
-    portalStr = if null portals
+    directionStr = if null directions
       then ""
-      else "Directions here: " ++ (intercalate ", " portalDescs) ++ ".\r\n"
-  let desc = (locationTitle l) ++ "\r\n" ++ (locationDesc l) ++ "\r\n" ++ charStr ++ itemStr ++ portalStr
+      else "Directions here: " ++ (intercalate ", " directionDescs) ++ ".\r\n"
+  let desc = (locationTitle l) ++ "\r\n" ++ (locationDesc l) ++ "\r\n" ++ charStr ++ itemStr ++ directionStr
   return desc
 
-instance FromJSON LocationDef where
-  parseJSON (Object o) = LocationDef
+instance Yaml.FromJSON LocationDef where
+  parseJSON (Yaml.Object o) = LocationDef
     <$> o .: "id"
     <*> o .: "title"
     <*> o .: "desc"
@@ -80,10 +80,9 @@ instance FromJSON LocationDef where
     <*> o .:? "init_file"
   parseJSON _ = error "Can't parse LocationDef from YAML/JSON"
 
-instance FromJSON PortalDef where
-  parseJSON (Object o) = PortalDef
-    <$> o .:? "item"
-    <*> o .:? "dir"
+instance Yaml.FromJSON PortalDef where
+  parseJSON (Yaml.Object o) = PortalDef
+    <$> o .: "dir"
     <*> o .: "dest"
   parseJSON _ = error "Can't parse PortalDef from YAML/JSON"
 
@@ -104,15 +103,22 @@ findLocation id locations =
 
 findDirDest :: GameState -> Direction -> Location -> STM (Maybe Location)
 findDirDest gs dir loc = do
-  portals <- readTVar $ locationPortals loc
-  let portal = find (portalHasDir dir) portals
-  case portal of
-    Just (Portal _ dest) -> lookupLocation dest gs
+  result <- getPortalByDirection loc dir
+  case result of
+    Just p -> do
+      let
+        idA = portalDestA p
+        idB = portalDestB p
+        currId = locationId loc
+      destId <-
+          if currId == idA
+            then return idB
+            else
+              if currId == idB
+                then return idA
+                else fail "Bad portal!"
+      lookupLocation destId gs
     Nothing -> return Nothing
-
-portalHasDir :: Direction -> Portal -> Bool
-portalHasDir d (Portal pd _) =
-  pd == d
 
 fromLocationId :: LocationId -> Int
 fromLocationId (LocationId id) = id
@@ -136,3 +142,38 @@ dirToString South = "south"
 dirToString Southwest = "southwest"
 dirToString West = "west"
 dirToString Northwest = "northwest"
+
+getLocationChars :: Location -> STM [Character]
+getLocationChars loc = do
+  objs <- readTVar $ locationObjects loc
+  return $ mapMaybe onlyChars objs
+  where
+    onlyChars (ObjectCharacter c) = Just c
+    onlyChars _ = Nothing
+
+getLocationItems :: Location -> STM [Item]
+getLocationItems loc = do
+  objs <- readTVar $ locationObjects loc
+  return $ mapMaybe onlyItems objs
+  where
+    onlyItems (ObjectItem i) = Just i
+    onlyItems _ = Nothing
+
+getLocationDirections :: Location -> STM [Direction]
+getLocationDirections loc = do
+  objs <- readTVar $ locationObjects loc
+  return $ mapMaybe onlyDirections objs
+  where
+    onlyDirections (ObjectDirection d _) = Just d
+    onlyDirections _ = Nothing
+
+getPortalByDirection :: Location -> Direction -> STM (Maybe Portal)
+getPortalByDirection loc dir = do
+  objs <- readTVar $ locationObjects loc
+  return $ findDir objs
+  where
+    findDir ((ObjectDirection d p) : rest)
+      | d == dir = Just p
+      | otherwise = findDir rest
+    findDir [] = Nothing
+    findDir (_ : rest) = findDir rest
