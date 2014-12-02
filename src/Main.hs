@@ -8,6 +8,7 @@ import Database.HDBC.Sqlite3
 import Network
 import System.Directory
 import System.IO
+import System.Timeout
 
 import Character
 import Command
@@ -23,16 +24,27 @@ main = withSocketsDo $ do
   sock <- listenOn $ PortNumber port
   putStrLn $ "Listening on port " ++ show port ++ "."
   connections <- atomically $ newConnectionList
-  gameState <- newGameState "mud.db" connections
+  gs <- newGameState "mud.db" connections
   -- Process game commands and update game state in a new thread
-  _ <- forkIO (mainServer gameState)
+  _ <- forkIO (mainServer gs)
   -- Accept incoming connections
-  forever $ do
-    (h, _, _) <- accept sock
-    putStrLn "Got a new connection."
-    idVar <- newEmptyMVar
-    tId <- forkFinally (clientPlayGame gameState h idVar)  (cleanupClient h)
-    putMVar idVar tId
+  acceptLoop gs sock
+
+acceptLoop :: GameState -> Socket -> IO ()
+acceptLoop gs sock = do
+  state <- atomically $ readTVar $ gameStatus gs
+  case state of
+    Running -> do
+      r <- timeout 100000 $ accept sock
+      case r of
+        Just (h, _, _) -> do
+          putStrLn "Got a new connection."
+          idVar <- newEmptyMVar
+          tId <- forkFinally (clientPlayGame gs h idVar)  (cleanupClient h)
+          putMVar idVar tId
+          acceptLoop gs sock
+        Nothing -> acceptLoop gs sock
+    Stopping -> putStrLn "Shutting down server"
 
 mainServer :: GameState -> IO ()
 mainServer gs =

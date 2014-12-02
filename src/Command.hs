@@ -87,3 +87,7 @@ cmdLook gs conn _ = do
 cmdSay :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdSay gs conn (CmdArgsString str) =
   hPutStrLn (connectionHandle conn) $ "You say, \"" ++ str ++ "\""
+
+cmdShutdown :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdShutdown gs _ _ =
+  atomically $ writeTVar (gameStatus gs) Stopping

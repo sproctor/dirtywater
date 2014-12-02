@@ -114,7 +114,7 @@ data ServerStatus = Running | Stopping
 data GameState =
   GameState
   { gameClients :: ClientConnectionList
-  , gameStatus :: ServerStatus
+  , gameStatus :: TVar ServerStatus
   , sqlConnection :: Connection
   , commandList :: TVar [CommandDef]
   , gameLocations :: TVar [Location]

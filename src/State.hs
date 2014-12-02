@@ -55,10 +55,12 @@ newGameState dbfilename connections = do
     , CommandDef ("exit", [CmdTypeNone], cmdExit)
     , CommandDef ("quit", [CmdTypeNone], cmdExit)
     , CommandDef ("say", [CmdTypeString], cmdSay)
+    , CommandDef ("shutdown", [CmdTypeNone], cmdShutdown)
     ] ++ (map (\d -> CommandDef (dirToString d, [CmdTypeNone], cmdGoDir d)) [North ..])
   chars <- loadCharacters dbconn locations
   charsTVar <- atomically $ newTVar chars
-  return $ GameState connections Running dbconn q locTVar charsTVar
+  status <- atomically $ newTVar Running
+  return $ GameState connections status dbconn q locTVar charsTVar
 
 initDatabase :: Connection -> IO ()
 initDatabase dbconn = do
