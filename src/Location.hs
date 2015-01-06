@@ -8,8 +8,6 @@ import Data.List
 import Data.Maybe
 import qualified Data.Yaml as Yaml
 import Data.Yaml ((.:), (.:?))
-import System.Directory (getDirectoryContents)
-import System.FilePath (takeExtension, pathSeparator)
 
 import Character
 import Item
@@ -85,12 +83,6 @@ instance Yaml.FromJSON PortalDef where
     <$> o .: "dir"
     <*> o .: "dest"
   parseJSON _ = error "Can't parse PortalDef from YAML/JSON"
-
-loadLocations :: FilePath -> IO [Location]
-loadLocations path = do
-  files <- getDirectoryContents path
-  let yamlFiles = filter ((== ".yaml") . takeExtension) files
-  mapM (\f -> loadLocation (path ++ (pathSeparator : f))) yamlFiles
 
 lookupLocation :: LocationId -> GameState -> STM (Maybe Location)
 lookupLocation id gs = do

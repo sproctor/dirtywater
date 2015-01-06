@@ -55,26 +55,67 @@ data Position = In | On deriving Eq
 
 newtype Volume = Volume Int deriving (Ord, Eq, Show, Read)
 
+data ItemTemplate =
+  ItemTemplate
+    { itemTemplId :: String
+    , itemTemplName :: String
+    , itemTemplAdjs :: [String]
+    , itemTemplWeaponType :: WeaponType
+    }
+
 data Item =
   Item
     { itemId :: Int
     , itemContainer :: TVar Container
-    , itemName :: String
-    , itemAdjs :: [String]
-    , itemContainers :: [(Position, Volume)]
-    , itemContainedItems :: [(Position, Item)]
-    , itemContainedChars :: [(Position, Character)]
-    , itemDest :: Maybe Location
-    } deriving Eq
+    , itemAddObject :: Object -> Bool
+    , itemContents :: TVar [ItemSlot]
+    , itemTemplate :: ItemTemplate
+    }
+
+data ItemSlot =
+  ItemSlot
+    { slotType :: ItemType
+    , slotPosition :: Position
+    , slotContents :: TVar [Item]
+    }
+
+data ItemType
+  = ItemAny
+  | ItemHands
+  | ItemHead
+  | ItemLegs
+  | ItemShield
+  | ItemTorso
+  | ItemWeapon
+
+data WeaponType
+  = WeaponBroadsword
+  | WeaponShortsword
+  | WeaponNone
+  deriving (Eq, Show, Enum)
 
 data Character =
   Character
     { charContainer :: TVar Container
     , charName :: TVar String
     , charPassword :: TVar String
-      --leftHand :: Item,
-      --rightHand :: Item
+    , charHands :: TVar [Item]
+    , charST :: TVar Int
+    , charDX :: TVar Int
+    , charIQ :: TVar Int
+    , charHT :: TVar Int
+    , charHP :: TVar Int
+    , charWill :: TVar Int
+    , charPer :: TVar Int
+    , charCurrHP :: TVar Int
+    , charSkills :: TVar [Skill]
     } deriving Eq
+
+data Skill =
+  Skill
+    { skillName :: String
+    , skillRank :: TVar Int
+    }
 
 data Object
   = ObjectItem Item
@@ -84,6 +125,7 @@ data Object
 data Container
   = ContainerLocation Location
   | ContainerItem Item
+  | ContainerCharacter Character
 
 data Direction
   = East
@@ -118,6 +160,7 @@ data GameState =
   , sqlConnection :: Connection
   , commandList :: TVar [CommandDef]
   , gameLocations :: TVar [Location]
+  , gameItemTemplates :: TVar [ItemTemplate]
   , gameCharacters :: TVar [Character]
   }
 

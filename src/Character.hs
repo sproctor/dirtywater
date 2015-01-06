@@ -40,3 +40,22 @@ changeName self newName =
 changePassword :: Character -> String -> STM ()
 changePassword self newPassword =
   writeTVar (charPassword self) newPassword
+
+createCharacter :: Container -> String -> String -> IO Character
+createCharacter container name password = do
+  nameVar <- atomically $ newTVar name
+  passwordVar <- atomically $ newTVar password
+  containerVar <- atomically $ newTVar container
+  handsVar <- atomically $ newTVar []
+  stVar <- atomically $ newTVar 10
+  dxVar <- atomically $ newTVar 10
+  iqVar <- atomically $ newTVar 10
+  htVar <- atomically $ newTVar 10
+  hpVar <- atomically $ newTVar 10
+  willVar <- atomically $ newTVar 10
+  perVar <- atomically $ newTVar 10
+  currHPVar <- atomically $ newTVar 10
+  ssVar <- atomically $ newTVar 2
+  skillsVar <- atomically $ newTVar [Skill "shortsword" ssVar]
+  return $ Character containerVar nameVar passwordVar handsVar stVar dxVar iqVar htVar hpVar willVar perVar currHPVar
+        skillsVar

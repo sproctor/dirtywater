@@ -7,11 +7,15 @@ import Data.List
 import Data.Maybe
 import Database.HDBC
 import Database.HDBC.Sqlite3
+import System.Directory (getDirectoryContents)
+import System.FilePath (takeExtension, pathSeparator)
 import System.IO
 
+import Character
 import Command
 import Connection
 import Helpers
+import Item
 import Location
 import Tangible
 import Types
@@ -47,8 +51,10 @@ doCommand conn command gs =
 newGameState :: String -> ClientConnectionList -> IO GameState
 newGameState dbfilename connections = do
   dbconn <- connectSqlite3 dbfilename
-  locations <- loadLocations "../data/locations"
+  locations <- loadFiles "../data/locations" loadLocation
   locTVar <- atomically $ newTVar locations
+  items <- loadFiles "../data/items" loadItemTemplate
+  itemsTVar <- atomically $ newTVar items
   initDatabase dbconn
   q <- atomically $ newTVar $
     [ CommandDef ("look", [CmdTypeNone], cmdLook)
@@ -60,7 +66,13 @@ newGameState dbfilename connections = do
   chars <- loadCharacters dbconn locations
   charsTVar <- atomically $ newTVar chars
   status <- atomically $ newTVar Running
-  return $ GameState connections status dbconn q locTVar charsTVar
+  return $ GameState connections status dbconn q locTVar itemsTVar charsTVar
+
+loadFiles :: FilePath -> (FilePath -> IO a) -> IO [a]
+loadFiles path loadFun = do
+  files <- getDirectoryContents path
+  let yamlFiles = filter ((== ".yaml") . takeExtension) files
+  mapM (\f -> loadFun (path ++ (pathSeparator : f))) yamlFiles
 
 initDatabase :: Connection -> IO ()
 initDatabase dbconn = do
@@ -75,10 +87,7 @@ newCharacter gs name password = do
   startLoc <- atomically $ lookupLocation (LocationId 1001) gs
   case startLoc of
     Just loc -> do
-      nameVar <- atomically $ newTVar name
-      passwordVar <- atomically $ newTVar password
-      container <- atomically $ newTVar (ContainerLocation loc)
-      let char = Character container nameVar passwordVar
+      char <- createCharacter (ContainerLocation loc) name password
       addCharacter gs char
       return char
     Nothing -> do
@@ -129,11 +138,7 @@ loadCharacters dbconn locations = do
       let password = fromSql sPassword
       let loc = findLocation (LocationId (fromInteger conId)) locations
       case loc of
-        Just l -> do
-          locVar <- atomically $ newTVar $ ContainerLocation l
-          nameVar <- atomically $ newTVar name
-          passwordVar <- atomically $ newTVar password
-          return $ Character locVar nameVar passwordVar
+        Just l -> createCharacter (ContainerLocation l) name password
         Nothing -> fail $ "Non-existant location (" ++ (show conId) ++ ") for character: " ++ name
     loadSqlCharacter x = do
       print x
