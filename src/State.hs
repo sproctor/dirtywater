@@ -66,7 +66,8 @@ newGameState dbfilename connections = do
   chars <- loadCharacters dbconn locations
   charsTVar <- atomically $ newTVar chars
   status <- atomically $ newTVar Running
-  return $ GameState connections status dbconn q locTVar itemsTVar charsTVar
+  nextIdVar <- atomically $ newTVar 1
+  return $ GameState connections status dbconn q locTVar nextIdVar itemsTVar charsTVar
 
 loadFiles :: FilePath -> (FilePath -> IO a) -> IO [a]
 loadFiles path loadFun = do

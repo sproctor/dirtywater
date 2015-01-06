@@ -70,3 +70,12 @@ stringToWeaponType :: String -> WeaponType
 stringToWeaponType "shortsword" = WeaponShortsword
 stringToWeaponType "broadsword" = WeaponBroadsword
 stringToWeaponType _ = WeaponNone
+
+createItem :: GameState -> ItemTemplate -> Container -> STM Item
+createItem gs templ con = do
+  let nextId = gameNextItemId gs
+  id <- readTVar nextId
+  writeTVar nextId (id + 1)
+  contentsVar <- newTVar []
+  conVar <- newTVar con
+  return $ Item id conVar (\o -> False) contentsVar templ

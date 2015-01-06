@@ -160,6 +160,7 @@ data GameState =
   , sqlConnection :: Connection
   , commandList :: TVar [CommandDef]
   , gameLocations :: TVar [Location]
+  , gameNextItemId :: TVar Int
   , gameItemTemplates :: TVar [ItemTemplate]
   , gameCharacters :: TVar [Character]
   }

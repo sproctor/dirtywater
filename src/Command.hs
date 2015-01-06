@@ -92,8 +92,9 @@ cmdShutdown :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdShutdown gs _ _ =
   atomically $ writeTVar (gameStatus gs) Stopping
 
-{- cmdCreate :: GameState -> ClientConnection -> CommandArgs -> IO ()
+{-
+cmdCreate :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdCreate gs conn args = do
   let char = connectionCharacter conn
   loc <- getLocation char
--}
+  -}
