@@ -25,8 +25,8 @@ instance Tangible Item where
   matchesDesc self adjs name =
     return $ isPrefixOf name (itemName self) && findAdjs adjs (itemAdjs self) []
 
-  viewShortDesc _ _ = return ""
-  viewLongDesc _ _ = return ""
+  viewShortDesc i _ = return $ (itemTemplShortDesc . itemTemplate) i
+  viewLongDesc i _ = return $ (itemTemplLongDesc . itemTemplate) i
 
 itemName :: Item -> String
 itemName = itemTemplName . itemTemplate
@@ -60,6 +60,8 @@ instance Yaml.FromJSON ItemTemplate where
     <$> o .: "id"
     <*> o .: "name"
     <*> o .:? "adjs" .!= []
+    <*> o .: "sdesc" -- TODO: make this optional and default to adjs + name
+    <*> o .: "ldesc" -- TODO: Make this optional and default to sdesc
     <*> o .:? "weapon-type" .!= WeaponNone
 
 instance Yaml.FromJSON WeaponType where
@@ -71,11 +73,19 @@ stringToWeaponType "shortsword" = WeaponShortsword
 stringToWeaponType "broadsword" = WeaponBroadsword
 stringToWeaponType _ = WeaponNone
 
-createItem :: GameState -> ItemTemplate -> Container -> STM Item
-createItem gs templ con = do
+createItem :: GameState -> String -> Container -> STM Item
+createItem gs tId con = do
+  templ <- lookupTempl gs tId
   let nextId = gameNextItemId gs
   id <- readTVar nextId
   writeTVar nextId (id + 1)
   contentsVar <- newTVar []
   conVar <- newTVar con
   return $ Item id conVar (\o -> False) contentsVar templ
+
+lookupTempl :: GameState -> String -> STM ItemTemplate
+lookupTempl gs tId = do
+  templs <- readTVar $ gameItemTemplates gs
+  case find (\t -> tId == itemTemplName t) templs of
+    Just t -> return t
+    Nothing -> error $ "Invalid item template id: " ++ tId

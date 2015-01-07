@@ -1,6 +1,6 @@
 ---
 id: shortsword
-noun: shortsword
+name: shortsword
 sdesc: a shortsword
 ldesc: A very generic shortsword with no special properties at all. It should probably be melted down into something better.
 ...

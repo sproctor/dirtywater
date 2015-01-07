@@ -60,6 +60,8 @@ data ItemTemplate =
     { itemTemplId :: String
     , itemTemplName :: String
     , itemTemplAdjs :: [String]
+    , itemTemplShortDesc :: String
+    , itemTemplLongDesc :: String
     , itemTemplWeaponType :: WeaponType
     }
 

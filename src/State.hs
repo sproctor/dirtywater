@@ -62,6 +62,7 @@ newGameState dbfilename connections = do
     , CommandDef ("quit", [CmdTypeNone], cmdExit)
     , CommandDef ("say", [CmdTypeString], cmdSay)
     , CommandDef ("shutdown", [CmdTypeNone], cmdShutdown)
+    , CommandDef ("create", [CmdTypeString], cmdCreate)
     ] ++ (map (\d -> CommandDef (dirToString d, [CmdTypeNone], cmdGoDir d)) [North ..])
   chars <- loadCharacters dbconn locations
   charsTVar <- atomically $ newTVar chars

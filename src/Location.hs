@@ -169,3 +169,10 @@ getPortalByDirection loc dir = do
       | otherwise = findDir rest
     findDir [] = Nothing
     findDir (_ : rest) = findDir rest
+
+locationAddObject :: Location -> Object -> STM ()
+locationAddObject loc obj = do
+  let objsVar = locationObjects loc
+  objs <- readTVar objsVar
+  writeTVar objsVar (obj : objs)
+

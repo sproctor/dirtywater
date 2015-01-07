@@ -9,6 +9,7 @@ import System.IO
 import Text.ParserCombinators.Parsec
 
 import Connection
+import Item
 import Location
 import Tangible
 import Types
@@ -92,9 +93,10 @@ cmdShutdown :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdShutdown gs _ _ =
   atomically $ writeTVar (gameStatus gs) Stopping
 
-{-
 cmdCreate :: GameState -> ClientConnection -> CommandArgs -> IO ()
-cmdCreate gs conn args = do
+cmdCreate gs conn (CmdArgsString tId) = do
   let char = connectionCharacter conn
-  loc <- getLocation char
-  -}
+  loc <- atomically $ getLocation char
+  item <- atomically $ createItem gs tId (ContainerLocation loc)
+  atomically $ locationAddObject loc (ObjectItem item)
+  hPutStrLn (connectionHandle conn) $ "A " ++ (itemName item) ++ " has just fallen from the sky!"
