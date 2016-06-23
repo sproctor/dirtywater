@@ -7,7 +7,7 @@ import Control.Monad
 
 hello :: Lua.LuaState -> IO C.CInt
 hello state = do
-  isfunction <- Lua.isfunction state 0
+  isfunction <- Lua.isfunction state (-1)
   when isfunction $ Lua.call state 0 1
   isstring <- Lua.isstring state 0
   if isstring then do
