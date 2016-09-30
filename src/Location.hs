@@ -34,17 +34,16 @@ newLocation id title desc portals = do
   objs <- newTVar portals
   return $ Location id title desc objs
 
+addLocation :: LuaState -> IO CInt
+addLocation id locationMap = do
+  
+
 loadLocation :: FilePath -> IO Location
 loadLocation file = do
-  l <- either (error . show) id <$> Yaml.decodeFileEither file
-  let locId = LocationId (ldId l)
-  atomically $ newLocation locId (ldTitle l) (ldDesc l) (genPortals locId (ldPortals l))
-  where
-    genPortals :: LocationId -> [PortalDef] -> [Object]
-    genPortals locId ((PortalDef dirId destId) : rest) =
-      let p = Portal locId (LocationId destId) in
-      ObjectDirection (stringToDir dirId) p : genPortals locId rest
-    genPortals _ [] = []
+  luaState <- Lua.newstate
+  Lua.openlibs luaState
+  Lua.register luaState "addLocation" addLocation
+  Lua.dofile luaState file
 
 getLocationDesc :: Location -> Character -> STM String
 getLocationDesc l char = do

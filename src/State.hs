@@ -57,13 +57,14 @@ newGameState dbfilename connections = do
   itemsTVar <- atomically $ newTVar items
   initDatabase dbconn
   q <- atomically $ newTVar $
+    (map (\d -> CommandDef (dirToString d, [CmdTypeNone], cmdGoDir d)) [North ..]) ++
     [ CommandDef ("look", [CmdTypeNone], cmdLook)
     , CommandDef ("exit", [CmdTypeNone], cmdExit)
     , CommandDef ("quit", [CmdTypeNone], cmdExit)
     , CommandDef ("say", [CmdTypeString], cmdSay)
     , CommandDef ("shutdown", [CmdTypeNone], cmdShutdown)
     , CommandDef ("create", [CmdTypeString], cmdCreate)
-    ] ++ (map (\d -> CommandDef (dirToString d, [CmdTypeNone], cmdGoDir d)) [North ..])
+    ]
   chars <- loadCharacters dbconn locations
   charsTVar <- atomically $ newTVar chars
   status <- atomically $ newTVar Running

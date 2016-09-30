@@ -147,13 +147,13 @@ clientLoop gs conn = do
   closed <- atomically $ readTVar (connectionClosed conn)
   unless closed $ do
     let h = connectionHandle conn
-    l <- tryJust (guard . isExitException) $ hGetLine h
-    case l of
+    possibleLine <- tryJust (guard . isExitException) $ hGetLine h
+    case possibleLine of
       Left _ -> return ()
       Right line -> do
-        let str = unpack $ strip $ pack line
-        cl <- atomically $ readTVar $ commandList gs
-        case parseCommand cl str of
+        let strippedLine = unpack $ strip $ pack line
+        commands <- atomically $ readTVar $ commandList gs
+        case parseCommand commands strippedLine of
           Left e -> hPutStrLn h $ "Parse error at " ++ (show e)
           Right cmd -> atomically $ queueCommand conn cmd
     clientLoop gs conn

@@ -74,18 +74,23 @@ stringToWeaponType "broadsword" = WeaponBroadsword
 stringToWeaponType _ = WeaponNone
 
 createItem :: GameState -> String -> Container -> STM Item
-createItem gs tId con = do
-  templ <- lookupTempl gs tId
-  let nextId = gameNextItemId gs
-  id <- readTVar nextId
-  writeTVar nextId (id + 1)
+createItem gs templateId con = do
+  template <- lookupTemplate gs templateId
+  id <- takeItemId gs
   contentsVar <- newTVar []
   conVar <- newTVar con
-  return $ Item id conVar (\o -> False) contentsVar templ
+  return $ Item id conVar (\o -> False) contentsVar template
 
-lookupTempl :: GameState -> String -> STM ItemTemplate
-lookupTempl gs tId = do
-  templs <- readTVar $ gameItemTemplates gs
-  case find (\t -> tId == itemTemplName t) templs of
+takeItemId :: GameState -> STM Int
+takeItemId gs = do
+  let idState = gameNextItemId gs
+  id <- readTVar idState
+  writeTVar idState (id + 1)
+  return id
+
+lookupTemplate :: GameState -> String -> STM ItemTemplate
+lookupTemplate gs id = do
+  templates <- readTVar $ gameItemTemplates gs
+  case find (\t -> id == itemTemplName t) templates of
     Just t -> return t
-    Nothing -> error $ "Invalid item template id: " ++ tId
+    Nothing -> error $ "Invalid item template id: " ++ id

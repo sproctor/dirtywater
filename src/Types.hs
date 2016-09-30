@@ -51,8 +51,6 @@ data Command
 
 newtype CommandDef = CommandDef (String, [CommandArgsType], GameState -> ClientConnection -> CommandArgs -> IO ())
 
-data Position = In | On deriving Eq
-
 newtype Volume = Volume Int deriving (Ord, Eq, Show, Read)
 
 data ItemTemplate =
@@ -77,7 +75,6 @@ data Item =
 data ItemSlot =
   ItemSlot
     { slotType :: ItemType
-    , slotPosition :: Position
     , slotContents :: TVar [Item]
     }
 
@@ -101,7 +98,9 @@ data Character =
     { charContainer :: TVar Container
     , charName :: TVar String
     , charPassword :: TVar String
-    , charHands :: TVar [Item]
+    , charHands :: TVar [ItemSlot]
+    , charSlots :: TVar [ItemSlot]
+    , charInventory :: TVar [Item]
     , charST :: TVar Int
     , charDX :: TVar Int
     , charIQ :: TVar Int
