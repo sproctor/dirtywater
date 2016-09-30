@@ -3,4 +3,5 @@ room = {
     description = "You are standing in Andy's office."
 }
 
+hello ("mike")
 addLocation (room)
