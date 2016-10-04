@@ -51,10 +51,6 @@ doCommand conn command gs =
 newGameState :: String -> ClientConnectionList -> IO GameState
 newGameState dbfilename connections = do
   dbconn <- connectSqlite3 dbfilename
-  locations <- loadFiles "../data/locations" loadLocation
-  locTVar <- atomically $ newTVar locations
-  items <- loadFiles "../data/items" loadItemTemplate
-  itemsTVar <- atomically $ newTVar items
   initDatabase dbconn
   q <- atomically $ newTVar $
     (map (\d -> CommandDef (dirToString d, [CmdTypeNone], cmdGoDir d)) [North ..]) ++
@@ -65,17 +61,22 @@ newGameState dbfilename connections = do
     , CommandDef ("shutdown", [CmdTypeNone], cmdShutdown)
     , CommandDef ("create", [CmdTypeString], cmdCreate)
     ]
-  chars <- loadCharacters dbconn locations
-  charsTVar <- atomically $ newTVar chars
   status <- atomically $ newTVar Running
   nextIdVar <- atomically $ newTVar 1
-  return $ GameState connections status dbconn q locTVar nextIdVar itemsTVar charsTVar
+  locTVar <- atomically $ newTVar []
+  itemsTVar <- atomically $ newTVar []
+  charsTVar <- atomically $ newTVar []
+  let gs = GameState connections status dbconn q locTVar nextIdVar itemsTVar charsTVar
+  loadFiles gs "../data/locations" loadLocation
+  -- loadFiles gs "../data/items" loadItemTemplate
+  loadCharacters gs
+  return gs
 
-loadFiles :: FilePath -> (FilePath -> IO a) -> IO [a]
-loadFiles path loadFun = do
+loadFiles :: GameState -> FilePath -> (GameState -> FilePath -> IO ()) -> IO ()
+loadFiles gs path loadFun = do
   files <- getDirectoryContents path
-  let yamlFiles = filter ((== ".yaml") . takeExtension) files
-  mapM (\f -> loadFun (path ++ (pathSeparator : f))) yamlFiles
+  let luaFiles = filter ((== ".lua") . takeExtension) files
+  mapM_ (\f -> loadFun gs (path ++ (pathSeparator : f))) luaFiles
 
 initDatabase :: Connection -> IO ()
 initDatabase dbconn = do
@@ -127,15 +128,18 @@ addSqlCharacter dbconn char = do
   password <- atomically $ readTVar $ charPassword char
   void $ run dbconn "INSERT INTO characters VALUES (?, ?, ?)" [toSql id, toSql name, toSql password]
 
-loadCharacters :: Connection -> [Location] -> IO [Character]
-loadCharacters dbconn locations = do
+loadCharacters :: GameState -> IO ()
+loadCharacters gs = do
+  let dbconn = sqlConnection gs
+  locations <- atomically $ readTVar $ gameLocations gs
   stmt <- prepare dbconn "SELECT conId, name, password FROM characters"
   execute stmt []
   results <- fetchAllRowsAL stmt
-  mapM loadSqlCharacter results
+  characters <- mapM (loadSqlCharacter locations) results
+  atomically $ writeTVar (gameCharacters gs) characters
   where
-    loadSqlCharacter :: [(String, SqlValue)] -> IO Character
-    loadSqlCharacter [("conId", sId), ("name", sName), ("password", sPassword)] = do
+    loadSqlCharacter :: [Location] -> [(String, SqlValue)] -> IO Character
+    loadSqlCharacter locations [("conId", sId), ("name", sName), ("password", sPassword)] = do
       let conId = fromSql sId
       let name = fromSql sName
       let password = fromSql sPassword
@@ -143,6 +147,6 @@ loadCharacters dbconn locations = do
       case loc of
         Just l -> createCharacter (ContainerLocation l) name password
         Nothing -> fail $ "Non-existant location (" ++ (show conId) ++ ") for character: " ++ name
-    loadSqlCharacter x = do
+    loadSqlCharacter _ x = do
       print x
       fail "Bad result loading Character"

@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Types where
 
 import Control.Concurrent
@@ -86,12 +87,13 @@ data ItemType
   | ItemShield
   | ItemTorso
   | ItemWeapon
+  deriving (Eq, Show, Enum, Bounded)
 
 data WeaponType
   = WeaponBroadsword
   | WeaponShortsword
   | WeaponNone
-  deriving (Eq, Show, Enum)
+  deriving (Eq, Show, Enum, Bounded)
 
 data Character =
   Character
@@ -137,9 +139,9 @@ data Direction
   | Southeast
   | Southwest
   | West
-  deriving (Eq, Enum)
+  deriving (Eq, Enum, Bounded)
 
-newtype LocationId = LocationId Int deriving (Show, Eq, Read)
+newtype LocationId = LocationId Int deriving (Num, Show, Eq, Read)
 
 data Location =
   Location

@@ -34,8 +34,8 @@ itemName = itemTemplName . itemTemplate
 itemAdjs :: Item -> [String]
 itemAdjs = itemTemplAdjs . itemTemplate
 
-canAdd :: Item -> Character -> Position -> Bool
-canAdd item _ pos = True
+canAdd :: Item -> Character -> Bool
+canAdd item _ = True
   -- not $ null $ filter (\ (p, _) -> p == pos) (itemContents item)
 
 -- helper functions
@@ -76,21 +76,21 @@ stringToWeaponType _ = WeaponNone
 createItem :: GameState -> String -> Container -> STM Item
 createItem gs templateId con = do
   template <- lookupTemplate gs templateId
-  id <- takeItemId gs
+  itemId <- takeItemId gs
   contentsVar <- newTVar []
   conVar <- newTVar con
-  return $ Item id conVar (\o -> False) contentsVar template
+  return $ Item itemId conVar (\o -> False) contentsVar template
 
 takeItemId :: GameState -> STM Int
 takeItemId gs = do
   let idState = gameNextItemId gs
-  id <- readTVar idState
-  writeTVar idState (id + 1)
-  return id
+  currId <- readTVar idState
+  writeTVar idState (currId + 1)
+  return currId
 
 lookupTemplate :: GameState -> String -> STM ItemTemplate
-lookupTemplate gs id = do
+lookupTemplate gs templateId = do
   templates <- readTVar $ gameItemTemplates gs
-  case find (\t -> id == itemTemplName t) templates of
+  case find (\t -> templateId == itemTemplName t) templates of
     Just t -> return t
-    Nothing -> error $ "Invalid item template id: " ++ id
+    Nothing -> error $ "Invalid item template id: " ++ templateId

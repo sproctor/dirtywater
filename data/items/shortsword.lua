@@ -1,4 +1,4 @@
-sword = Item {
+sword = {
     id = "shortsword",
     name = "shortsword",
     shortDescription = "a shortsword",

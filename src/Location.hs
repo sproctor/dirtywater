@@ -4,10 +4,16 @@ module Location where
 
 import Control.Applicative
 import Control.Concurrent.STM
+import Control.Monad
 import Data.List
 import Data.Maybe
-import qualified Data.Yaml as Yaml
-import Data.Yaml ((.:), (.:?))
+import Foreign.StablePtr
+import Foreign.C.Types
+
+import Scripting.Lua (LuaState)
+import qualified Scripting.Lua as Lua
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as BC
 
 import Character
 import Item
@@ -34,16 +40,66 @@ newLocation id title desc portals = do
   objs <- newTVar portals
   return $ Location id title desc objs
 
-addLocation :: LuaState -> IO CInt
-addLocation id locationMap = do
-  
+getRequiredField :: LuaState -> String -> IO String
+getRequiredField lstate key = do
+  Lua.getfield lstate (-1) key
+  str <- Lua.tostring lstate (-1)
+  Lua.pop lstate 1
+  return $ BC.unpack str
 
-loadLocation :: FilePath -> IO Location
-loadLocation file = do
+getRequiredFieldInt :: LuaState -> String -> IO Int
+getRequiredFieldInt lstate key = do
+  Lua.getfield lstate (-1) key
+  i <- Lua.tointeger lstate (-1)
+  Lua.pop lstate 1
+  return $ fromIntegral i
+
+luaAddLocation :: LuaState -> IO CInt
+luaAddLocation luaState = do
+  validArg <- Lua.istable luaState (-1)
+  when (not validArg) $ error "location argument must be a table"
+  locId <- getRequiredFieldInt luaState "id"
+  title <- getRequiredField luaState "title"
+  description <- getRequiredField luaState "description"
+  portals <- findDirectionPortals luaState (LocationId locId)
+  Lua.getglobal luaState "gamestate"
+  gsPtr <- Lua.touserdata luaState (-1)
+  gs <- deRefStablePtr $ castPtrToStablePtr gsPtr
+  addLocation gs (LocationId locId) title description
+  return 0
+
+findDirectionPortals :: LuaState -> LocationId -> IO [Object]
+findDirectionPortals luaState locId = do
+  liftM catMaybes $ mapM (getDirectionPortal luaState locId) [(minBound :: Direction) ..]
+
+getDirectionPortal :: LuaState -> LocationId -> Direction -> IO (Maybe Object)
+getDirectionPortal luaState locId dir = do
+  Lua.getfield luaState (-1) (dirToString dir)
+  val <- Lua.tointegerx luaState (-1)
+  Lua.pop luaState 1
+  case val of
+    Just destId -> return $ Just $ ObjectDirection dir (Portal locId (fromIntegral destId))
+    Nothing -> return Nothing
+
+addLocation :: GameState -> LocationId -> String -> String -> IO ()
+addLocation gs locId title description = do
+  objs <- atomically $ newTVar []
+  locs <- atomically $ readTVar (gameLocations gs)
+  let loc = Location locId title description objs
+  atomically $ writeTVar (gameLocations gs) (loc : locs)
+
+loadLocation :: GameState -> FilePath -> IO ()
+loadLocation gs file = do
   luaState <- Lua.newstate
   Lua.openlibs luaState
-  Lua.register luaState "addLocation" addLocation
-  Lua.dofile luaState file
+  gsStablePtr <- newStablePtr gs
+  Lua.pushlightuserdata luaState $ castStablePtrToPtr gsStablePtr
+  Lua.setglobal luaState "gamestate"
+  Lua.registerrawhsfunction luaState "addLocation" luaAddLocation
+  Lua.loadfile luaState file
+  Lua.call luaState 0 0
+  Lua.close luaState
+  freeStablePtr gsStablePtr
 
 getLocationDesc :: Location -> Character -> STM String
 getLocationDesc l char = do
@@ -68,29 +124,14 @@ getLocationDesc l char = do
   let desc = (locationTitle l) ++ "\r\n" ++ (locationDesc l) ++ "\r\n" ++ charStr ++ itemStr ++ directionStr
   return desc
 
-instance Yaml.FromJSON LocationDef where
-  parseJSON (Yaml.Object o) = LocationDef
-    <$> o .: "id"
-    <*> o .: "title"
-    <*> o .: "desc"
-    <*> o .: "portals"
-    <*> o .:? "init_file"
-  parseJSON _ = error "Can't parse LocationDef from YAML/JSON"
-
-instance Yaml.FromJSON PortalDef where
-  parseJSON (Yaml.Object o) = PortalDef
-    <$> o .: "dir"
-    <*> o .: "dest"
-  parseJSON _ = error "Can't parse PortalDef from YAML/JSON"
-
 lookupLocation :: LocationId -> GameState -> STM (Maybe Location)
-lookupLocation id gs = do
+lookupLocation locId gs = do
   locations <- readTVar $ gameLocations gs
-  return $ findLocation id locations
+  return $ findLocation locId locations
 
 findLocation :: LocationId -> [Location] -> Maybe Location
-findLocation id locations =
-  find ((== id) . locationId) locations
+findLocation locId locations =
+  find ((== locId) . locationId) locations
 
 findDirDest :: GameState -> Direction -> Location -> STM (Maybe Location)
 findDirDest gs dir loc = do

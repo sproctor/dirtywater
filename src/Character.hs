@@ -47,6 +47,8 @@ createCharacter container name password = do
   passwordVar <- atomically $ newTVar password
   containerVar <- atomically $ newTVar container
   handsVar <- atomically $ newTVar []
+  slotsVar <- atomically $ newTVar []
+  invVar <- atomically $ newTVar []
   stVar <- atomically $ newTVar 10
   dxVar <- atomically $ newTVar 10
   iqVar <- atomically $ newTVar 10
@@ -57,5 +59,4 @@ createCharacter container name password = do
   currHPVar <- atomically $ newTVar 10
   ssVar <- atomically $ newTVar 2
   skillsVar <- atomically $ newTVar [Skill "shortsword" ssVar]
-  return $ Character containerVar nameVar passwordVar handsVar stVar dxVar iqVar htVar hpVar willVar perVar currHPVar
-        skillsVar
+  return $ Character containerVar nameVar passwordVar handsVar slotsVar invVar stVar dxVar iqVar htVar hpVar willVar perVar currHPVar skillsVar
