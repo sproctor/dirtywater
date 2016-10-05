@@ -50,6 +50,10 @@ data Command
   = Command (String, CommandArgs, GameState -> ClientConnection -> CommandArgs -> IO ())
   | BadCommand String
 
+instance Show Command where
+  show (Command (cmd, args, _)) = cmd ++ (show args)
+  show (BadCommand s) = "Bad command: " ++ s
+
 newtype CommandDef = CommandDef (String, [CommandArgsType], GameState -> ClientConnection -> CommandArgs -> IO ())
 
 newtype Volume = Volume Int deriving (Ord, Eq, Show, Read)
@@ -141,7 +145,28 @@ data Direction
   | West
   deriving (Eq, Enum, Bounded)
 
-newtype LocationId = LocationId Int deriving (Num, Show, Eq, Read)
+instance Show Direction where
+  show East = "east"
+  show North = "north"
+  show Northeast = "northeast"
+  show Northwest = "northwest"
+  show South = "south"
+  show Southeast = "southeast"
+  show Southwest = "southwest"
+  show West = "west"
+
+instance Read Direction where
+  readsPrec _ value =
+    tryParse [(minBound :: Direction) ..]
+    where
+      tryParse [] = []
+      tryParse (result:xs) =
+        let attempt = show result in
+        if (take (length attempt) value) == attempt
+          then [(result, drop (length attempt) value)]
+          else tryParse xs
+
+newtype LocationId = LocationId Int deriving (Num, Show, Eq, Read, Enum, Real, Ord, Integral)
 
 data Location =
   Location
@@ -152,7 +177,7 @@ data Location =
   } deriving Eq
 
 data Portal
-  = Portal { portalDestA :: LocationId, portalDestB :: LocationId }
+  = Portal { portalDestA :: LocationId, portalDestB :: LocationId } deriving (Eq, Show)
 
 data ServerStatus = Running | Stopping
 

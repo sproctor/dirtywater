@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Location where
 
-import Control.Applicative
 import Control.Concurrent.STM
 import Control.Monad
 import Data.List
@@ -12,11 +11,10 @@ import Foreign.C.Types
 
 import Scripting.Lua (LuaState)
 import qualified Scripting.Lua as Lua
-import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 
-import Character
-import Item
+import Character()
+import Item()
 import Types
 import Tangible
 
@@ -36,20 +34,20 @@ data PortalDef =
     }
 
 newLocation :: LocationId -> String -> String -> [Object] -> STM Location
-newLocation id title desc portals = do
+newLocation locId title desc portals = do
   objs <- newTVar portals
-  return $ Location id title desc objs
+  return $ Location locId title desc objs
 
 getRequiredField :: LuaState -> String -> IO String
 getRequiredField lstate key = do
-  Lua.getfield lstate (-1) key
+  _ <- Lua.getfield lstate (-1) key
   str <- Lua.tostring lstate (-1)
   Lua.pop lstate 1
   return $ BC.unpack str
 
 getRequiredFieldInt :: LuaState -> String -> IO Int
 getRequiredFieldInt lstate key = do
-  Lua.getfield lstate (-1) key
+  _ <- Lua.getfield lstate (-1) key
   i <- Lua.tointeger lstate (-1)
   Lua.pop lstate 1
   return $ fromIntegral i
@@ -62,10 +60,10 @@ luaAddLocation luaState = do
   title <- getRequiredField luaState "title"
   description <- getRequiredField luaState "description"
   portals <- findDirectionPortals luaState (LocationId locId)
-  Lua.getglobal luaState "gamestate"
+  _ <- Lua.getglobal luaState "gamestate"
   gsPtr <- Lua.touserdata luaState (-1)
   gs <- deRefStablePtr $ castPtrToStablePtr gsPtr
-  addLocation gs (LocationId locId) title description
+  addLocation gs (LocationId locId) title description portals
   return 0
 
 findDirectionPortals :: LuaState -> LocationId -> IO [Object]
@@ -74,18 +72,18 @@ findDirectionPortals luaState locId = do
 
 getDirectionPortal :: LuaState -> LocationId -> Direction -> IO (Maybe Object)
 getDirectionPortal luaState locId dir = do
-  Lua.getfield luaState (-1) (dirToString dir)
+  _ <- Lua.getfield luaState (-1) (show dir)
   val <- Lua.tointegerx luaState (-1)
   Lua.pop luaState 1
   case val of
     Just destId -> return $ Just $ ObjectDirection dir (Portal locId (fromIntegral destId))
     Nothing -> return Nothing
 
-addLocation :: GameState -> LocationId -> String -> String -> IO ()
-addLocation gs locId title description = do
-  objs <- atomically $ newTVar []
+addLocation :: GameState -> LocationId -> String -> String -> [Object] -> IO ()
+addLocation gs locId title description objects = do
+  objectsVar <- atomically $ newTVar objects
   locs <- atomically $ readTVar (gameLocations gs)
-  let loc = Location locId title description objs
+  let loc = Location locId title description objectsVar
   atomically $ writeTVar (gameLocations gs) (loc : locs)
 
 loadLocation :: GameState -> FilePath -> IO ()
@@ -96,8 +94,10 @@ loadLocation gs file = do
   Lua.pushlightuserdata luaState $ castStablePtrToPtr gsStablePtr
   Lua.setglobal luaState "gamestate"
   Lua.registerrawhsfunction luaState "addLocation" luaAddLocation
-  Lua.loadfile luaState file
-  Lua.call luaState 0 0
+  status <- Lua.loadfile luaState file
+  if status == Lua.OK
+    then Lua.call luaState 0 0
+    else error $ "Problem processing file \"" ++ file ++ "\""
   Lua.close luaState
   freeStablePtr gsStablePtr
 
@@ -116,7 +116,7 @@ getLocationDesc l char = do
       then ""
       else "Items here: " ++ (intercalate ", " itemDescs) ++ ".\r\n"
   directions <- getLocationDirections l
-  let directionDescs = map dirToString directions
+  let directionDescs = map show directions
   let
     directionStr = if null directions
       then ""
@@ -124,14 +124,16 @@ getLocationDesc l char = do
   let desc = (locationTitle l) ++ "\r\n" ++ (locationDesc l) ++ "\r\n" ++ charStr ++ itemStr ++ directionStr
   return desc
 
-lookupLocation :: LocationId -> GameState -> STM (Maybe Location)
+lookupLocation :: LocationId -> GameState -> STM Location
 lookupLocation locId gs = do
   locations <- readTVar $ gameLocations gs
   return $ findLocation locId locations
 
-findLocation :: LocationId -> [Location] -> Maybe Location
+findLocation :: LocationId -> [Location] -> Location
 findLocation locId locations =
-  find ((== locId) . locationId) locations
+  case find ((== locId) . locationId) locations of
+    Just loc -> loc
+    Nothing -> error $ "Invalid location ID: " ++ show locId
 
 findDirDest :: GameState -> Direction -> Location -> STM (Maybe Location)
 findDirDest gs dir loc = do
@@ -149,31 +151,8 @@ findDirDest gs dir loc = do
               if currId == idB
                 then return idA
                 else fail "Bad portal!"
-      lookupLocation destId gs
+      liftM Just $ lookupLocation destId gs
     Nothing -> return Nothing
-
-fromLocationId :: LocationId -> Int
-fromLocationId (LocationId id) = id
-
-stringToDir :: String -> Direction
-stringToDir "north" = North
-stringToDir "northeast" = Northeast
-stringToDir "east" = East
-stringToDir "southeast" = Southeast
-stringToDir "south" = South
-stringToDir "southwest" = Southwest
-stringToDir "west" = West
-stringToDir "northwest" = Northwest
-
-dirToString :: Direction -> String
-dirToString North = "north"
-dirToString Northeast = "northeast"
-dirToString East = "east"
-dirToString Southeast = "southeast"
-dirToString South = "south"
-dirToString Southwest = "southwest"
-dirToString West = "west"
-dirToString Northwest = "northwest"
 
 getLocationChars :: Location -> STM [Character]
 getLocationChars loc = do

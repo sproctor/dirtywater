@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Item where
 
-import Control.Applicative
 import Control.Concurrent.STM
 import Data.List
 import qualified Data.Yaml as Yaml
@@ -17,6 +16,7 @@ instance Tangible Item where
     case con of
       ContainerLocation l -> return l
       ContainerItem i -> getLocation i
+      ContainerCharacter _ -> error "You are not allowed to have a character inside an item!"
 
   getContainer self = readTVar (itemContainer self)
 
@@ -79,7 +79,7 @@ createItem gs templateId con = do
   itemId <- takeItemId gs
   contentsVar <- newTVar []
   conVar <- newTVar con
-  return $ Item itemId conVar (\o -> False) contentsVar template
+  return $ Item itemId conVar (\_ -> False) contentsVar template
 
 takeItemId :: GameState -> STM Int
 takeItemId gs = do

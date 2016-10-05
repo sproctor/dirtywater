@@ -2,6 +2,7 @@ module State where
 
 import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Exception
 import Control.Monad
 import Data.List
 import Data.Maybe
@@ -28,8 +29,9 @@ processCommands gameState =
       mcmd <- atomically $ getCommand conn
       case mcmd of
         Just cmd -> do
-          --print ((getCharacter conn), realCommand)
-          doCommand conn cmd gameState
+          -- print ((connectionCharacter conn), cmd)
+          catch (doCommand conn cmd gameState)
+            (\e -> putOutput conn $ "BUG! You've encountered an internal server error: " ++ (show (e :: SomeException)) ++ "\r\n")
           prompt <- atomically $ isEmptyCommandQueue conn
           when prompt $ putOutput conn ">"
         Nothing -> return ()
@@ -53,7 +55,7 @@ newGameState dbfilename connections = do
   dbconn <- connectSqlite3 dbfilename
   initDatabase dbconn
   q <- atomically $ newTVar $
-    (map (\d -> CommandDef (dirToString d, [CmdTypeNone], cmdGoDir d)) [North ..]) ++
+    (map (\d -> CommandDef (show d, [CmdTypeNone], cmdGoDir d)) [(minBound :: Direction) ..]) ++
     [ CommandDef ("look", [CmdTypeNone], cmdLook)
     , CommandDef ("exit", [CmdTypeNone], cmdExit)
     , CommandDef ("quit", [CmdTypeNone], cmdExit)
@@ -89,13 +91,9 @@ initDatabase dbconn = do
 newCharacter :: GameState -> String -> String -> IO Character
 newCharacter gs name password = do
   startLoc <- atomically $ lookupLocation (LocationId 1001) gs
-  case startLoc of
-    Just loc -> do
-      char <- createCharacter (ContainerLocation loc) name password
-      addCharacter gs char
-      return char
-    Nothing -> do
-      fail "Start location could not be found!"
+  char <- createCharacter (ContainerLocation startLoc) name password
+  addCharacter gs char
+  return char
 
 findCharacter :: String -> GameState -> STM (Maybe Character)
 findCharacter name gs = do
@@ -122,7 +120,7 @@ addSqlCharacter dbconn char = do
   container <- atomically $ readTVar $ charContainer char
   let
     id = case container of
-      ContainerLocation l -> fromLocationId $ locationId l
+      ContainerLocation l -> fromIntegral $ locationId l
       ContainerItem i -> itemId i
   name <- atomically $ readTVar $ charName char
   password <- atomically $ readTVar $ charPassword char
@@ -144,9 +142,8 @@ loadCharacters gs = do
       let name = fromSql sName
       let password = fromSql sPassword
       let loc = findLocation (LocationId (fromInteger conId)) locations
-      case loc of
-        Just l -> createCharacter (ContainerLocation l) name password
-        Nothing -> fail $ "Non-existant location (" ++ (show conId) ++ ") for character: " ++ name
+      createCharacter (ContainerLocation loc) name password
+      --  Nothing -> fail $ "Non-existant location (" ++ (show conId) ++ ") for character: " ++ name
     loadSqlCharacter _ x = do
       print x
       fail "Bad result loading Character"

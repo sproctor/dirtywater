@@ -66,7 +66,7 @@ cmdGoDir dir gs conn _ = do
     Just d -> do
       atomically $ move char (ContainerLocation d)
       cmdLook gs conn CmdArgsNone
-    Nothing -> hPutStrLn (connectionHandle conn) $ "You can't go " ++ (dirToString dir) ++ " from here!"
+    Nothing -> hPutStrLn (connectionHandle conn) $ "You can't go " ++ (show dir) ++ " from here!"
 
 cmdExit :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdExit gs conn _ = do

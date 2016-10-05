@@ -19,6 +19,7 @@ instance Tangible Character where
     case con of
       ContainerLocation l -> return l
       ContainerItem i -> getLocation i
+      ContainerCharacter i -> getLocation i
 
   getContainer self = readTVar (charContainer self)
 
