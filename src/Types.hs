@@ -3,6 +3,8 @@ module Types where
 
 import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Exception
+import Data.Typeable
 import Database.HDBC.Sqlite3
 import System.IO
 
@@ -202,3 +204,9 @@ data ClientConnection = ClientConnection
     } deriving Eq
 
 newtype ClientConnectionList = ClientConnectionList (TVar [ClientConnection])
+
+data InvalidValueException =
+  InvalidValueException String
+  deriving (Show, Typeable)
+
+instance Exception InvalidValueException

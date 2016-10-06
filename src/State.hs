@@ -31,7 +31,7 @@ processCommands gameState =
         Just cmd -> do
           -- print ((connectionCharacter conn), cmd)
           catch (doCommand conn cmd gameState)
-            (\e -> putOutput conn $ "BUG! You've encountered an internal server error: " ++ (show (e :: SomeException)) ++ "\r\n")
+            (\e -> putOutput conn $ "BUG! You've encountered an internal server error: " ++ (show (e :: InvalidValueException)) ++ "\r\n")
           prompt <- atomically $ isEmptyCommandQueue conn
           when prompt $ putOutput conn ">"
         Nothing -> return ()
@@ -129,21 +129,20 @@ addSqlCharacter dbconn char = do
 loadCharacters :: GameState -> IO ()
 loadCharacters gs = do
   let dbconn = sqlConnection gs
-  locations <- atomically $ readTVar $ gameLocations gs
   stmt <- prepare dbconn "SELECT conId, name, password FROM characters"
   execute stmt []
   results <- fetchAllRowsAL stmt
-  characters <- mapM (loadSqlCharacter locations) results
+  characters <- mapM loadSqlCharacter results
   atomically $ writeTVar (gameCharacters gs) characters
   where
-    loadSqlCharacter :: [Location] -> [(String, SqlValue)] -> IO Character
-    loadSqlCharacter locations [("conId", sId), ("name", sName), ("password", sPassword)] = do
+    loadSqlCharacter :: [(String, SqlValue)] -> IO Character
+    loadSqlCharacter [("conId", sId), ("name", sName), ("password", sPassword)] = do
       let conId = fromSql sId
       let name = fromSql sName
       let password = fromSql sPassword
-      let loc = findLocation (LocationId (fromInteger conId)) locations
+      loc <- atomically $ lookupLocation (LocationId (fromInteger conId)) gs
       createCharacter (ContainerLocation loc) name password
       --  Nothing -> fail $ "Non-existant location (" ++ (show conId) ++ ") for character: " ++ name
-    loadSqlCharacter _ x = do
+    loadSqlCharacter x = do
       print x
       fail "Bad result loading Character"

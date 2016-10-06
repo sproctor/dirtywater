@@ -3,9 +3,11 @@
 module Location where
 
 import Control.Concurrent.STM
+import Control.Exception
 import Control.Monad
 import Data.List
 import Data.Maybe
+import Debug.Trace
 import Foreign.StablePtr
 import Foreign.C.Types
 
@@ -125,15 +127,12 @@ getLocationDesc l char = do
   return desc
 
 lookupLocation :: LocationId -> GameState -> STM Location
+-- lookupLocation locId _ | trace ("lookupLocation " ++ show locId) False = undefined
 lookupLocation locId gs = do
   locations <- readTVar $ gameLocations gs
-  return $ findLocation locId locations
-
-findLocation :: LocationId -> [Location] -> Location
-findLocation locId locations =
   case find ((== locId) . locationId) locations of
-    Just loc -> loc
-    Nothing -> error $ "Invalid location ID: " ++ show locId
+    Just loc -> return loc
+    Nothing -> throwSTM $ InvalidValueException $ "Invalid location ID: " ++ show locId
 
 findDirDest :: GameState -> Direction -> Location -> STM (Maybe Location)
 findDirDest gs dir loc = do

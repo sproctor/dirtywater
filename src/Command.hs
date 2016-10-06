@@ -61,10 +61,10 @@ cmdGoDir :: Direction -> GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdGoDir dir gs conn _ = do
   let char = connectionCharacter conn
   loc <- atomically $ getLocation char
-  dest <- atomically $ findDirDest gs dir loc
-  case dest of
-    Just d -> do
-      atomically $ move char (ContainerLocation d)
+  destMaybe <- atomically $ findDirDest gs dir loc
+  case destMaybe of
+    Just dest -> do
+      atomically $ move char (ContainerLocation dest)
       cmdLook gs conn CmdArgsNone
     Nothing -> hPutStrLn (connectionHandle conn) $ "You can't go " ++ (show dir) ++ " from here!"
 
