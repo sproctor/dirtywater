@@ -40,7 +40,7 @@ acceptLoop gs sock = do
         Just (h, _, _) -> do
           putStrLn "Got a new connection."
           idVar <- newEmptyMVar
-          tId <- forkFinally (clientPlayGame gs h idVar)  (cleanupClient h)
+          tId <- forkFinally (clientGameHandler gs h idVar)  (cleanupClient h)
           putMVar idVar tId
           acceptLoop gs sock
         Nothing -> acceptLoop gs sock
@@ -66,6 +66,14 @@ clientPlayGame gs h idVar = do
   cmdLook gs conn CmdArgsNone
   putOutput conn ">"
   clientLoop gs conn
+
+clientGameHandler :: GameState -> Handle -> MVar ThreadId -> IO ()
+clientGameHandler gs h idVar =
+  catch (clientPlayGame gs h idVar)
+    (\e -> do
+        hPutStrLn stderr (show (e :: SomeException))
+        hPutStrLn h $ "ERROR! " ++ show (e :: SomeException)
+    )
 
 clientHandshakeChar :: GameState -> Handle -> IO Character
 clientHandshakeChar gs h = do
@@ -96,7 +104,7 @@ clientQueryName h = do
 
 clientQueryPassword :: Handle -> Character -> IO ()
 clientQueryPassword h char = do
-  name <- atomically $ readTVar $ charName char
+  let name = charName char
   password <- atomically $ readTVar $ charPassword char
   hPutStrLn h $ "Welcome back, " ++ name ++ ". Please enter your password."
   line <- hGetLine h

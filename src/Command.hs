@@ -80,9 +80,8 @@ cmdExit gs conn _ = do
 cmdLook :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdLook gs conn _ = do
   let char = connectionCharacter conn
-  locDesc <- atomically $ do
-    loc <- getLocation char
-    getLocationDesc loc char
+  loc <- atomically $ getLocation char
+  locDesc <- getLocationDesc loc char
   hPutStrLn (connectionHandle conn) locDesc
 
 cmdSay :: GameState -> ClientConnection -> CommandArgs -> IO ()

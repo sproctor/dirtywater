@@ -2,16 +2,12 @@ module Character where
 
 import Control.Concurrent.STM
 import Data.List
+import Debug.Trace
 import System.IO.Unsafe
 
 import Types
 import Tangible
 import Item
-
-instance Show Character where
-  show char =
-    let name = unsafePerformIO $ atomically $ readTVar $ charName char in
-    "name: " ++ name
 
 instance Tangible Character where
   getLocation self = do
@@ -26,25 +22,20 @@ instance Tangible Character where
   move self = writeTVar (charContainer self)
 
   matchesDesc self [] name = do
-    myName <- readTVar (charName self)
-    return $ isPrefixOf name myName
+    return $ isPrefixOf name (charName self)
   matchesDesc _ _ _ = return False
 
   viewShortDesc _ _ = return ""
 
   viewLongDesc _ _ = return ""
 
-changeName :: Character -> String -> STM ()
-changeName self newName =
-  writeTVar (charName self) newName
-
 changePassword :: Character -> String -> STM ()
 changePassword self newPassword =
   writeTVar (charPassword self) newPassword
 
 createCharacter :: Container -> String -> String -> IO Character
+-- createCharacter container name password | trace ("createCharacter " ++ show container ++ " " ++ name ++ " " ++ password) False = undefined
 createCharacter container name password = do
-  nameVar <- atomically $ newTVar name
   passwordVar <- atomically $ newTVar password
   containerVar <- atomically $ newTVar container
   handsVar <- atomically $ newTVar []
@@ -60,4 +51,4 @@ createCharacter container name password = do
   currHPVar <- atomically $ newTVar 10
   ssVar <- atomically $ newTVar 2
   skillsVar <- atomically $ newTVar [Skill "shortsword" ssVar]
-  return $ Character containerVar nameVar passwordVar handsVar slotsVar invVar stVar dxVar iqVar htVar hpVar willVar perVar currHPVar skillsVar
+  return $ Character name containerVar passwordVar handsVar slotsVar invVar stVar dxVar iqVar htVar hpVar willVar perVar currHPVar skillsVar

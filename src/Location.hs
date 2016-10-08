@@ -20,111 +20,117 @@ import Item()
 import Types
 import Tangible
 
-data LocationDef =
-  LocationDef
-    { ldId :: Int
-    , ldTitle :: String
-    , ldDesc :: String
-    , ldPortals :: [PortalDef]
-    , ldInitFile :: Maybe String
-    }
-
-data PortalDef =
-  PortalDef
-    { pdDirId :: String
-    , pdDestId :: Int
-    }
-
-newLocation :: LocationId -> String -> String -> [Object] -> STM Location
-newLocation locId title desc portals = do
-  objs <- newTVar portals
-  return $ Location locId title desc objs
-
-getRequiredField :: LuaState -> String -> IO String
-getRequiredField lstate key = do
-  _ <- Lua.getfield lstate (-1) key
-  str <- Lua.tostring lstate (-1)
-  Lua.pop lstate 1
-  return $ BC.unpack str
-
-getRequiredFieldInt :: LuaState -> String -> IO Int
-getRequiredFieldInt lstate key = do
-  _ <- Lua.getfield lstate (-1) key
-  i <- Lua.tointeger lstate (-1)
-  Lua.pop lstate 1
-  return $ fromIntegral i
-
-luaAddLocation :: LuaState -> IO CInt
-luaAddLocation luaState = do
-  validArg <- Lua.istable luaState (-1)
-  when (not validArg) $ error "location argument must be a table"
-  locId <- getRequiredFieldInt luaState "id"
-  title <- getRequiredField luaState "title"
-  description <- getRequiredField luaState "description"
-  portals <- findDirectionPortals luaState (LocationId locId)
-  _ <- Lua.getglobal luaState "gamestate"
-  gsPtr <- Lua.touserdata luaState (-1)
-  gs <- deRefStablePtr $ castPtrToStablePtr gsPtr
-  addLocation gs (LocationId locId) title description portals
-  return 0
-
 findDirectionPortals :: LuaState -> LocationId -> IO [Object]
-findDirectionPortals luaState locId = do
+findDirectionPortals luaState locId =
   liftM catMaybes $ mapM (getDirectionPortal luaState locId) [(minBound :: Direction) ..]
 
 getDirectionPortal :: LuaState -> LocationId -> Direction -> IO (Maybe Object)
 getDirectionPortal luaState locId dir = do
-  _ <- Lua.getfield luaState (-1) (show dir)
-  val <- Lua.tointegerx luaState (-1)
+  _ <- Lua.getglobal luaState (show dir)
+  isString <- Lua.isstring luaState (-1)
+  if isString
+    then do
+      destId <- Lua.tostring luaState (-1)
+      Lua.pop luaState 1
+      Lua.pushnil luaState
+      Lua.setglobal luaState (show dir)
+      return $ Just $ ObjectDirection dir (Portal locId (LocationId (BC.unpack destId)))
+    else return Nothing
+
+{-
+getLuaGlobalInt :: LuaState -> String -> IO Int
+getLuaGlobalInt luaState key = do
+  _ <- Lua.getglobal luaState key
+  result <- liftM fromIntegral $ Lua.tointeger luaState (-1)
   Lua.pop luaState 1
-  case val of
-    Just destId -> return $ Just $ ObjectDirection dir (Portal locId (fromIntegral destId))
-    Nothing -> return Nothing
+  -- Set the global to nil so it can't be used accidentally in the future.
+  Lua.pushnil luaState
+  Lua.setglobal luaState key
+  return result
+-}
 
-addLocation :: GameState -> LocationId -> String -> String -> [Object] -> IO ()
-addLocation gs locId title description objects = do
-  objectsVar <- atomically $ newTVar objects
-  locs <- atomically $ readTVar (gameLocations gs)
-  let loc = Location locId title description objectsVar
-  atomically $ writeTVar (gameLocations gs) (loc : locs)
+getPropertyForCharacter :: LuaState -> String -> Character -> IO String
+getPropertyForCharacter luaState objId _ = do
+  _ <- Lua.getglobal luaState "_properties"
+  fieldType <- Lua.getfield luaState (-1) objId
+  unless (fieldType == Lua.TFUNCTION) $ error $ "Invalid value in _properties[" ++ objId ++ "]"
+  -- TODO: put character object on the stack
+  Lua.call luaState 0 1
+  result <- Lua.tostring luaState (-1)
+  Lua.pop luaState 1
+  return $ BC.unpack result
 
-loadLocation :: GameState -> FilePath -> IO ()
-loadLocation gs file = do
-  luaState <- Lua.newstate
-  Lua.openlibs luaState
-  gsStablePtr <- newStablePtr gs
-  Lua.pushlightuserdata luaState $ castStablePtrToPtr gsStablePtr
-  Lua.setglobal luaState "gamestate"
-  Lua.registerrawhsfunction luaState "addLocation" luaAddLocation
+getLuaGlobalVisibleProperty :: LuaState -> String -> String -> IO VisibleProperty
+getLuaGlobalVisibleProperty luaState objId key = do
+  t <- Lua.getglobal luaState key
+  case t of
+    Lua.TFUNCTION -> do
+      propertiesType <- Lua.getglobal luaState "_properties"
+      when (propertiesType /= Lua.TTABLE) $ do
+        Lua.pop luaState 1
+        Lua.newtable luaState
+        _ <- Lua.setglobal luaState "_properties"
+        void $ Lua.getglobal luaState "_properties"
+      Lua.insert luaState (-2)
+      Lua.setfield luaState (-2) objId
+      Lua.pop luaState 1
+      return $ DynamicVisibleProperty (getPropertyForCharacter luaState objId)
+    _ -> do
+      isString <- Lua.isstring luaState (-1)
+      if isString
+        then do
+          value <- Lua.tostring luaState (-1)
+          Lua.pop luaState 1
+          return $ StaticVisibleProperty $ BC.unpack value
+        else error $ "Property (" ++ key ++ ") has type: " ++ show t
+
+createLocationFromLua :: LuaState -> String -> IO Location
+createLocationFromLua luaState objId = do
+  let locId = LocationId objId
+  title <- getLuaGlobalVisibleProperty luaState objId "title"
+  description <- getLuaGlobalVisibleProperty luaState objId "description"
+  portals <- findDirectionPortals luaState locId
+  objs <- atomically $ newTVar portals
+  return $ Location locId title description objs
+  
+loadLocation :: LuaState -> String -> FilePath -> IO Location
+loadLocation luaState baseFileName file = do
   status <- Lua.loadfile luaState file
   if status == Lua.OK
-    then Lua.call luaState 0 0
-    else error $ "Problem processing file \"" ++ file ++ "\""
-  Lua.close luaState
-  freeStablePtr gsStablePtr
+    then do
+      Lua.call luaState 0 0
+      createLocationFromLua luaState baseFileName
+    else do
+      errMsg <- Lua.tostring luaState (-1)
+      error $ "ERROR: " ++ BC.unpack errMsg
 
-getLocationDesc :: Location -> Character -> STM String
-getLocationDesc l char = do
-  chars <- getLocationChars l
-  charDescs <- sequence $ map (\ t -> viewShortDesc t char) chars
+getLocationDesc :: Location -> Character -> IO String
+getLocationDesc location char = do
+  chars <- atomically $ getLocationChars location
+  charDescs <- atomically $ sequence $ map (\ t -> viewShortDesc t char) chars
   let
     charStr = if null chars
       then ""
       else "People here: " ++ (intercalate ", " charDescs) ++ ".\r\n"
-  items <- getLocationItems l
-  itemDescs <- sequence $ map (\ t -> viewShortDesc t char) items
+  items <- atomically $ getLocationItems location
+  itemDescs <- atomically $ sequence $ map (\ t -> viewShortDesc t char) items
   let
     itemStr = if null items
       then ""
       else "Items here: " ++ (intercalate ", " itemDescs) ++ ".\r\n"
-  directions <- getLocationDirections l
+  directions <- atomically $ getLocationDirections location
   let directionDescs = map show directions
   let
     directionStr = if null directions
       then ""
       else "Directions here: " ++ (intercalate ", " directionDescs) ++ ".\r\n"
-  let desc = (locationTitle l) ++ "\r\n" ++ (locationDesc l) ++ "\r\n" ++ charStr ++ itemStr ++ directionStr
-  return desc
+  title <- case locationTitle location of
+    DynamicVisibleProperty f -> f char
+    StaticVisibleProperty s -> return s
+  description <- case locationDescription location of
+    DynamicVisibleProperty f -> f char
+    StaticVisibleProperty s -> return s
+  return $ title ++ "\r\n" ++ description ++ "\r\n" ++ charStr ++ itemStr ++ directionStr
 
 lookupLocation :: LocationId -> GameState -> STM Location
 -- lookupLocation locId _ | trace ("lookupLocation " ++ show locId) False = undefined

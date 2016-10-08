@@ -70,6 +70,11 @@ data ItemTemplate =
     , itemTemplWeaponType :: WeaponType
     }
 
+newtype ItemId = ItemId String deriving Eq
+
+instance Show ItemId where
+  show (ItemId str) = "itm:" ++ str
+
 data Item =
   Item
     { itemId :: Int
@@ -78,6 +83,12 @@ data Item =
     , itemContents :: TVar [ItemSlot]
     , itemTemplate :: ItemTemplate
     }
+
+instance Eq Item where
+  (==) a b = (itemId a) == (itemId b)
+
+instance Show Item where
+  show = show . itemId
 
 data ItemSlot =
   ItemSlot
@@ -103,8 +114,8 @@ data WeaponType
 
 data Character =
   Character
-    { charContainer :: TVar Container
-    , charName :: TVar String
+    { charName :: String
+    , charContainer :: TVar Container
     , charPassword :: TVar String
     , charHands :: TVar [ItemSlot]
     , charSlots :: TVar [ItemSlot]
@@ -119,6 +130,9 @@ data Character =
     , charCurrHP :: TVar Int
     , charSkills :: TVar [Skill]
     } deriving Eq
+
+instance Show Character where
+  show c = "chr:" ++ (show . charName) c
 
 data Skill =
   Skill
@@ -135,6 +149,7 @@ data Container
   = ContainerLocation Location
   | ContainerItem Item
   | ContainerCharacter Character
+  deriving (Show, Eq)
 
 data Direction
   = East
@@ -168,15 +183,28 @@ instance Read Direction where
           then [(result, drop (length attempt) value)]
           else tryParse xs
 
-newtype LocationId = LocationId Int deriving (Num, Show, Eq, Read, Enum, Real, Ord, Integral)
+newtype LocationId = LocationId String deriving Eq
+
+instance Show LocationId where
+  show (LocationId str) = "loc:" ++ str
+
+data VisibleProperty
+  = StaticVisibleProperty String
+  | DynamicVisibleProperty (Character -> IO String)
 
 data Location =
   Location
   { locationId :: LocationId
-  , locationTitle :: String
-  , locationDesc :: String
+  , locationTitle :: VisibleProperty
+  , locationDescription :: VisibleProperty
   , locationObjects :: TVar [Object]
-  } deriving Eq
+  }
+
+instance Eq Location where
+  (==) a b = (locationId a) == (locationId b)
+
+instance Show Location where
+  show = show . locationId
 
 data Portal
   = Portal { portalDestA :: LocationId, portalDestB :: LocationId } deriving (Eq, Show)
