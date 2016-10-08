@@ -88,7 +88,7 @@ initDatabase :: Connection -> IO ()
 initDatabase dbconn = do
   tables <- getTables dbconn
   unless (elem "characters" tables) $ do
-    _ <- run dbconn "CREATE TABLE characters (containerId INTEGER, name VARCHAR(255), password VARCHAR(255))" []
+    _ <- run dbconn "CREATE TABLE characters (name VARCHAR(255) PRIMARY KEY, containerId VARCHAR(255), password VARCHAR(255))" []
     commit dbconn
     putStrLn "Created characters table"
 
@@ -120,15 +120,24 @@ addCharacter gs char = do
   let dbconn = sqlConnection gs
   addSqlCharacter dbconn char
 
-addSqlCharacter :: Connection -> Character -> IO ()
-addSqlCharacter dbconn char = do
+writeSqlCharacter :: String -> Connection -> Character -> IO ()
+writeSqlCharacter method dbconn char = do
   container <- atomically $ readTVar $ charContainer char
   let
-    id = case container of
+    conId = case container of
       ContainerLocation l -> show $ locationId l
       -- ContainerItem i -> itemId i
   password <- atomically $ readTVar $ charPassword char
-  void $ run dbconn "INSERT INTO characters VALUES (?, ?, ?)" [toSql id, toSql (charName char), toSql password]
+  putStrLn $ method ++ " " ++ (charName char) ++ " " ++ conId ++ " " ++ password
+  void $ run dbconn (method ++ " INTO characters (name, containerId, password) VALUES (?, ?, ?)")
+      [toSql (charName char), toSql conId, toSql password]
+  putStrLn $ "Saved character: " ++ show char
+
+addSqlCharacter :: Connection -> Character -> IO ()
+addSqlCharacter = writeSqlCharacter "INSERT"
+
+saveCharacter :: Connection -> Character -> IO ()
+saveCharacter = writeSqlCharacter "REPLACE"
 
 loadCharacters :: GameState -> IO ()
 loadCharacters gs = do
@@ -148,7 +157,7 @@ loadCharacters gs = do
         case conId of
           -- TODO: make this prettier
           'l':'o':'c':':' : locId -> do
-            loc <- atomically $ lookupLocation (LocationId conId) gs
+            loc <- atomically $ lookupLocation (LocationId locId) gs
             return $ ContainerLocation loc
           _ -> throwIO $ InvalidValueException $ "DB column `containerId` must be a location. Value: " ++ conId
       createCharacter container name password

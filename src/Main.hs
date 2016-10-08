@@ -28,7 +28,11 @@ main = withSocketsDo $ do
   -- Process game commands and update game state in a new thread
   _ <- forkIO (mainServer gs)
   -- Accept incoming connections
-  acceptLoop gs sock
+  catch (acceptLoop gs sock) (\e -> putStrLn $ "Caught exception: " ++ show (e :: SomeException))
+  putStrLn "Shutting down server."
+  characters <- atomically $ readTVar $ gameCharacters gs
+  mapM_ (saveCharacter (sqlConnection gs)) characters
+  commit (sqlConnection gs)
 
 acceptLoop :: GameState -> Socket -> IO ()
 acceptLoop gs sock = do
@@ -44,7 +48,7 @@ acceptLoop gs sock = do
           putMVar idVar tId
           acceptLoop gs sock
         Nothing -> acceptLoop gs sock
-    Stopping -> putStrLn "Shutting down server"
+    Stopping -> return ()
 
 mainServer :: GameState -> IO ()
 mainServer gs =
