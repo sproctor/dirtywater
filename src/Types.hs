@@ -114,7 +114,9 @@ data WeaponType
 
 data Character =
   Character
-    { charName :: String
+    { charId :: String
+    , charShortDescription :: Character -> IO String
+    , charLongDescription :: Character -> IO String
     , charContainer :: TVar Container
     , charPassword :: TVar String
     , charHands :: TVar [ItemSlot]
@@ -129,10 +131,13 @@ data Character =
     , charPer :: TVar Int
     , charCurrHP :: TVar Int
     , charSkills :: TVar [Skill]
-    } deriving Eq
+    }
+
+instance Eq Character where
+  (==) a b = (charId a) == (charId b)
 
 instance Show Character where
-  show c = "chr:" ++ (show . charName) c
+  show c = "chr:" ++ (show . charId) c
 
 data Skill =
   Skill

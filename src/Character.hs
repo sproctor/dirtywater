@@ -22,7 +22,10 @@ instance Tangible Character where
   move self = writeTVar (charContainer self)
 
   matchesDesc self [] name = do
-    return $ isPrefixOf name (charName self)
+    -- TODO: matchesDesc should probably take a viewing Character
+    description <- charShortDescription self self
+    return $ isPrefixOf name description
+
   matchesDesc _ _ _ = return False
 
   viewShortDesc _ _ = return ""
@@ -51,4 +54,4 @@ createCharacter container name password = do
   currHPVar <- atomically $ newTVar 10
   ssVar <- atomically $ newTVar 2
   skillsVar <- atomically $ newTVar [Skill "shortsword" ssVar]
-  return $ Character name containerVar passwordVar handsVar slotsVar invVar stVar dxVar iqVar htVar hpVar willVar perVar currHPVar skillsVar
+  return $ Character name (\_ -> return name) (\_ -> return name) containerVar passwordVar handsVar slotsVar invVar stVar dxVar iqVar htVar hpVar willVar perVar currHPVar skillsVar

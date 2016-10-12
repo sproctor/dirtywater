@@ -8,15 +8,13 @@ import Control.Monad
 import Data.List
 import Data.Maybe
 import Debug.Trace
-import Foreign.StablePtr
-import Foreign.C.Types
 
 import Scripting.Lua (LuaState)
 import qualified Scripting.Lua as Lua
-import qualified Data.ByteString.Char8 as BC
 
-import Character()
-import Item()
+import Character
+import Item
+import LuaHelpers
 import Types
 import Tangible
 
@@ -34,55 +32,8 @@ getDirectionPortal luaState locId dir = do
       Lua.pop luaState 1
       Lua.pushnil luaState
       Lua.setglobal luaState (show dir)
-      return $ Just $ ObjectDirection dir (Portal locId (LocationId (BC.unpack destId)))
+      return $ Just $ ObjectDirection dir (Portal locId (LocationId destId))
     else return Nothing
-
-{-
-getLuaGlobalInt :: LuaState -> String -> IO Int
-getLuaGlobalInt luaState key = do
-  _ <- Lua.getglobal luaState key
-  result <- liftM fromIntegral $ Lua.tointeger luaState (-1)
-  Lua.pop luaState 1
-  -- Set the global to nil so it can't be used accidentally in the future.
-  Lua.pushnil luaState
-  Lua.setglobal luaState key
-  return result
--}
-
-getPropertyForCharacter :: LuaState -> String -> Character -> IO String
-getPropertyForCharacter luaState objId _ = do
-  _ <- Lua.getglobal luaState "_properties"
-  fieldType <- Lua.getfield luaState (-1) objId
-  unless (fieldType == Lua.TFUNCTION) $ error $ "Invalid value in _properties[" ++ objId ++ "]"
-  -- TODO: put character object on the stack
-  Lua.call luaState 0 1
-  result <- Lua.tostring luaState (-1)
-  Lua.pop luaState 1
-  return $ BC.unpack result
-
-getLuaGlobalVisibleProperty :: LuaState -> String -> String -> IO VisibleProperty
-getLuaGlobalVisibleProperty luaState objId key = do
-  t <- Lua.getglobal luaState key
-  case t of
-    Lua.TFUNCTION -> do
-      propertiesType <- Lua.getglobal luaState "_properties"
-      when (propertiesType /= Lua.TTABLE) $ do
-        Lua.pop luaState 1
-        Lua.newtable luaState
-        _ <- Lua.setglobal luaState "_properties"
-        void $ Lua.getglobal luaState "_properties"
-      Lua.insert luaState (-2)
-      Lua.setfield luaState (-2) objId
-      Lua.pop luaState 1
-      return $ DynamicVisibleProperty (getPropertyForCharacter luaState objId)
-    _ -> do
-      isString <- Lua.isstring luaState (-1)
-      if isString
-        then do
-          value <- Lua.tostring luaState (-1)
-          Lua.pop luaState 1
-          return $ StaticVisibleProperty $ BC.unpack value
-        else error $ "Property (" ++ key ++ ") has type: " ++ show t
 
 createLocationFromLua :: LuaState -> String -> IO Location
 createLocationFromLua luaState objId = do
@@ -102,18 +53,18 @@ loadLocation luaState baseFileName file = do
       createLocationFromLua luaState baseFileName
     else do
       errMsg <- Lua.tostring luaState (-1)
-      error $ "ERROR: " ++ BC.unpack errMsg
+      error $ "ERROR: " ++ errMsg
 
 getLocationDesc :: Location -> Character -> IO String
 getLocationDesc location char = do
   chars <- atomically $ getLocationChars location
-  charDescs <- atomically $ sequence $ map (\ t -> viewShortDesc t char) chars
+  charDescs <- sequence $ map (\ t -> viewShortDesc t char) chars
   let
     charStr = if null chars
       then ""
       else "People here: " ++ (intercalate ", " charDescs) ++ ".\r\n"
   items <- atomically $ getLocationItems location
-  itemDescs <- atomically $ sequence $ map (\ t -> viewShortDesc t char) items
+  itemDescs <- sequence $ map (\ t -> viewShortDesc t char) items
   let
     itemStr = if null items
       then ""

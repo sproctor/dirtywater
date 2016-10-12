@@ -107,7 +107,7 @@ findCharacter name gs = do
   where
     hasName :: Character -> STM (Maybe Character)
     hasName c = do
-      if (charName c) == name
+      if (charId c) == name
         then return $ Just c
         else return Nothing
 
@@ -128,9 +128,9 @@ writeSqlCharacter method dbconn char = do
       ContainerLocation l -> show $ locationId l
       -- ContainerItem i -> itemId i
   password <- atomically $ readTVar $ charPassword char
-  putStrLn $ method ++ " " ++ (charName char) ++ " " ++ conId ++ " " ++ password
+  putStrLn $ method ++ " " ++ (charId char) ++ " " ++ conId ++ " " ++ password
   void $ run dbconn (method ++ " INTO characters (name, containerId, password) VALUES (?, ?, ?)")
-      [toSql (charName char), toSql conId, toSql password]
+      [toSql (charId char), toSql conId, toSql password]
   putStrLn $ "Saved character: " ++ show char
 
 addSqlCharacter :: Connection -> Character -> IO ()

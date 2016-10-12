@@ -11,6 +11,6 @@ class Tangible t where
   getLocation :: t -> STM Location
   getContainer :: t -> STM Container
   move :: t -> Container -> STM ()
-  matchesDesc :: t -> [String] -> String -> STM Bool
-  viewShortDesc :: t -> Character -> STM String
-  viewLongDesc :: t -> Character -> STM String
+  matchesDesc :: t -> [String] -> String -> IO Bool
+  viewShortDesc :: t -> Character -> IO String
+  viewLongDesc :: t -> Character -> IO String

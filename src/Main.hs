@@ -108,7 +108,7 @@ clientQueryName h = do
 
 clientQueryPassword :: Handle -> Character -> IO ()
 clientQueryPassword h char = do
-  let name = charName char
+  let name = charId char
   password <- atomically $ readTVar $ charPassword char
   hPutStrLn h $ "Welcome back, " ++ name ++ ". Please enter your password."
   line <- hGetLine h

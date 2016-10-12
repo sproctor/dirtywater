@@ -23,6 +23,8 @@ executable dirtywater
   build-depends:
     base >=4.6,
     bytestring >= 0.10,
+    directory,
+    filepath,
     hslua >= 0.5,
     network >=2.4,
     HDBC >= 2.4 && <2.5,
