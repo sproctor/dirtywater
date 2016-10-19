@@ -1,6 +1,7 @@
 module Character where
 
 import Control.Concurrent.STM
+import Control.Monad.Extra
 import Data.List
 import Debug.Trace
 import System.IO.Unsafe
@@ -36,22 +37,31 @@ changePassword :: Character -> String -> STM ()
 changePassword self newPassword =
   writeTVar (charPassword self) newPassword
 
-createCharacter :: Container -> String -> String -> IO Character
+createCharacter :: Container -> String -> String -> STM Character
 -- createCharacter container name password | trace ("createCharacter " ++ show container ++ " " ++ name ++ " " ++ password) False = undefined
 createCharacter container name password = do
-  passwordVar <- atomically $ newTVar password
-  containerVar <- atomically $ newTVar container
-  handsVar <- atomically $ newTVar []
-  slotsVar <- atomically $ newTVar []
-  invVar <- atomically $ newTVar []
-  stVar <- atomically $ newTVar 10
-  dxVar <- atomically $ newTVar 10
-  iqVar <- atomically $ newTVar 10
-  htVar <- atomically $ newTVar 10
-  hpVar <- atomically $ newTVar 10
-  willVar <- atomically $ newTVar 10
-  perVar <- atomically $ newTVar 10
-  currHPVar <- atomically $ newTVar 10
-  ssVar <- atomically $ newTVar 2
-  skillsVar <- atomically $ newTVar [Skill "shortsword" ssVar]
-  return $ Character name (\_ -> return name) (\_ -> return name) containerVar passwordVar handsVar slotsVar invVar stVar dxVar iqVar htVar hpVar willVar perVar currHPVar skillsVar
+  passwordVar <- newTVar password
+  containerVar <- newTVar container
+  rContents <- newTVar []
+  lContents <- newTVar []
+  let hands = [ItemSlot ItemAny rContents, ItemSlot ItemAny lContents]
+  stVar <- newTVar 10
+  dxVar <- newTVar 10
+  iqVar <- newTVar 10
+  htVar <- newTVar 10
+  hpVar <- newTVar 10
+  willVar <- newTVar 10
+  perVar <- newTVar 10
+  currHPVar <- newTVar 10
+  ssVar <- newTVar 2
+  skillsVar <- newTVar [Skill "shortsword" ssVar]
+  return $ Character name (\_ -> return name) (\_ -> return name) containerVar passwordVar hands [] stVar dxVar iqVar htVar hpVar willVar perVar currHPVar skillsVar
+
+isEmptySlot :: ItemSlot -> STM Bool
+isEmptySlot slot = do
+  contents <- readTVar (slotContents slot)
+  return $ null contents
+
+findEmptyHand :: Character -> STM (Maybe ItemSlot)
+findEmptyHand char = do
+  findM isEmptySlot (charHolding char)

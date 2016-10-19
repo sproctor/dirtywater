@@ -24,6 +24,7 @@ executable dirtywater
     base >=4.6,
     bytestring >= 0.10,
     directory,
+    extra >= 1.5,
     filepath,
     hslua >= 0.5,
     network >=2.4,

@@ -111,6 +111,18 @@ getLocationItems loc = do
     onlyItems (ObjectItem i) = Just i
     onlyItems _ = Nothing
 
+findItemAtLocation :: Location -> String -> STM (Maybe Item)
+findItemAtLocation loc str = do
+  objs <- readTVar $ locationObjects loc
+  return $ findItem objs
+  where
+    findItem [] = Nothing
+    findItem ((ObjectItem item):rest) =
+      if isPrefixOf str (itemName item)
+        then Just item
+        else findItem rest
+    findItem (_:rest) = findItem rest
+
 getLocationDirections :: Location -> STM [Direction]
 getLocationDirections loc = do
   objs <- readTVar $ locationObjects loc
@@ -136,3 +148,7 @@ locationAddObject loc obj = do
   objs <- readTVar objsVar
   writeTVar objsVar (obj : objs)
 
+locationRemoveObject :: Location -> Object -> STM ()
+locationRemoveObject loc obj = do
+  objs <- readTVar $ locationObjects loc
+  writeTVar (locationObjects loc) $ filter ((==) obj) objs

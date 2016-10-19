@@ -8,6 +8,7 @@ import Data.List
 import System.IO
 import Text.ParserCombinators.Parsec
 
+import Character
 import Connection
 import Item
 import Location
@@ -29,7 +30,7 @@ playerCommand cl = do
   cmdName <- word <?> "command"
   case lookupCommand cmdName cl of
     Just cmdDef -> commandArgs cmdDef
-    Nothing -> return $ BadCommand $ "What are you stupid? You can't " ++ cmdName ++ "."
+    Nothing -> return $ BadCommand $ "You don't know how to \"" ++ cmdName ++ "\"."
 
 commandArgs :: CommandDef -> GenParser Char st Command
 commandArgs (CommandDef (name, [], _)) = return $ BadCommand $ "That's not how you " ++ name ++ "."
@@ -99,3 +100,23 @@ cmdCreate gs conn (CmdArgsString tId) = do
   item <- atomically $ createItem gs tId (ContainerLocation loc)
   atomically $ locationAddObject loc (ObjectItem item)
   hPutStrLn (connectionHandle conn) $ "A " ++ (itemName item) ++ " has just fallen from the sky!"
+
+cmdGet :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdGet gs conn (CmdArgsString str) = do
+  let char = connectionCharacter conn
+  let h = connectionHandle conn
+  loc <- atomically $ getLocation char
+  maybeItem <- atomically $ findItemAtLocation loc str
+  case maybeItem of
+    Just item -> do
+      maybeSlot <- atomically $ findEmptyHand char
+      case maybeSlot of
+        Just slot -> do
+          atomically $ do
+            writeTVar (slotContents slot) [item]
+            move item (ContainerCharacter char)
+            locationRemoveObject loc (ObjectItem item)
+          itemDesc <- viewShortDesc item char
+          hPutStrLn h $ "You picked up " ++ itemDesc ++ "."
+        Nothing -> hPutStrLn h "You need a free hand to pick that up."
+    Nothing -> hPutStrLn h "Could not locate that item here."

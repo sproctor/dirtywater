@@ -66,6 +66,9 @@ newGameState dbfilename connections = do
     , CommandDef ("say", [CmdTypeString], cmdSay)
     , CommandDef ("shutdown", [CmdTypeNone], cmdShutdown)
     , CommandDef ("create", [CmdTypeString], cmdCreate)
+    , CommandDef ("get", [CmdTypeString], cmdGet)
+    , CommandDef ("take", [CmdTypeString], cmdGet)
+    , CommandDef ("pickup", [CmdTypeString], cmdGet)
     ]
   status <- atomically $ newTVar Running
   nextIdVar <- atomically $ newTVar 1
@@ -91,7 +94,7 @@ newCharacter :: GameState -> String -> String -> IO Character
 -- newCharacter _ name password | trace ("newCharacter " ++ name ++ " " ++ password) False = undefined
 newCharacter gs name password = do
   startLoc <- atomically $ lookupLocation (LocationId "start") gs
-  char <- createCharacter (ContainerLocation startLoc) name password
+  char <- atomically $ createCharacter (ContainerLocation startLoc) name password
   addCharacter gs char
   return char
 
@@ -155,7 +158,7 @@ loadCharacters gs = do
             loc <- atomically $ lookupLocation (LocationId locId) gs
             return $ ContainerLocation loc
           _ -> throwIO $ InvalidValueException $ "DB column `containerId` must be a location. Value: " ++ conId
-      createCharacter container name password
+      atomically $ createCharacter container name password
       --  Nothing -> fail $ "Non-existant location (" ++ (show conId) ++ ") for character: " ++ name
     loadSqlCharacter x = do
       print x

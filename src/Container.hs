@@ -6,4 +6,4 @@ module Container
 import Item
 import Location
 
-data Container = ContainerLocation Location | ContainerItem Item
+

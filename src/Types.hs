@@ -84,7 +84,7 @@ data Item =
   Item
     { itemId :: ItemId
     , itemContainer :: TVar Container
-    , itemContents :: TVar [ItemSlot]
+    , itemSlots :: [ItemSlot]
     , itemTemplate :: ItemTemplate
     }
 
@@ -142,9 +142,8 @@ data Character =
     , charLongDescription :: Character -> IO String
     , charContainer :: TVar Container
     , charPassword :: TVar String
-    , charHands :: TVar [ItemSlot]
-    , charSlots :: TVar [ItemSlot]
-    , charInventory :: TVar [Item]
+    , charHolding :: [ItemSlot]
+    , charInventory :: [ItemSlot]
     , charST :: TVar Int
     , charDX :: TVar Int
     , charIQ :: TVar Int
@@ -172,6 +171,7 @@ data Object
   = ObjectItem Item
   | ObjectCharacter Character
   | ObjectDirection Direction Portal
+  deriving Eq
 
 data Container
   = ContainerLocation Location

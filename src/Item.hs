@@ -61,12 +61,11 @@ createItemTemplate luaState objId = do
   return $ ItemTemplate itemTemplateId name [] shortDescription longDescription (read weaponType)
   
 createItem :: GameState -> String -> Container -> STM Item
-createItem gs templateId con = do
+createItem gs templateId container = do
   template <- lookupTemplate gs templateId
   itemId <- takeItemId gs
-  contentsVar <- newTVar []
-  conVar <- newTVar con
-  return $ Item itemId conVar contentsVar template
+  containerVar <- newTVar container
+  return $ Item itemId containerVar [] template
 
 takeItemId :: GameState -> STM ItemId
 takeItemId gs = do
