@@ -151,4 +151,4 @@ locationAddObject loc obj = do
 locationRemoveObject :: Location -> Object -> STM ()
 locationRemoveObject loc obj = do
   objs <- readTVar $ locationObjects loc
-  writeTVar (locationObjects loc) $ filter ((==) obj) objs
+  writeTVar (locationObjects loc) $ filter ((/=) obj) objs

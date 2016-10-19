@@ -3,6 +3,7 @@ module Command where
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Exception
+import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.List
 import System.IO
@@ -120,3 +121,25 @@ cmdGet gs conn (CmdArgsString str) = do
           hPutStrLn h $ "You picked up " ++ itemDesc ++ "."
         Nothing -> hPutStrLn h "You need a free hand to pick that up."
     Nothing -> hPutStrLn h "Could not locate that item here."
+
+getSlotsContentsDescription :: [ItemSlot] -> Character -> IO (Maybe String)
+getSlotsContentsDescription slots char = do
+  items <- atomically $ liftM concat $ mapM (readTVar . slotContents) slots
+  descriptions <- mapM (\t -> viewShortDesc t char) items
+  if null descriptions
+    then return Nothing
+    else return $ Just $ intercalate ", " descriptions
+
+cmdInventory :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdInventory gs conn _ = do
+  let char = connectionCharacter conn
+  let h = connectionHandle conn
+  holding <- getSlotsContentsDescription (charHolding char) char
+  case holding of
+    Just desc -> hPutStrLn h $ "You are holding " ++ desc ++ "."
+    Nothing -> hPutStrLn h $ "You are holding nothing."
+  wearing <- getSlotsContentsDescription (charInventory char) char
+  case wearing of
+    Just desc -> hPutStrLn h $ "You are wearing " ++ desc ++ "."
+    Nothing -> hPutStrLn h $ "You are wearing nothing!"
+
