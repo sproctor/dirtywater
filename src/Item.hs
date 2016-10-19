@@ -4,11 +4,11 @@ module Item where
 
 import Control.Concurrent.STM
 import Data.List
-import qualified Data.Yaml as Yaml
-import Data.Yaml ((.:), (.:?), (.!=))
+import Scripting.Lua
 
 import Types
 import Tangible
+import LuaHelpers
 
 instance Tangible Item where
   getLocation self = do
@@ -25,8 +25,8 @@ instance Tangible Item where
   matchesDesc self adjs name =
     return $ isPrefixOf name (itemName self) && findAdjs adjs (itemAdjs self) []
 
-  viewShortDesc i _ = return $ (itemTemplShortDesc . itemTemplate) i
-  viewLongDesc i _ = return $ (itemTemplLongDesc . itemTemplate) i
+  viewShortDesc i c = showVisibleProperty c $ (itemTemplShortDesc . itemTemplate) i
+  viewLongDesc i c = showVisibleProperty c $ (itemTemplLongDesc . itemTemplate) i
 
 itemName :: Item -> String
 itemName = itemTemplName . itemTemplate
@@ -51,37 +51,24 @@ putTogether :: [String] -> [String] -> [String]
 putTogether [] xs = xs
 putTogether (x:rest) xs = putTogether rest (x:xs)
 
-loadItemTemplate :: FilePath -> IO ItemTemplate
-loadItemTemplate file = do
-  either (error . show) id <$> Yaml.decodeFileEither file
-
-instance Yaml.FromJSON ItemTemplate where
-  parseJSON (Yaml.Object o) = ItemTemplate
-    <$> o .: "id"
-    <*> o .: "name"
-    <*> o .:? "adjs" .!= []
-    <*> o .: "sdesc" -- TODO: make this optional and default to adjs + name
-    <*> o .: "ldesc" -- TODO: Make this optional and default to sdesc
-    <*> o .:? "weapon-type" .!= WeaponNone
-
-instance Yaml.FromJSON WeaponType where
-  parseJSON (Yaml.String text) =
-    return $ stringToWeaponType (show text)
-
-stringToWeaponType :: String -> WeaponType
-stringToWeaponType "shortsword" = WeaponShortsword
-stringToWeaponType "broadsword" = WeaponBroadsword
-stringToWeaponType _ = WeaponNone
-
+createItemTemplate :: LuaState -> String -> IO ItemTemplate
+createItemTemplate luaState objId = do
+  let itemTemplateId = ItemTemplateId objId
+  name <- getLuaGlobalString luaState "name"
+  shortDescription <- getLuaGlobalVisibleProperty luaState objId "shortDescription"
+  longDescription <- getLuaGlobalVisibleProperty luaState objId "longDescription"
+  weaponType <- getLuaGlobalString luaState "weaponType"
+  return $ ItemTemplate itemTemplateId name [] shortDescription longDescription (read weaponType)
+  
 createItem :: GameState -> String -> Container -> STM Item
 createItem gs templateId con = do
   template <- lookupTemplate gs templateId
   itemId <- takeItemId gs
   contentsVar <- newTVar []
   conVar <- newTVar con
-  return $ Item itemId conVar (\_ -> False) contentsVar template
+  return $ Item itemId conVar contentsVar template
 
-takeItemId :: GameState -> STM Int
+takeItemId :: GameState -> STM ItemId
 takeItemId gs = do
   let idState = gameNextItemId gs
   currId <- readTVar idState

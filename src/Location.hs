@@ -35,8 +35,8 @@ getDirectionPortal luaState locId dir = do
       return $ Just $ ObjectDirection dir (Portal locId (LocationId destId))
     else return Nothing
 
-createLocationFromLua :: LuaState -> String -> IO Location
-createLocationFromLua luaState objId = do
+createLocation :: LuaState -> String -> IO Location
+createLocation luaState objId = do
   let locId = LocationId objId
   title <- getLuaGlobalVisibleProperty luaState objId "title"
   description <- getLuaGlobalVisibleProperty luaState objId "description"
@@ -44,17 +44,6 @@ createLocationFromLua luaState objId = do
   objs <- atomically $ newTVar portals
   return $ Location locId title description objs
   
-loadLocation :: LuaState -> String -> FilePath -> IO Location
-loadLocation luaState baseFileName file = do
-  status <- Lua.loadfile luaState file
-  if status == Lua.OK
-    then do
-      Lua.call luaState 0 0
-      createLocationFromLua luaState baseFileName
-    else do
-      errMsg <- Lua.tostring luaState (-1)
-      error $ "ERROR: " ++ errMsg
-
 getLocationDesc :: Location -> Character -> IO String
 getLocationDesc location char = do
   chars <- atomically $ getLocationChars location
@@ -75,12 +64,8 @@ getLocationDesc location char = do
     directionStr = if null directions
       then ""
       else "Directions here: " ++ (intercalate ", " directionDescs) ++ ".\r\n"
-  title <- case locationTitle location of
-    DynamicVisibleProperty f -> f char
-    StaticVisibleProperty s -> return s
-  description <- case locationDescription location of
-    DynamicVisibleProperty f -> f char
-    StaticVisibleProperty s -> return s
+  title <- showVisibleProperty char (locationTitle location)
+  description <- showVisibleProperty char (locationDescription location)
   return $ title ++ "\r\n" ++ description ++ "\r\n" ++ charStr ++ itemStr ++ directionStr
 
 lookupLocation :: LocationId -> GameState -> STM Location

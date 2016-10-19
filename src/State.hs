@@ -21,6 +21,7 @@ import Connection
 import Helpers
 import Item
 import Location
+import LuaHelpers
 import Tangible
 import Types
 
@@ -69,20 +70,14 @@ newGameState dbfilename connections = do
   status <- atomically $ newTVar Running
   nextIdVar <- atomically $ newTVar 1
   charsTVar <- atomically $ newTVar []
-  locs <- loadFiles "../data/locations" loadLocation
+  luaState <- Lua.newstate
+  locs <- loadFiles luaState "../data/locations" createLocation
   locTVar <- atomically $ newTVar locs
-  -- loadFiles gs "../data/items" loadItemTemplate
-  itemTemplatesTVar <- atomically $ newTVar []
+  itemTemplates <- loadFiles luaState "../data/items" createItemTemplate
+  itemTemplatesTVar <- atomically $ newTVar itemTemplates
   let gs = GameState connections status dbconn q locTVar nextIdVar itemTemplatesTVar charsTVar
   loadCharacters gs
   return gs
-
-loadFiles :: FilePath -> (LuaState -> String -> FilePath -> IO a) -> IO [a]
-loadFiles path loadFun = do
-  luaState <- Lua.newstate
-  files <- getDirectoryContents path
-  let luaFiles = filter ((== ".lua") . takeExtension) files
-  mapM (\f -> loadFun luaState (dropExtension f) (path ++ (pathSeparator : f))) luaFiles
 
 initDatabase :: Connection -> IO ()
 initDatabase dbconn = do

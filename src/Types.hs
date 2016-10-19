@@ -60,26 +60,30 @@ newtype CommandDef = CommandDef (String, [CommandArgsType], GameState -> ClientC
 
 newtype Volume = Volume Int deriving (Ord, Eq, Show, Read)
 
+newtype ItemTemplateId = ItemTemplateId String deriving Eq
+
+instance Show ItemTemplateId where
+  show (ItemTemplateId str) = "tpl:" ++ str
+
 data ItemTemplate =
   ItemTemplate
-    { itemTemplId :: String
+    { itemTemplId :: ItemTemplateId
     , itemTemplName :: String
     , itemTemplAdjs :: [String]
-    , itemTemplShortDesc :: String
-    , itemTemplLongDesc :: String
+    , itemTemplShortDesc :: VisibleProperty
+    , itemTemplLongDesc :: VisibleProperty
     , itemTemplWeaponType :: WeaponType
     }
 
-newtype ItemId = ItemId String deriving Eq
+newtype ItemId = ItemId Int deriving (Eq, Num)
 
 instance Show ItemId where
-  show (ItemId str) = "itm:" ++ str
+  show (ItemId n) = "itm:" ++ show n
 
 data Item =
   Item
-    { itemId :: Int
+    { itemId :: ItemId
     , itemContainer :: TVar Container
-    , itemAddObject :: Object -> Bool
     , itemContents :: TVar [ItemSlot]
     , itemTemplate :: ItemTemplate
     }
@@ -101,16 +105,35 @@ data ItemType
   | ItemHands
   | ItemHead
   | ItemLegs
-  | ItemShield
+  | ItemArms
+  | ItemFeet
   | ItemTorso
-  | ItemWeapon
+  | ItemWrist -- for wrist sheaths
+  | ItemAnkle -- for ankle sheaths
+  | ItemForearm -- for shields
   deriving (Eq, Show, Enum, Bounded)
 
 data WeaponType
   = WeaponBroadsword
   | WeaponShortsword
   | WeaponNone
-  deriving (Eq, Show, Enum, Bounded)
+  deriving (Eq, Enum, Bounded)
+
+instance Show WeaponType where
+  show WeaponShortsword = "shortsword"
+  show WeaponBroadsword = "broadsword"
+  show WeaponNone = "none"
+
+instance Read WeaponType where
+  readsPrec _ value =
+    tryParse [(minBound :: WeaponType) ..]
+    where
+      tryParse [] = []
+      tryParse (result:xs) =
+        let attempt = show result in
+        if (take (length attempt) value) == attempt
+          then [(result, drop (length attempt) value)]
+          else tryParse xs
 
 data Character =
   Character
@@ -197,6 +220,10 @@ data VisibleProperty
   = StaticVisibleProperty String
   | DynamicVisibleProperty (Character -> IO String)
 
+showVisibleProperty :: Character -> VisibleProperty -> IO String
+showVisibleProperty _ (StaticVisibleProperty str) = return str
+showVisibleProperty c (DynamicVisibleProperty f) = f c
+
 data Location =
   Location
   { locationId :: LocationId
@@ -223,7 +250,7 @@ data GameState =
   , sqlConnection :: Connection
   , commandList :: TVar [CommandDef]
   , gameLocations :: TVar [Location]
-  , gameNextItemId :: TVar Int
+  , gameNextItemId :: TVar ItemId
   , gameItemTemplates :: TVar [ItemTemplate]
   , gameCharacters :: TVar [Character]
   }

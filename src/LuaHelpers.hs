@@ -1,9 +1,10 @@
 module LuaHelpers where
 
 import Control.Monad
-
 import Scripting.Lua (LuaState)
 import qualified Scripting.Lua as Lua
+import System.Directory
+import System.FilePath
 
 import Types
 
@@ -18,6 +19,33 @@ getLuaGlobalInt luaState key = do
   Lua.setglobal luaState key
   return result
 -}
+
+getLuaGlobalString :: LuaState -> String -> IO String
+getLuaGlobalString luaState key = do
+  _ <- Lua.getglobal luaState key
+  result <- Lua.tostring luaState (-1)
+  Lua.pop luaState 1
+  -- Set the global to nil so it can't be used accidentally in the future.
+  Lua.pushnil luaState
+  Lua.setglobal luaState key
+  return result
+
+loadFiles :: LuaState -> FilePath -> (LuaState -> String -> IO a) -> IO [a]
+loadFiles luaState path loadFun = do
+  files <- getDirectoryContents path
+  let luaFiles = filter ((== ".lua") . takeExtension) files
+  mapM (\f -> loadLuaFile luaState loadFun (dropExtension f) (path ++ (pathSeparator : f))) luaFiles
+
+loadLuaFile :: LuaState -> (LuaState -> String -> IO a) -> String -> FilePath -> IO a
+loadLuaFile luaState createFromLuaFun objId file = do
+  status <- Lua.loadfile luaState file
+  if status == Lua.OK
+    then do
+      Lua.call luaState 0 0
+      createFromLuaFun luaState objId
+    else do
+      errMsg <- Lua.tostring luaState (-1)
+      error $ "ERROR: " ++ errMsg
 
 pushCharacter :: LuaState -> Character -> Character -> IO ()
 pushCharacter luaState target viewer = do
