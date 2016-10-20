@@ -98,9 +98,12 @@ cmdCreate :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdCreate gs conn (CmdArgsString tId) = do
   let char = connectionCharacter conn
   loc <- atomically $ getLocation char
-  item <- atomically $ createItem gs tId (ContainerLocation loc)
-  atomically $ locationAddObject loc (ObjectItem item)
-  hPutStrLn (connectionHandle conn) $ "A " ++ (itemName item) ++ " has just fallen from the sky!"
+  maybeItem <- atomically $ createItem gs tId (ContainerLocation loc)
+  case maybeItem of
+    Just item -> do
+      atomically $ locationAddObject loc (ObjectItem item)
+      hPutStrLn (connectionHandle conn) $ "A " ++ (itemName item) ++ " has just fallen from the sky!"
+    Nothing -> hPutStrLn (connectionHandle conn) $ "\"" ++ tId ++ "\" is not a valid item template ID."
 
 cmdGet :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdGet gs conn (CmdArgsString str) = do
@@ -143,3 +146,27 @@ cmdInventory gs conn _ = do
     Just desc -> hPutStrLn h $ "You are wearing " ++ desc ++ "."
     Nothing -> hPutStrLn h $ "You are wearing nothing!"
 
+searchSlots :: String -> [ItemSlot] -> STM (Maybe (Item, ItemSlot))
+searchSlots _ [] = return Nothing
+searchSlots needle (slot:rest) = do
+  result <- liftM (find (\i -> isPrefixOf needle (itemName i))) $ readTVar $ slotContents slot
+  case result of
+    Just item -> return $ Just (item, slot)
+    Nothing -> searchSlots needle rest
+
+cmdDrop :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdDrop gs conn (CmdArgsString str) = do
+  let char = connectionCharacter conn
+  let h = connectionHandle conn
+  results <- atomically $ searchSlots str (charHolding char)
+  case results of
+    Just (item, slot) -> do
+      atomically $ do
+        loc <- getLocation char
+        contents <- readTVar (slotContents slot)
+        writeTVar (slotContents slot) $ filter ((/=) item) contents
+        move item (ContainerLocation loc)
+        locationAddObject loc (ObjectItem item)
+      itemDesc <- viewShortDesc item char
+      hPutStrLn h $ "You dropped " ++ itemDesc ++ "."
+    Nothing -> hPutStrLn h $ "You aren't holding that."

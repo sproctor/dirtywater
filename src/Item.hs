@@ -60,12 +60,15 @@ createItemTemplate luaState objId = do
   weaponType <- getLuaGlobalString luaState "weaponType"
   return $ ItemTemplate itemTemplateId name [] shortDescription longDescription (read weaponType)
   
-createItem :: GameState -> String -> Container -> STM Item
+createItem :: GameState -> String -> Container -> STM (Maybe Item)
 createItem gs templateId container = do
-  template <- lookupTemplate gs templateId
-  itemId <- takeItemId gs
-  containerVar <- newTVar container
-  return $ Item itemId containerVar [] template
+  maybeTemplate <- lookupTemplate gs templateId
+  case maybeTemplate of
+    Just template -> do
+      itemId <- takeItemId gs
+      containerVar <- newTVar container
+      return $ Just $ Item itemId containerVar [] template
+    Nothing -> return Nothing
 
 takeItemId :: GameState -> STM ItemId
 takeItemId gs = do
@@ -74,9 +77,8 @@ takeItemId gs = do
   writeTVar idState (currId + 1)
   return currId
 
-lookupTemplate :: GameState -> String -> STM ItemTemplate
+lookupTemplate :: GameState -> String -> STM (Maybe ItemTemplate)
 lookupTemplate gs templateId = do
   templates <- readTVar $ gameItemTemplates gs
-  case find (\t -> templateId == itemTemplName t) templates of
-    Just t -> return t
-    Nothing -> error $ "Invalid item template id: " ++ templateId
+  return $ find (\t -> templateId == itemTemplName t) templates
+  --  Nothing -> throwSTM $ "Invalid item template id: " ++ templateId

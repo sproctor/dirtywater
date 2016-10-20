@@ -70,6 +70,7 @@ newGameState dbfilename connections = do
     , CommandDef ("take", [CmdTypeString], cmdGet)
     , CommandDef ("pickup", [CmdTypeString], cmdGet)
     , CommandDef ("inventory", [CmdTypeNone], cmdInventory)
+    , CommandDef ("drop", [CmdTypeString], cmdDrop)
     ]
   status <- atomically $ newTVar Running
   nextIdVar <- atomically $ newTVar 1
