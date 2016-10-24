@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Command where
 
 import Control.Concurrent
@@ -5,9 +6,14 @@ import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad.Extra
 import Control.Monad.IO.Class
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as B8
+import qualified Data.ByteString.UTF8 as UTF8
 import Data.List
 import System.IO
-import Text.ParserCombinators.Parsec
+import Text.Parsec
+import Text.Parsec.ByteString
 
 import Character
 import Connection
@@ -23,7 +29,7 @@ lookupCommand str =
   in
     find helper
 
-parseCommand :: [CommandDef] -> String -> Either ParseError Command
+parseCommand :: [CommandDef] -> ByteString -> Either ParseError Command
 parseCommand cl input = parse (playerCommand cl) "" input
 
 playerCommand :: [CommandDef] -> GenParser Char st Command
@@ -31,16 +37,16 @@ playerCommand cl = do
   cmdName <- word <?> "command"
   case lookupCommand cmdName cl of
     Just cmdDef -> commandArgs cmdDef
-    Nothing -> return $ BadCommand $ "You don't know how to \"" ++ cmdName ++ "\"."
+    Nothing -> return $ BadCommand $ "You don't know how to \"" `B.append` UTF8.fromString cmdName `B.append` "\"."
 
 commandArgs :: CommandDef -> GenParser Char st Command
-commandArgs (CommandDef (name, [], _)) = return $ BadCommand $ "That's not how you " ++ name ++ "."
+commandArgs (CommandDef (name, [], _)) = return $ BadCommand $ "That's not how you " `B.append` UTF8.fromString name `B.append` "."
 commandArgs (CommandDef (name, CmdTypeNone:_, f)) = return $ Command (name, CmdArgsNone, f)
 commandArgs (CommandDef (name, CmdTypeString:rest, f)) =
   do
     whitespace <?> "whitespace"
     str <- anyString <?> "arg string"
-    return $ Command (name, CmdArgsString str, f)
+    return $ Command (name, CmdArgsString (UTF8.fromString str), f)
   <|> ( commandArgs (CommandDef (name, rest, f)) )
 
 word :: GenParser Char st String
@@ -66,7 +72,10 @@ cmdGoDir dir gs conn _ = do
   destMaybe <- atomically $ findDirDest gs dir loc
   case destMaybe of
     Just dest -> do
-      atomically $ move char (ContainerLocation dest)
+      atomically $ do
+        locationRemoveObject loc (ObjectCharacter char)
+        setContainer char (ContainerLocation dest)
+        locationAddObject dest (ObjectCharacter char)
       cmdLook gs conn CmdArgsNone
     Nothing -> hPutStrLn (connectionHandle conn) $ "You can't go " ++ (show dir) ++ " from here!"
 
@@ -84,11 +93,14 @@ cmdLook gs conn _ = do
   let char = connectionCharacter conn
   loc <- atomically $ getLocation char
   locDesc <- getLocationDesc loc char
-  hPutStrLn (connectionHandle conn) locDesc
+  B8.hPutStrLn (connectionHandle conn) locDesc
 
 cmdSay :: GameState -> ClientConnection -> CommandArgs -> IO ()
-cmdSay gs conn (CmdArgsString str) =
-  hPutStrLn (connectionHandle conn) $ "You say, \"" ++ str ++ "\""
+cmdSay gs conn (CmdArgsString str) = do
+  let char = connectionCharacter conn
+  loc <- atomically $ getLocation char
+  sendToRoomExcept loc char "%s says, \"%s\"" [charShortDescription char, \_ -> return str]
+  B8.hPutStrLn (connectionHandle conn) $ "You say, \"" `B.append` str `B.append` "\""
 
 cmdShutdown :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdShutdown gs _ _ =
@@ -98,12 +110,12 @@ cmdCreate :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdCreate gs conn (CmdArgsString tId) = do
   let char = connectionCharacter conn
   loc <- atomically $ getLocation char
-  maybeItem <- atomically $ createItem gs tId (ContainerLocation loc)
+  maybeItem <- atomically $ createItem gs (UTF8.toString tId) (ContainerLocation loc)
   case maybeItem of
     Just item -> do
       atomically $ locationAddObject loc (ObjectItem item)
-      hPutStrLn (connectionHandle conn) $ "A " ++ (itemName item) ++ " has just fallen from the sky!"
-    Nothing -> hPutStrLn (connectionHandle conn) $ "\"" ++ tId ++ "\" is not a valid item template ID."
+      B8.hPutStrLn (connectionHandle conn) $ "A " `B.append` (itemName item) `B.append` " has just fallen from the sky!"
+    Nothing -> B8.hPutStrLn (connectionHandle conn) $ "\"" `B.append` tId `B.append` "\" is not a valid item template ID."
 
 cmdGet :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdGet gs conn (CmdArgsString str) = do
@@ -117,21 +129,21 @@ cmdGet gs conn (CmdArgsString str) = do
       case maybeSlot of
         Just slot -> do
           atomically $ do
-            writeTVar (slotContents slot) [item]
-            move item (ContainerCharacter char)
+            slotAddItem slot item
+            setContainer item (ContainerCharacter char)
             locationRemoveObject loc (ObjectItem item)
           itemDesc <- viewShortDesc item char
-          hPutStrLn h $ "You picked up " ++ itemDesc ++ "."
+          B8.hPutStrLn h $ "You picked up " `B.append` itemDesc `B.append` "."
         Nothing -> hPutStrLn h "You need a free hand to pick that up."
     Nothing -> hPutStrLn h "Could not locate that item here."
 
-getSlotsContentsDescription :: [ItemSlot] -> Character -> IO (Maybe String)
+getSlotsContentsDescription :: [ItemSlot] -> Character -> IO (Maybe ByteString)
 getSlotsContentsDescription slots char = do
   items <- atomically $ liftM concat $ mapM (readTVar . slotContents) slots
   descriptions <- mapM (\t -> viewShortDesc t char) items
   if null descriptions
     then return Nothing
-    else return $ Just $ intercalate ", " descriptions
+    else return $ Just $ B.intercalate ", " descriptions
 
 cmdInventory :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdInventory gs conn _ = do
@@ -139,17 +151,17 @@ cmdInventory gs conn _ = do
   let h = connectionHandle conn
   holding <- getSlotsContentsDescription (charHolding char) char
   case holding of
-    Just desc -> hPutStrLn h $ "You are holding " ++ desc ++ "."
-    Nothing -> hPutStrLn h $ "You are holding nothing."
+    Just desc -> B8.hPutStrLn h $ "You are holding " `B.append` desc `B.append` "."
+    Nothing -> B8.hPutStrLn h $ "You are holding nothing."
   wearing <- getSlotsContentsDescription (charInventory char) char
   case wearing of
-    Just desc -> hPutStrLn h $ "You are wearing " ++ desc ++ "."
-    Nothing -> hPutStrLn h $ "You are wearing nothing!"
+    Just desc -> B8.hPutStrLn h $ "You are wearing " `B.append` desc `B.append` "."
+    Nothing -> B8.hPutStrLn h $ "You are wearing nothing!"
 
-searchSlots :: String -> [ItemSlot] -> STM (Maybe (Item, ItemSlot))
+searchSlots :: ByteString -> [ItemSlot] -> STM (Maybe (Item, ItemSlot))
 searchSlots _ [] = return Nothing
 searchSlots needle (slot:rest) = do
-  result <- liftM (find (\i -> isPrefixOf needle (itemName i))) $ readTVar $ slotContents slot
+  result <- liftM (find (\i -> B.isPrefixOf needle (itemName i))) $ readTVar $ slotContents slot
   case result of
     Just item -> return $ Just (item, slot)
     Nothing -> searchSlots needle rest
@@ -163,10 +175,9 @@ cmdDrop gs conn (CmdArgsString str) = do
     Just (item, slot) -> do
       atomically $ do
         loc <- getLocation char
-        contents <- readTVar (slotContents slot)
-        writeTVar (slotContents slot) $ filter ((/=) item) contents
-        move item (ContainerLocation loc)
+        slotRemoveItem slot item
+        setContainer item (ContainerLocation loc)
         locationAddObject loc (ObjectItem item)
       itemDesc <- viewShortDesc item char
-      hPutStrLn h $ "You dropped " ++ itemDesc ++ "."
+      B8.hPutStrLn h $ "You dropped " `B.append` itemDesc `B.append` "."
     Nothing -> hPutStrLn h $ "You aren't holding that."

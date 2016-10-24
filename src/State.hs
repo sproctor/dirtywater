@@ -1,9 +1,14 @@
+{-# LANGUAGE OverloadedStrings #-}
 module State where
 
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as B8
+import qualified Data.ByteString.UTF8 as UTF8
 import Data.List
 import Data.Maybe
 import Database.HDBC
@@ -52,7 +57,7 @@ doCommand conn command gs =
     case command of
       Command (_, args, f) -> f gs conn args
       BadCommand str -> do
-        hPutStrLn h str
+        B8.hPutStrLn h str
 
 newGameState :: String -> ClientConnectionList -> IO GameState
 newGameState dbfilename connections = do
@@ -81,7 +86,6 @@ newGameState dbfilename connections = do
   itemTemplates <- loadFiles luaState "../data/items" createItemTemplate
   itemTemplatesTVar <- atomically $ newTVar itemTemplates
   let gs = GameState connections status dbconn q locTVar nextIdVar itemTemplatesTVar charsTVar
-  loadCharacters gs
   return gs
 
 initDatabase :: Connection -> IO ()
@@ -92,12 +96,34 @@ initDatabase dbconn = do
     commit dbconn
     putStrLn "Created characters table"
 
-newCharacter :: GameState -> String -> String -> IO Character
+newCharacter :: GameState -> Handle -> ByteString -> ByteString -> IO Character
 -- newCharacter _ name password | trace ("newCharacter " ++ name ++ " " ++ password) False = undefined
-newCharacter gs name password = do
+newCharacter gs h name password = do
   startLoc <- atomically $ lookupLocation (LocationId "start") gs
-  char <- atomically $ createCharacter (ContainerLocation startLoc) name password
+  char <- atomically $ createCharacter (B8.hPutStrLn h) (ContainerLocation startLoc) name password
   addCharacter gs char
+  return char
+
+createCharacter :: (ByteString -> IO ()) -> Container -> ByteString -> ByteString -> STM Character
+-- createCharacter container name password | trace ("createCharacter " ++ show container ++ " " ++ name ++ " " ++ password) False = undefined
+createCharacter msgFun (ContainerLocation loc) name password = do
+  passwordVar <- newTVar password
+  containerVar <- newTVar (ContainerLocation loc)
+  rContents <- newTVar []
+  lContents <- newTVar []
+  let hands = [ItemSlot ItemAny rContents, ItemSlot ItemAny lContents]
+  stVar <- newTVar 10
+  dxVar <- newTVar 10
+  iqVar <- newTVar 10
+  htVar <- newTVar 10
+  hpVar <- newTVar 10
+  willVar <- newTVar 10
+  perVar <- newTVar 10
+  currHPVar <- newTVar 10
+  ssVar <- newTVar 2
+  skillsVar <- newTVar [Skill "shortsword" ssVar]
+  let char = Character (UTF8.toString name) msgFun (\_ -> return name) (\_ -> return name) containerVar passwordVar hands [] stVar dxVar iqVar htVar hpVar willVar perVar currHPVar skillsVar
+  locationAddObject loc (ObjectCharacter char)
   return char
 
 findCharacter :: String -> GameState -> STM (Maybe Character)
@@ -128,10 +154,10 @@ writeSqlCharacter method dbconn char = do
       ContainerLocation l -> show $ locationId l
       -- ContainerItem i -> itemId i
   password <- atomically $ readTVar $ charPassword char
-  putStrLn $ method ++ " " ++ (charId char) ++ " " ++ conId ++ " " ++ password
+  -- putStrLn $ method ++ " " ++ (charId char) ++ " " ++ conId ++ " " ++ password
   void $ run dbconn (method ++ " INTO characters (name, containerId, password) VALUES (?, ?, ?)")
       [toSql (charId char), toSql conId, toSql password]
-  putStrLn $ "Saved character: " ++ show char
+  -- putStrLn $ "Saved character: " ++ show char
 
 addSqlCharacter :: Connection -> Character -> IO ()
 addSqlCharacter = writeSqlCharacter "INSERT"
@@ -139,14 +165,21 @@ addSqlCharacter = writeSqlCharacter "INSERT"
 saveCharacter :: Connection -> Character -> IO ()
 saveCharacter = writeSqlCharacter "REPLACE"
 
-loadCharacters :: GameState -> IO ()
-loadCharacters gs = do
+loadCharacter :: GameState -> Handle -> String -> IO (Maybe Character)
+loadCharacter gs h name = do
   let dbconn = sqlConnection gs
-  stmt <- prepare dbconn "SELECT containerId, name, password FROM characters"
-  execute stmt []
-  results <- fetchAllRowsAL stmt
-  characters <- mapM loadSqlCharacter results
-  atomically $ writeTVar (gameCharacters gs) characters
+  stmt <- prepare dbconn "SELECT containerId, name, password FROM characters WHERE name = ?"
+  execute stmt [toSql name]
+  results <- fetchRowAL stmt
+  case results of
+    Just row -> do
+      character <- loadSqlCharacter row
+      let charsTVar = gameCharacters gs
+      atomically $ do
+        characters <- readTVar charsTVar
+        writeTVar charsTVar (character : characters)
+      return $ Just character
+    Nothing -> return Nothing
   where
     loadSqlCharacter :: [(String, SqlValue)] -> IO Character
     loadSqlCharacter [("containerId", sId), ("name", sName), ("password", sPassword)] = do
@@ -160,7 +193,7 @@ loadCharacters gs = do
             loc <- atomically $ lookupLocation (LocationId locId) gs
             return $ ContainerLocation loc
           _ -> throwIO $ InvalidValueException $ "DB column `containerId` must be a location. Value: " ++ conId
-      atomically $ createCharacter container name password
+      atomically $ createCharacter (B8.hPutStrLn h) container name password
       --  Nothing -> fail $ "Non-existant location (" ++ (show conId) ++ ") for character: " ++ name
     loadSqlCharacter x = do
       print x

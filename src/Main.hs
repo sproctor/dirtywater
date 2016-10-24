@@ -1,13 +1,18 @@
+import Prelude hiding (putStrLn)
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
-import Data.Text
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as B
+import qualified Data.ByteString.UTF8 as UTF8
+import Data.String.Class
+import Data.Strings
 import Database.HDBC
 import Database.HDBC.Sqlite3
 import Network
 import System.Directory
-import System.IO
+import System.IO (Handle, hClose, hSetEncoding, stderr, utf8)
 import System.Timeout
 
 import Character
@@ -65,6 +70,7 @@ cleanupClient h _ = do
 
 clientPlayGame :: GameState -> Handle -> MVar ThreadId -> IO ()
 clientPlayGame gs h idVar = do
+  hSetEncoding h utf8
   char <- clientHandshakeChar gs h
   conn <- atomically $ newConnection gs h char idVar
   cmdLook gs conn CmdArgsNone
@@ -82,54 +88,51 @@ clientGameHandler gs h idVar =
 clientHandshakeChar :: GameState -> Handle -> IO Character
 clientHandshakeChar gs h = do
   name <- clientQueryName h
-  case name of
-    "new" -> do
+  if name == UTF8.fromString "new"
+    then do
       newName <- clientCreateName h
       password <- clientCreatePassword h
-      newCharacter gs newName password
-    _ -> do
+      newCharacter gs h newName password
+    else do
       chars <- atomically $ readTVar $ gameCharacters gs
-      mc <- atomically $ findCharacter name gs
+      mc <- loadCharacter gs h (UTF8.toString name)
       case mc of
         Just c -> do
           clientQueryPassword h c
           return c
         Nothing -> do
-          hPutStrLn h $ "You must be mistaken. There is no one named \"" ++ name ++ ".\" Let's try this again."
+          hPutStrLn h $ "You must be mistaken. There is no one named \"" ++ UTF8.toString name ++ ".\" Let's try this again."
           clientHandshakeChar gs h
 
 
-clientQueryName :: Handle -> IO String
+clientQueryName :: Handle -> IO ByteString
 clientQueryName h = do
-  hPutStrLn h "Welcome to Dirty Water, friend. What name do you go by? If you are new here, type \"new\"."
-  line <- hGetLine h
-  let name = unpack $ strip $ pack line
-  return name
+  hPutStrLn h "Welcome to Dirty Water\x00AE, friend. What name do you go by? If you are new here, type \"new\"."
+  name <- B.hGetLine h
+  return $ strTrim name
 
 clientQueryPassword :: Handle -> Character -> IO ()
 clientQueryPassword h char = do
-  let name = charId char
+  let name = UTF8.fromString $ charId char
   password <- atomically $ readTVar $ charPassword char
-  hPutStrLn h $ "Welcome back, " ++ name ++ ". Please enter your password."
-  line <- hGetLine h
-  let supposedPassword = unpack $ strip $ pack line
+  hPutStrLn h $ "Welcome back, " ++ UTF8.toString name ++ ". Please enter your password."
+  supposedPassword <- liftM strTrim $ B.hGetLine h
   if password == supposedPassword
     then return ()
     else do
-      hPutStrLn h $ "What are you trying to pull here, \"" ++ name ++ "?\" Maybe I should call you liar instead? Let's start this over."
+      hPutStrLn h $ "What are you trying to pull here, \"" ++ UTF8.toString name ++ "?\" Maybe I should call you liar instead? Let's start this over."
       clientQueryPassword h char
 
-clientCreateName :: Handle -> IO String
+clientCreateName :: Handle -> IO ByteString
 clientCreateName h = do
   hPutStrLn h "Would name would you like to be referred to by?"
-  line <- hGetLine h
-  let name = unpack $ strip $ pack line
-  hPutStrLn h $ "Ah, " ++ name ++ ", an excellent name! Are you sure that is what you want to go by? (y/n)"
+  name <- liftM strTrim $ B.hGetLine h
+  hPutStrLn h $ "Ah, " ++ UTF8.toString name ++ ", an excellent name! Are you sure that is what you want to go by? (y/n)"
   confirmName name
   where
-    confirmName :: String -> IO String
+    confirmName :: ByteString -> IO ByteString
     confirmName name = do
-      line <- hGetLine h
+      line <- liftM strTrim $ hGetLine h
       case line of
         'y' : _ -> return name
         'n' : _ -> do
@@ -137,17 +140,15 @@ clientCreateName h = do
           clientQueryName h
         _ -> do
           hPutStrLn h "I said, \"(y/n),\" not whatever crap you typed."
-          hPutStrLn h $ "Let's try this again. Are you sure you want to go by " ++ name ++ "?"
+          hPutStrLn h $ "Let's try this again. Are you sure you want to go by " ++ UTF8.toString name ++ "?"
           confirmName name
 
-clientCreatePassword :: Handle -> IO String
+clientCreatePassword :: Handle -> IO ByteString
 clientCreatePassword h = do
   hPutStrLn h "Please enter a password."
-  line <- hGetLine h
-  let password = unpack $ strip $ pack line
+  password <- liftM strTrim $ B.hGetLine h
   hPutStrLn h "Please re-enter your password to verify."
-  line <- hGetLine h
-  let password2 = unpack $ strip $ pack line
+  password2 <- liftM strTrim $ B.hGetLine h
   if password == password2
     then return password
     else do
@@ -159,11 +160,11 @@ clientLoop gs conn = do
   closed <- atomically $ readTVar (connectionClosed conn)
   unless closed $ do
     let h = connectionHandle conn
-    possibleLine <- tryJust (guard . isExitException) $ hGetLine h
+    possibleLine <- tryJust (guard . isExitException) $ B.hGetLine h
     case possibleLine of
       Left _ -> return ()
       Right line -> do
-        let strippedLine = unpack $ strip $ pack line
+        let strippedLine = strTrim line
         commands <- atomically $ readTVar $ commandList gs
         case parseCommand commands strippedLine of
           Left e -> hPutStrLn h $ "Parse error at " ++ (show e)

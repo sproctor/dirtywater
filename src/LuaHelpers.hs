@@ -1,6 +1,7 @@
 module LuaHelpers where
 
 import Control.Monad
+import Data.ByteString (ByteString)
 import Scripting.Lua (LuaState)
 import qualified Scripting.Lua as Lua
 import System.Directory
@@ -20,10 +21,10 @@ getLuaGlobalInt luaState key = do
   return result
 -}
 
-getLuaGlobalString :: LuaState -> String -> IO String
+getLuaGlobalString :: LuaState -> String -> IO ByteString
 getLuaGlobalString luaState key = do
   _ <- Lua.getglobal luaState key
-  result <- Lua.tostring luaState (-1)
+  result <- Lua.tobytestring luaState (-1)
   Lua.pop luaState 1
   -- Set the global to nil so it can't be used accidentally in the future.
   Lua.pushnil luaState
@@ -53,20 +54,20 @@ pushCharacter luaState target viewer = do
   Lua.pushstring luaState (charId target)
   Lua.setfield luaState (-2) "id"
   shortDescription <- charShortDescription target viewer
-  Lua.pushstring luaState shortDescription
+  Lua.pushbytestring luaState shortDescription
   Lua.setfield luaState (-2) "shortDescription"
   longDescription <- charLongDescription target viewer
-  Lua.pushstring luaState longDescription
+  Lua.pushbytestring luaState longDescription
   Lua.setfield luaState (-2) "longDescription"
 
-getPropertyForCharacter :: LuaState -> String -> Character -> IO String
+getPropertyForCharacter :: LuaState -> String -> Character -> IO ByteString
 getPropertyForCharacter luaState objId c = do
   _ <- Lua.getglobal luaState "_properties"
   fieldType <- Lua.getfield luaState (-1) objId
   unless (fieldType == Lua.TFUNCTION) $ error $ "Invalid value in _properties[" ++ objId ++ "]"
   pushCharacter luaState c c
   Lua.call luaState 1 1
-  result <- Lua.tostring luaState (-1)
+  result <- Lua.tobytestring luaState (-1)
   Lua.pop luaState 1
   return result
 
@@ -89,7 +90,7 @@ getLuaGlobalVisibleProperty luaState objId key = do
       isString <- Lua.isstring luaState (-1)
       if isString
         then do
-          value <- Lua.tostring luaState (-1)
+          value <- Lua.tobytestring luaState (-1)
           Lua.pop luaState 1
           return $ StaticVisibleProperty value
         else error $ "Property (" ++ key ++ ") has type: " ++ show t

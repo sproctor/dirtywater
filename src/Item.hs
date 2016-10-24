@@ -3,12 +3,15 @@
 module Item where
 
 import Control.Concurrent.STM
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.UTF8 as BS
 import Data.List
 import Scripting.Lua
 
-import Types
-import Tangible
 import LuaHelpers
+import Tangible
+import Types
 
 instance Tangible Item where
   getLocation self = do
@@ -20,18 +23,18 @@ instance Tangible Item where
 
   getContainer self = readTVar (itemContainer self)
 
-  move self = writeTVar (itemContainer self)
+  setContainer self = writeTVar (itemContainer self)
 
   matchesDesc self adjs name =
-    return $ isPrefixOf name (itemName self) && findAdjs adjs (itemAdjs self) []
+    return $ BS.isPrefixOf name (itemName self) && findAdjs adjs (itemAdjs self) []
 
   viewShortDesc i c = showVisibleProperty c $ (itemTemplShortDesc . itemTemplate) i
   viewLongDesc i c = showVisibleProperty c $ (itemTemplLongDesc . itemTemplate) i
 
-itemName :: Item -> String
+itemName :: Item -> ByteString
 itemName = itemTemplName . itemTemplate
 
-itemAdjs :: Item -> [String]
+itemAdjs :: Item -> [ByteString]
 itemAdjs = itemTemplAdjs . itemTemplate
 
 canAdd :: Item -> Character -> Bool
@@ -39,15 +42,15 @@ canAdd item _ = True
   -- not $ null $ filter (\ (p, _) -> p == pos) (itemContents item)
 
 -- helper functions
-findAdjs :: [String] -> [String] -> [String] -> Bool
+findAdjs :: [ByteString] -> [ByteString] -> [ByteString] -> Bool
 findAdjs [] _ _ = True
 findAdjs _ [] _ = False
 findAdjs (prefix:toFind) (adj:toSearch) searched =
-  if isPrefixOf prefix adj
+  if BS.isPrefixOf prefix adj
     then findAdjs toFind (putTogether searched toSearch) []
     else findAdjs (prefix:toFind) toSearch (adj:searched)
 
-putTogether :: [String] -> [String] -> [String]
+putTogether :: [ByteString] -> [ByteString] -> [ByteString]
 putTogether [] xs = xs
 putTogether (x:rest) xs = putTogether rest (x:xs)
 
@@ -58,7 +61,7 @@ createItemTemplate luaState objId = do
   shortDescription <- getLuaGlobalVisibleProperty luaState objId "shortDescription"
   longDescription <- getLuaGlobalVisibleProperty luaState objId "longDescription"
   weaponType <- getLuaGlobalString luaState "weaponType"
-  return $ ItemTemplate itemTemplateId name [] shortDescription longDescription (read weaponType)
+  return $ ItemTemplate itemTemplateId name [] shortDescription longDescription (read (BS.toString weaponType))
   
 createItem :: GameState -> String -> Container -> STM (Maybe Item)
 createItem gs templateId container = do
@@ -80,5 +83,15 @@ takeItemId gs = do
 lookupTemplate :: GameState -> String -> STM (Maybe ItemTemplate)
 lookupTemplate gs templateId = do
   templates <- readTVar $ gameItemTemplates gs
-  return $ find (\t -> templateId == itemTemplName t) templates
+  return $ find (\t -> (ItemTemplateId templateId) == itemTemplId t) templates
   --  Nothing -> throwSTM $ "Invalid item template id: " ++ templateId
+
+slotAddItem :: ItemSlot -> Item -> STM ()
+slotAddItem slot item = do
+  contents <- readTVar (slotContents slot)
+  writeTVar (slotContents slot) (item : contents)
+
+slotRemoveItem :: ItemSlot -> Item -> STM ()
+slotRemoveItem slot item = do
+  contents <- readTVar (slotContents slot)
+  writeTVar (slotContents slot) $ filter ((/=) item) contents

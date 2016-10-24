@@ -32,6 +32,7 @@ executable dirtywater
     HDBC-sqlite3 >= 2.3 && <2.4,
     parsec >= 3.1,
     stm >=2.4 && <2.5,
+    strings >= 1.1,
     text >=1.2,
     transformers >= 0.3
   hs-source-dirs:

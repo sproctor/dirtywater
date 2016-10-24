@@ -4,6 +4,9 @@ module Types where
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Exception
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.UTF8 as BS
 import Data.Typeable
 import Database.HDBC.Sqlite3
 import System.IO
@@ -13,9 +16,9 @@ data NounOrd
   | NounOrd Int
   deriving (Show, Eq)
 
-newtype AdjectiveList = AdjectiveList [String] deriving (Show, Eq)
+newtype AdjectiveList = AdjectiveList [ByteString] deriving (Show, Eq)
 
-newtype Noun = Noun String deriving (Show, Eq)
+newtype Noun = Noun ByteString deriving (Show, Eq)
 
 newtype NounDesc = NounDesc (NounOrd, AdjectiveList, Noun) deriving (Show, Eq)
 
@@ -44,17 +47,17 @@ data CommandArgsType
 
 data CommandArgs
   = CmdArgsObjectDesc ObjectDesc
-  | CmdArgsString String
+  | CmdArgsString ByteString
   | CmdArgsNone
   deriving (Show, Eq)
 
 data Command
   = Command (String, CommandArgs, GameState -> ClientConnection -> CommandArgs -> IO ())
-  | BadCommand String
+  | BadCommand ByteString
 
 instance Show Command where
   show (Command (cmd, args, _)) = cmd ++ (show args)
-  show (BadCommand s) = "Bad command: " ++ s
+  show (BadCommand s) = "Bad command: " ++ BS.toString s
 
 newtype CommandDef = CommandDef (String, [CommandArgsType], GameState -> ClientConnection -> CommandArgs -> IO ())
 
@@ -68,8 +71,8 @@ instance Show ItemTemplateId where
 data ItemTemplate =
   ItemTemplate
     { itemTemplId :: ItemTemplateId
-    , itemTemplName :: String
-    , itemTemplAdjs :: [String]
+    , itemTemplName :: ByteString
+    , itemTemplAdjs :: [ByteString]
     , itemTemplShortDesc :: VisibleProperty
     , itemTemplLongDesc :: VisibleProperty
     , itemTemplWeaponType :: WeaponType
@@ -99,6 +102,7 @@ data ItemSlot =
     { slotType :: ItemType
     , slotContents :: TVar [Item]
     }
+  deriving Eq
 
 data ItemType
   = ItemAny
@@ -138,10 +142,11 @@ instance Read WeaponType where
 data Character =
   Character
     { charId :: String
-    , charShortDescription :: Character -> IO String
-    , charLongDescription :: Character -> IO String
+    , charMessage :: ByteString -> IO ()
+    , charShortDescription :: Character -> IO ByteString
+    , charLongDescription :: Character -> IO ByteString
     , charContainer :: TVar Container
-    , charPassword :: TVar String
+    , charPassword :: TVar ByteString
     , charHolding :: [ItemSlot]
     , charInventory :: [ItemSlot]
     , charST :: TVar Int
@@ -163,7 +168,7 @@ instance Show Character where
 
 data Skill =
   Skill
-    { skillName :: String
+    { skillName :: ByteString
     , skillRank :: TVar Int
     }
 
@@ -177,7 +182,7 @@ data Container
   = ContainerLocation Location
   | ContainerItem Item
   | ContainerCharacter Character
-  deriving (Show, Eq)
+  deriving (Eq)
 
 data Direction
   = East
@@ -217,10 +222,10 @@ instance Show LocationId where
   show (LocationId str) = "loc:" ++ str
 
 data VisibleProperty
-  = StaticVisibleProperty String
-  | DynamicVisibleProperty (Character -> IO String)
+  = StaticVisibleProperty ByteString
+  | DynamicVisibleProperty (Character -> IO ByteString)
 
-showVisibleProperty :: Character -> VisibleProperty -> IO String
+showVisibleProperty :: Character -> VisibleProperty -> IO ByteString
 showVisibleProperty _ (StaticVisibleProperty str) = return str
 showVisibleProperty c (DynamicVisibleProperty f) = f c
 

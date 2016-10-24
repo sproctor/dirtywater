@@ -5,6 +5,10 @@ module Location where
 import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
+import Control.Monad.Extra
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as B
+import qualified Data.ByteString.UTF8 as UTF8
 import Data.List
 import Data.Maybe
 import Debug.Trace
@@ -44,29 +48,29 @@ createLocation luaState objId = do
   objs <- atomically $ newTVar portals
   return $ Location locId title description objs
   
-getLocationDesc :: Location -> Character -> IO String
+getLocationDesc :: Location -> Character -> IO ByteString
 getLocationDesc location char = do
   chars <- atomically $ getLocationChars location
   charDescs <- sequence $ map (\ t -> viewShortDesc t char) chars
   let
     charStr = if null chars
       then ""
-      else "People here: " ++ (intercalate ", " charDescs) ++ ".\r\n"
+      else "People here: " `B.append` (B.intercalate ", " charDescs) `B.append` ".\r\n"
   items <- atomically $ getLocationItems location
   itemDescs <- sequence $ map (\ t -> viewShortDesc t char) items
   let
     itemStr = if null items
       then ""
-      else "Items here: " ++ (intercalate ", " itemDescs) ++ ".\r\n"
+      else "Items here: " `B.append` (B.intercalate ", " itemDescs) `B.append` ".\r\n"
   directions <- atomically $ getLocationDirections location
-  let directionDescs = map show directions
+  let directionDescs = map (UTF8.fromString . show) directions
   let
     directionStr = if null directions
       then ""
-      else "Directions here: " ++ (intercalate ", " directionDescs) ++ ".\r\n"
+      else "Directions here: " `B.append` (B.intercalate ", " directionDescs) `B.append` ".\r\n"
   title <- showVisibleProperty char (locationTitle location)
   description <- showVisibleProperty char (locationDescription location)
-  return $ title ++ "\r\n" ++ description ++ "\r\n" ++ charStr ++ itemStr ++ directionStr
+  return $ B.concat $ [title, "\r\n", description, "\r\n", charStr, itemStr, directionStr]
 
 lookupLocation :: LocationId -> GameState -> STM Location
 -- lookupLocation locId _ | trace ("lookupLocation " ++ show locId) False = undefined
@@ -111,14 +115,14 @@ getLocationItems loc = do
     onlyItems (ObjectItem i) = Just i
     onlyItems _ = Nothing
 
-findItemAtLocation :: Location -> String -> STM (Maybe Item)
+findItemAtLocation :: Location -> ByteString -> STM (Maybe Item)
 findItemAtLocation loc str = do
   objs <- readTVar $ locationObjects loc
   return $ findItem objs
   where
     findItem [] = Nothing
     findItem ((ObjectItem item):rest) =
-      if isPrefixOf str (itemName item)
+      if B.isPrefixOf str (itemName item)
         then Just item
         else findItem rest
     findItem (_:rest) = findItem rest
@@ -152,3 +156,8 @@ locationRemoveObject :: Location -> Object -> STM ()
 locationRemoveObject loc obj = do
   objs <- readTVar $ locationObjects loc
   writeTVar (locationObjects loc) $ filter ((/=) obj) objs
+
+sendToRoomExcept :: Location -> Character -> ByteString -> [Character -> IO ByteString] -> IO ()
+sendToRoomExcept loc excluded msg substitutions = do
+  chars <- atomically $ getLocationChars loc
+  mapM_ (\c -> when (c /= excluded) (sendToCharacter c msg substitutions)) chars
