@@ -4,6 +4,7 @@ module Item where
 
 import Control.Concurrent.STM
 import Data.ByteString (ByteString)
+import Debug.Trace
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.UTF8 as BS
 import Data.List
@@ -54,8 +55,9 @@ putTogether :: [ByteString] -> [ByteString] -> [ByteString]
 putTogether [] xs = xs
 putTogether (x:rest) xs = putTogether rest (x:xs)
 
-createItemTemplate :: LuaState -> String -> IO ItemTemplate
-createItemTemplate luaState objId = do
+loadItemTemplate :: LuaState -> String -> IO ItemTemplate
+loadItemTemplate _ objId | trace ("loadItemTemplate luaState " ++ objId) False = undefined
+loadItemTemplate luaState objId = do
   let itemTemplateId = ItemTemplateId objId
   name <- getLuaGlobalString luaState "name"
   shortDescription <- getLuaGlobalVisibleProperty luaState objId "shortDescription"
@@ -65,8 +67,7 @@ createItemTemplate luaState objId = do
   
 createItem :: GameState -> String -> Container -> STM (Maybe Item)
 createItem gs templateId container = do
-  maybeTemplate <- lookupTemplate gs templateId
-  case maybeTemplate of
+  case lookupTemplate gs templateId of
     Just template -> do
       itemId <- takeItemId gs
       containerVar <- newTVar container
@@ -80,10 +81,9 @@ takeItemId gs = do
   writeTVar idState (currId + 1)
   return currId
 
-lookupTemplate :: GameState -> String -> STM (Maybe ItemTemplate)
+lookupTemplate :: GameState -> String -> Maybe ItemTemplate
 lookupTemplate gs templateId = do
-  templates <- readTVar $ gameItemTemplates gs
-  return $ find (\t -> (ItemTemplateId templateId) == itemTemplId t) templates
+  find (\t -> (ItemTemplateId templateId) == itemTemplId t) (gameItemTemplates gs)
   --  Nothing -> throwSTM $ "Invalid item template id: " ++ templateId
 
 slotAddItem :: ItemSlot -> Item -> STM ()

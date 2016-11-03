@@ -20,6 +20,7 @@ import Command
 import Connection
 import Location
 import State
+import Tangible
 import Types
 
 main :: IO ()
@@ -35,8 +36,6 @@ main = withSocketsDo $ do
   -- Accept incoming connections
   catch (acceptLoop gs sock) (\e -> putStrLn $ "Caught exception: " ++ show (e :: SomeException))
   putStrLn "Shutting down server."
-  characters <- atomically $ readTVar $ gameCharacters gs
-  mapM_ (saveCharacter (sqlConnection gs)) characters
   commit (sqlConnection gs)
 
 acceptLoop :: GameState -> Socket -> IO ()
@@ -57,10 +56,10 @@ acceptLoop gs sock = do
 
 mainServer :: GameState -> IO ()
 mainServer gs =
-  let dbconn = sqlConnection gs in
+  -- let dbconn = sqlConnection gs in
   forever $ do
     processCommands gs
-    commit dbconn
+    -- commit dbconn
     threadDelay 100000
 
 cleanupClient :: Handle -> Either SomeException () -> IO ()
@@ -74,8 +73,10 @@ clientPlayGame gs h idVar = do
   char <- clientHandshakeChar gs h
   conn <- atomically $ newConnection gs h char idVar
   cmdLook gs conn CmdArgsNone
-  putOutput conn ">"
+  cPutStr conn (">" :: String)
   clientLoop gs conn
+  loc <- atomically $ getLocation char
+  atomically $ locationRemoveObject loc (ObjectCharacter char)
 
 clientGameHandler :: GameState -> Handle -> MVar ThreadId -> IO ()
 clientGameHandler gs h idVar =
@@ -92,9 +93,9 @@ clientHandshakeChar gs h = do
     then do
       newName <- clientCreateName h
       password <- clientCreatePassword h
-      newCharacter gs h newName password
+      atomically $ newCharacter gs h newName password
     else do
-      chars <- atomically $ readTVar $ gameCharacters gs
+      -- chars <- atomically $ readTVar $ gameCharacters gs
       mc <- loadCharacter gs h (UTF8.toString name)
       case mc of
         Just c -> do
@@ -116,7 +117,7 @@ clientQueryPassword h char = do
   let name = UTF8.fromString $ charId char
   password <- atomically $ readTVar $ charPassword char
   hPutStrLn h $ "Welcome back, " ++ UTF8.toString name ++ ". Please enter your password."
-  supposedPassword <- liftM strTrim $ B.hGetLine h
+  supposedPassword <- fmap strTrim $ B.hGetLine h
   if password == supposedPassword
     then return ()
     else do
@@ -126,13 +127,13 @@ clientQueryPassword h char = do
 clientCreateName :: Handle -> IO ByteString
 clientCreateName h = do
   hPutStrLn h "Would name would you like to be referred to by?"
-  name <- liftM strTrim $ B.hGetLine h
+  name <- fmap strTrim $ B.hGetLine h
   hPutStrLn h $ "Ah, " ++ UTF8.toString name ++ ", an excellent name! Are you sure that is what you want to go by? (y/n)"
   confirmName name
   where
     confirmName :: ByteString -> IO ByteString
     confirmName name = do
-      line <- liftM strTrim $ hGetLine h
+      line <- fmap strTrim $ hGetLine h
       case line of
         'y' : _ -> return name
         'n' : _ -> do
@@ -146,9 +147,9 @@ clientCreateName h = do
 clientCreatePassword :: Handle -> IO ByteString
 clientCreatePassword h = do
   hPutStrLn h "Please enter a password."
-  password <- liftM strTrim $ B.hGetLine h
+  password <- fmap strTrim $ B.hGetLine h
   hPutStrLn h "Please re-enter your password to verify."
-  password2 <- liftM strTrim $ B.hGetLine h
+  password2 <- fmap strTrim $ B.hGetLine h
   if password == password2
     then return password
     else do
@@ -159,15 +160,11 @@ clientLoop :: GameState -> ClientConnection -> IO ()
 clientLoop gs conn = do
   closed <- atomically $ readTVar (connectionClosed conn)
   unless closed $ do
-    let h = connectionHandle conn
-    possibleLine <- tryJust (guard . isExitException) $ B.hGetLine h
+    possibleLine <- tryJust (guard . isExitException) $ cGetLine conn
     case possibleLine of
-      Left _ -> return ()
+      Left _ -> saveCharacter (sqlConnection gs) (connectionCharacter conn)
       Right line -> do
-        let strippedLine = strTrim line
-        commands <- atomically $ readTVar $ commandList gs
-        case parseCommand commands strippedLine of
-          Left e -> hPutStrLn h $ "Parse error at " ++ (show e)
+        case parseCommand (commandList gs) (strTrim line) of
+          Left e -> cPutStrLn conn $ "Parse error at " ++ (show e)
           Right cmd -> atomically $ queueCommand conn cmd
     clientLoop gs conn
-

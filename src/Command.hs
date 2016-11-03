@@ -100,7 +100,7 @@ cmdSay gs conn (CmdArgsString str) = do
   let char = connectionCharacter conn
   loc <- atomically $ getLocation char
   sendToRoomExcept loc char "%s says, \"%s\"" [charShortDescription char, \_ -> return str]
-  B8.hPutStrLn (connectionHandle conn) $ "You say, \"" `B.append` str `B.append` "\""
+  cPutStrLn conn $ "You say, \"" `B.append` str `B.append` "\""
 
 cmdShutdown :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdShutdown gs _ _ =
@@ -139,7 +139,7 @@ cmdGet gs conn (CmdArgsString str) = do
 
 getSlotsContentsDescription :: [ItemSlot] -> Character -> IO (Maybe ByteString)
 getSlotsContentsDescription slots char = do
-  items <- atomically $ liftM concat $ mapM (readTVar . slotContents) slots
+  items <- atomically $ fmap concat $ mapM (readTVar . slotContents) slots
   descriptions <- mapM (\t -> viewShortDesc t char) items
   if null descriptions
     then return Nothing
@@ -161,7 +161,7 @@ cmdInventory gs conn _ = do
 searchSlots :: ByteString -> [ItemSlot] -> STM (Maybe (Item, ItemSlot))
 searchSlots _ [] = return Nothing
 searchSlots needle (slot:rest) = do
-  result <- liftM (find (\i -> B.isPrefixOf needle (itemName i))) $ readTVar $ slotContents slot
+  result <- fmap (find (\i -> B.isPrefixOf needle (itemName i))) $ readTVar $ slotContents slot
   case result of
     Just item -> return $ Just (item, slot)
     Nothing -> searchSlots needle rest

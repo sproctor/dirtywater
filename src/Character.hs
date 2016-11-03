@@ -65,3 +65,13 @@ sendToCharacter :: Character -> ByteString -> [Character -> IO ByteString] -> IO
 sendToCharacter char msg substitutions = do
   substitutionStrings <- mapM (\f -> f char) substitutions
   charMessage char (replaceTokens msg substitutionStrings)
+
+getEffectiveSkillRank :: Character -> SkillId -> STM Int
+getEffectiveSkillRank char skillId = do
+  skills <- readTVar (charSkills char)
+  case find (\(Skill sId _) -> skillId == sId) skills of
+    Just (Skill _ rank) -> return rank
+    Nothing -> getDefaultSkillRank char skillId
+
+getDefaultSkillRank :: Character -> SkillId -> STM Int
+getDefaultSkillRank char skillName = return 5

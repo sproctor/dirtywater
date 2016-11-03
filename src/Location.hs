@@ -22,12 +22,13 @@ import LuaHelpers
 import Types
 import Tangible
 
-findDirectionPortals :: LuaState -> LocationId -> IO [Object]
-findDirectionPortals luaState locId =
-  liftM catMaybes $ mapM (getDirectionPortal luaState locId) [(minBound :: Direction) ..]
+readDirectionPortals :: LuaState -> LocationId -> IO [Object]
+readDirectionPortals luaState locId =
+  fmap catMaybes $ mapM (readDirectionPortal luaState locId) [(minBound :: Direction) ..]
 
-getDirectionPortal :: LuaState -> LocationId -> Direction -> IO (Maybe Object)
-getDirectionPortal luaState locId dir = do
+readDirectionPortal :: LuaState -> LocationId -> Direction -> IO (Maybe Object)
+-- readDirectionPortal _ locId dir | trace ("readDirectionPortal luaState " ++ show locId ++ " " ++ show dir) False = undefined
+readDirectionPortal luaState locId dir = do
   _ <- Lua.getglobal luaState (show dir)
   isString <- Lua.isstring luaState (-1)
   if isString
@@ -37,14 +38,17 @@ getDirectionPortal luaState locId dir = do
       Lua.pushnil luaState
       Lua.setglobal luaState (show dir)
       return $ Just $ ObjectDirection dir (Portal locId (LocationId destId))
-    else return Nothing
+    else do
+      Lua.pop luaState 1
+      return Nothing
 
-createLocation :: LuaState -> String -> IO Location
-createLocation luaState objId = do
+loadLocation :: LuaState -> String -> IO Location
+-- loadLocation _ objId | trace ("loadLocation luaState " ++ objId) False = undefined
+loadLocation luaState objId = do
   let locId = LocationId objId
   title <- getLuaGlobalVisibleProperty luaState objId "title"
   description <- getLuaGlobalVisibleProperty luaState objId "description"
-  portals <- findDirectionPortals luaState locId
+  portals <- readDirectionPortals luaState locId
   objs <- atomically $ newTVar portals
   return $ Location locId title description objs
   
@@ -72,13 +76,12 @@ getLocationDesc location char = do
   description <- showVisibleProperty char (locationDescription location)
   return $ B.concat $ [title, "\r\n", description, "\r\n", charStr, itemStr, directionStr]
 
-lookupLocation :: LocationId -> GameState -> STM Location
+lookupLocation :: LocationId -> GameState -> Location
 -- lookupLocation locId _ | trace ("lookupLocation " ++ show locId) False = undefined
 lookupLocation locId gs = do
-  locations <- readTVar $ gameLocations gs
-  case find ((== locId) . locationId) locations of
-    Just loc -> return loc
-    Nothing -> throwSTM $ InvalidValueException $ "Invalid location ID: " ++ show locId
+  case find ((== locId) . locationId) (gameLocations gs) of
+    Just loc -> loc
+    Nothing -> throw $ InvalidValueException $ "Invalid location ID: " ++ show locId
 
 findDirDest :: GameState -> Direction -> Location -> STM (Maybe Location)
 findDirDest gs dir loc = do
@@ -96,7 +99,7 @@ findDirDest gs dir loc = do
               if currId == idB
                 then return idA
                 else fail "Bad portal!"
-      liftM Just $ lookupLocation destId gs
+      return $ Just $ lookupLocation destId gs
     Nothing -> return Nothing
 
 getLocationChars :: Location -> STM [Character]

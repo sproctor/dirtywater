@@ -1,24 +1,12 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-module Connection
-(
-  ClientConnectionList,
-  ExitException(..),
-  isEmptyCommandQueue,
-  isExitException,
-  getCommand,
-  getConnections,
-  newConnection,
-  newConnectionList,
-  putOutput,
-  removeConnection,
-  queueCommand,
-) where
+module Connection where
 
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Exception
+import Data.String.Class
 import Data.Typeable
-import System.IO
+import System.IO (Handle)
 
 import Types
 import Character
@@ -39,9 +27,16 @@ isEmptyCommandQueue :: ClientConnection -> STM Bool
 isEmptyCommandQueue conn =
   isEmptyTBQueue $ connectionQueue conn
 
-putOutput :: ClientConnection -> String -> IO ()
-putOutput (ClientConnection h _ _ _ _) =
+cPutStr :: StringRWIO s => ClientConnection -> s -> IO ()
+cPutStr (ClientConnection h _ _ _ _) =
   hPutStr h
+
+cPutStrLn :: StringRWIO s => ClientConnection -> s -> IO ()
+cPutStrLn (ClientConnection h _ _ _ _) =
+  hPutStrLn h
+
+cGetLine :: StringRWIO s => ClientConnection -> IO s
+cGetLine (ClientConnection h _ _ _ _) = hGetLine h
 
 newConnection :: GameState -> Handle -> Character -> MVar ThreadId -> STM ClientConnection
 newConnection gs h char id = do

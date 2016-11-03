@@ -2,6 +2,7 @@ module LuaHelpers where
 
 import Control.Monad
 import Data.ByteString (ByteString)
+import Debug.Trace
 import Scripting.Lua (LuaState)
 import qualified Scripting.Lua as Lua
 import System.Directory
@@ -13,7 +14,7 @@ import Types
 getLuaGlobalInt :: LuaState -> String -> IO Int
 getLuaGlobalInt luaState key = do
   _ <- Lua.getglobal luaState key
-  result <- liftM fromIntegral $ Lua.tointeger luaState (-1)
+  result <- fmap fromIntegral $ Lua.tointeger luaState (-1)
   Lua.pop luaState 1
   -- Set the global to nil so it can't be used accidentally in the future.
   Lua.pushnil luaState
@@ -22,6 +23,7 @@ getLuaGlobalInt luaState key = do
 -}
 
 getLuaGlobalString :: LuaState -> String -> IO ByteString
+-- getLuaGlobalString _ key | trace ("getLuaGlobalString luaState " ++ key) False = undefined
 getLuaGlobalString luaState key = do
   _ <- Lua.getglobal luaState key
   result <- Lua.tobytestring luaState (-1)
@@ -38,13 +40,20 @@ loadFiles luaState path loadFun = do
   mapM (\f -> loadLuaFile luaState loadFun (dropExtension f) (path ++ (pathSeparator : f))) luaFiles
 
 loadLuaFile :: LuaState -> (LuaState -> String -> IO a) -> String -> FilePath -> IO a
-loadLuaFile luaState createFromLuaFun objId file = do
+-- loadLuaFile _ _ objId file | trace ("loadLuaFile luaState f " ++ objId ++ " " ++ show file) False = undefined
+loadLuaFile luaState loadFun objId file = do
+  startstacksize <- Lua.gettop luaState
+  -- putStrLn $ "Stack size: " ++ show startstacksize
   status <- Lua.loadfile luaState file
   if status == Lua.OK
     then do
-      Lua.call luaState 0 0
-      createFromLuaFun luaState objId
+      Lua.call luaState 0 Lua.multret
+      result <- loadFun luaState objId
+      endstacksize <- Lua.gettop luaState
+      when (startstacksize /= endstacksize) (error $ "Stack size changed when processing " ++ show file)
+      return result
     else do
+      putStrLn "Got an error!"
       errMsg <- Lua.tostring luaState (-1)
       error $ "ERROR: " ++ errMsg
 
@@ -72,6 +81,7 @@ getPropertyForCharacter luaState objId c = do
   return result
 
 getLuaGlobalVisibleProperty :: LuaState -> String -> String -> IO VisibleProperty
+-- getLuaGlobalVisibleProperty _ objId key | trace ("getLuaGlobalVisibleProperty luaState " ++ objId ++ " " ++ key) False = undefined
 getLuaGlobalVisibleProperty luaState objId key = do
   t <- Lua.getglobal luaState key
   case t of

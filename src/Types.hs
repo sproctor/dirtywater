@@ -5,8 +5,7 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Exception
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.UTF8 as BS
+import qualified Data.ByteString.UTF8 as B
 import Data.Typeable
 import Database.HDBC.Sqlite3
 import System.IO
@@ -57,7 +56,7 @@ data Command
 
 instance Show Command where
   show (Command (cmd, args, _)) = cmd ++ (show args)
-  show (BadCommand s) = "Bad command: " ++ BS.toString s
+  show (BadCommand s) = "Bad command: " ++ B.toString s
 
 newtype CommandDef = CommandDef (String, [CommandArgsType], GameState -> ClientConnection -> CommandArgs -> IO ())
 
@@ -139,6 +138,26 @@ instance Read WeaponType where
           then [(result, drop (length attempt) value)]
           else tryParse xs
 
+data Attribute = Strength | Dexterity | Intelligence | Health deriving (Bounded, Enum, Eq)
+
+instance Show Attribute where
+  show Strength = "ST"
+  show Dexterity = "DX"
+  show Intelligence = "IQ"
+  show Health = "HT"
+
+instance Read Attribute where
+  readsPrec _ value =
+    tryParse [(minBound :: Attribute) ..]
+    where
+      tryParse [] = []
+      tryParse (result:xs) =
+        let attempt = show result in
+        if (take (length attempt) value) == attempt
+          then [(result, drop (length attempt) value)]
+          else tryParse xs
+
+
 data Character =
   Character
     { charId :: String
@@ -149,14 +168,8 @@ data Character =
     , charPassword :: TVar ByteString
     , charHolding :: [ItemSlot]
     , charInventory :: [ItemSlot]
-    , charST :: TVar Int
-    , charDX :: TVar Int
-    , charIQ :: TVar Int
-    , charHT :: TVar Int
+    , charAttributes :: [(Attribute, TVar Int)]
     , charHP :: TVar Int
-    , charWill :: TVar Int
-    , charPer :: TVar Int
-    , charCurrHP :: TVar Int
     , charSkills :: TVar [Skill]
     }
 
@@ -166,10 +179,41 @@ instance Eq Character where
 instance Show Character where
   show c = "chr:" ++ (show . charId) c
 
+newtype SkillId = SkillId String deriving Eq
+
 data Skill =
   Skill
-    { skillName :: ByteString
-    , skillRank :: TVar Int
+    { skillId :: SkillId
+    , skillRank :: Int
+    }
+
+data SkillDifficulty = SkillEasy | SkillAverage | SkillHard | SkillVeryHard deriving (Bounded, Enum, Eq)
+
+instance Show SkillDifficulty where
+  show SkillEasy = "E"
+  show SkillAverage = "A"
+  show SkillHard = "H"
+  show SkillVeryHard = "VH"
+
+instance Read SkillDifficulty where
+  readsPrec _ value =
+    tryParse [(minBound :: SkillDifficulty) ..]
+    where
+      tryParse [] = []
+      tryParse (result:xs) =
+        let attempt = show result in
+        if (take (length attempt) value) == attempt
+          then [(result, drop (length attempt) value)]
+          else tryParse xs
+
+data SkillDefault = SkillDefaultByAttribute Attribute Int | SkillDefaultBySkill String Int
+
+data SkillDef =
+  SkillDef
+    { skillDefId :: SkillId
+    , skillDefName :: ByteString
+    , skillDefDifficulty :: SkillDifficulty
+    , skillDefDefault :: [SkillDefault]
     }
 
 data Object
@@ -253,11 +297,11 @@ data GameState =
   { gameClients :: ClientConnectionList
   , gameStatus :: TVar ServerStatus
   , sqlConnection :: Connection
-  , commandList :: TVar [CommandDef]
-  , gameLocations :: TVar [Location]
+  , commandList :: [CommandDef]
+  , gameLocations :: [Location]
   , gameNextItemId :: TVar ItemId
-  , gameItemTemplates :: TVar [ItemTemplate]
-  , gameCharacters :: TVar [Character]
+  , gameItemTemplates :: [ItemTemplate]
+  , gameSkillDefs :: [SkillDef]
   }
 
 data ClientConnection = ClientConnection
