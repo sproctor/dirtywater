@@ -8,3 +8,7 @@ To compile the project and run the main executable:
 
 > stack build --exec dirtywater
 
+To run the test suit
+
+> stack test
+
