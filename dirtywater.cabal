@@ -25,6 +25,7 @@ library
                      , State
                      , Tangible
                      , Types
+                     , Login
   build-depends:       base >= 4.7 && < 5
                      , bytestring
                      , HDBC-sqlite3
