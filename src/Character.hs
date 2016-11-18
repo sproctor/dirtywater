@@ -3,6 +3,7 @@
 module Character where
 
 import Control.Concurrent.STM
+import Control.Monad.Loops
 import Control.Monad.Extra
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
@@ -49,8 +50,16 @@ isEmptySlot slot = do
   return $ null contents
 
 findEmptyHand :: Character -> STM (Maybe ItemSlot)
-findEmptyHand char = do
+findEmptyHand char =
   findM isEmptySlot (charHolding char)
+
+getHeldItems :: Character -> STM [Item]
+getHeldItems char =
+  fmap concat $ mapM (readTVar . slotContents) (charHolding char)
+
+getWeapon :: Character -> STM (Maybe Item)
+getWeapon char =
+  fmap (find isWeapon) (getHeldItems char)
 
 replaceTokens :: ByteString -> [ByteString] -> ByteString
 replaceTokens msg [] = msg -- TODO: make sure msg contains no %s

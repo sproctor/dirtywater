@@ -1,7 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 import qualified Scripting.Lua as Lua
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as BC
 import qualified Foreign.C.Types as C
 import Control.Monad
 
@@ -12,13 +10,13 @@ hello state = do
   isstring <- Lua.isstring state (-1)
   if isstring then do
     str <- Lua.tostring state (-1)
-    putStrLn $ "Hello, " ++ BC.unpack str
+    putStrLn $ "Hello, " ++ str
   else
     putStrLn $ "Sorry, invalid call"
   Lua.pop state 1
   return 0
 
-getString :: Lua.LuaState -> IO B.ByteString
+getString :: Lua.LuaState -> IO String
 getString state = do
   isFunction <- Lua.isfunction state (-1)
   if isFunction then do
@@ -33,9 +31,9 @@ getString state = do
       ltype <- Lua.ltype state 1
       typename <- Lua.typename state ltype
       putStrLn $ "Invalid type: " ++ typename
-      return $ BC.pack $ "Invalid type: " ++ typename
+      return $ "Invalid type: " ++ typename
 
-getValue :: Lua.LuaState -> String -> IO B.ByteString
+getValue :: Lua.LuaState -> String -> IO String
 getValue state key = do
   isTable <- Lua.istable state $ -1
   if isTable then do
@@ -48,15 +46,18 @@ getValue state key = do
 addLocation :: Lua.LuaState -> IO C.CInt
 addLocation state = do
   name <- getValue state "name"
-  putStrLn $ "Name: " ++ BC.unpack name
+  putStrLn $ "Name: " ++ name
   description <- getValue state "description"
-  putStrLn $ "Description: " ++ BC.unpack description
+  putStrLn $ "Description: " ++ description
   return 0
 
 main = do
   state <- Lua.newstate
-  Lua.registerrawhsfunction state "hello" hello
-  Lua.registerrawhsfunction state "addLocation" addLocation
-  _ <- Lua.loadfile state "test.lua"
-  Lua.call state 0 0
+  -- Lua.registerrawhsfunction state "hello" hello
+  -- Lua.registerrawhsfunction state "addLocation" addLocation
+  -- _ <- Lua.loadfile state "test.lua"
+  -- Lua.call state 0 0
+  Lua.newtable state
+  str <- Lua.tostring state (-1)
+  putStrLn $ "String: " ++ str
   Lua.close state

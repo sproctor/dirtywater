@@ -8,7 +8,6 @@ import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.UTF8 as UTF8
 import Data.List
 import System.IO
@@ -16,6 +15,7 @@ import Text.Parsec
 import Text.Parsec.ByteString
 
 import Character
+import Combat
 import Connection
 import Item
 import Location
@@ -93,7 +93,7 @@ cmdLook gs conn _ = do
   let char = connectionCharacter conn
   loc <- atomically $ getLocation char
   locDesc <- getLocationDesc loc char
-  B8.hPutStrLn (connectionHandle conn) locDesc
+  cPutStrLn conn locDesc
 
 cmdSay :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdSay gs conn (CmdArgsString str) = do
@@ -114,13 +114,12 @@ cmdCreate gs conn (CmdArgsString tId) = do
   case maybeItem of
     Just item -> do
       atomically $ locationAddObject loc (ObjectItem item)
-      B8.hPutStrLn (connectionHandle conn) $ "A " `B.append` (itemName item) `B.append` " has just fallen from the sky!"
-    Nothing -> B8.hPutStrLn (connectionHandle conn) $ "\"" `B.append` tId `B.append` "\" is not a valid item template ID."
+      cPutStrLn conn $ "A " `B.append` (itemName item) `B.append` " has just fallen from the sky!"
+    Nothing -> cPutStrLn conn $ "\"" `B.append` tId `B.append` "\" is not a valid item template ID."
 
 cmdGet :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdGet gs conn (CmdArgsString str) = do
   let char = connectionCharacter conn
-  let h = connectionHandle conn
   loc <- atomically $ getLocation char
   maybeItem <- atomically $ findItemAtLocation loc str
   case maybeItem of
@@ -133,9 +132,9 @@ cmdGet gs conn (CmdArgsString str) = do
             setContainer item (ContainerCharacter char)
             locationRemoveObject loc (ObjectItem item)
           itemDesc <- viewShortDesc item char
-          B8.hPutStrLn h $ "You picked up " `B.append` itemDesc `B.append` "."
-        Nothing -> hPutStrLn h "You need a free hand to pick that up."
-    Nothing -> hPutStrLn h "Could not locate that item here."
+          cPutStrLn conn $ "You picked up " `B.append` itemDesc `B.append` "."
+        Nothing -> cPutStrLn conn ("You need a free hand to pick that up." :: ByteString)
+    Nothing -> cPutStrLn conn ("Could not locate that item here." :: ByteString)
 
 getSlotsContentsDescription :: [ItemSlot] -> Character -> IO (Maybe ByteString)
 getSlotsContentsDescription slots char = do
@@ -148,15 +147,14 @@ getSlotsContentsDescription slots char = do
 cmdInventory :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdInventory gs conn _ = do
   let char = connectionCharacter conn
-  let h = connectionHandle conn
   holding <- getSlotsContentsDescription (charHolding char) char
   case holding of
-    Just desc -> B8.hPutStrLn h $ "You are holding " `B.append` desc `B.append` "."
-    Nothing -> B8.hPutStrLn h $ "You are holding nothing."
+    Just desc -> cPutStrLn conn $ "You are holding " `B.append` desc `B.append` "."
+    Nothing -> cPutStrLn conn ("You are holding nothing." :: ByteString)
   wearing <- getSlotsContentsDescription (charInventory char) char
   case wearing of
-    Just desc -> B8.hPutStrLn h $ "You are wearing " `B.append` desc `B.append` "."
-    Nothing -> B8.hPutStrLn h $ "You are wearing nothing!"
+    Just desc -> cPutStrLn conn $ "You are wearing " `B.append` desc `B.append` "."
+    Nothing -> cPutStrLn conn ("You are wearing nothing!" :: ByteString)
 
 searchSlots :: ByteString -> [ItemSlot] -> STM (Maybe (Item, ItemSlot))
 searchSlots _ [] = return Nothing
@@ -169,7 +167,6 @@ searchSlots needle (slot:rest) = do
 cmdDrop :: GameState -> ClientConnection -> CommandArgs -> IO ()
 cmdDrop gs conn (CmdArgsString str) = do
   let char = connectionCharacter conn
-  let h = connectionHandle conn
   results <- atomically $ searchSlots str (charHolding char)
   case results of
     Just (item, slot) -> do
@@ -179,5 +176,14 @@ cmdDrop gs conn (CmdArgsString str) = do
         setContainer item (ContainerLocation loc)
         locationAddObject loc (ObjectItem item)
       itemDesc <- viewShortDesc item char
-      B8.hPutStrLn h $ "You dropped " `B.append` itemDesc `B.append` "."
-    Nothing -> hPutStrLn h $ "You aren't holding that."
+      cPutStrLn conn $ "You dropped " `B.append` itemDesc `B.append` "."
+    Nothing -> cPutStrLn conn ("You aren't holding that." :: ByteString)
+
+cmdAttack :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdAttack gs conn (CmdArgsString str) = do
+  let actor = connectionCharacter conn
+  loc <- atomically $ getLocation actor
+  result <- atomically $ findCharacterAtLocation loc str
+  case result of
+    Just target -> attackCharacter actor target
+    Nothing -> cPutStrLn conn ("There is no one by that name here." :: ByteString)
