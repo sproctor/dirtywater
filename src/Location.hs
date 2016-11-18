@@ -110,6 +110,11 @@ getLocationChars loc = do
     onlyChars (ObjectCharacter c) = Just c
     onlyChars _ = Nothing
 
+findCharacterAtLocation :: Location -> ByteString -> STM (Maybe Character)
+findCharacterAtLocation loc str = do
+  chars <- getLocationChars loc
+  return $ find (\char -> B.isPrefixOf str (UTF8.fromString (charId char))) chars
+
 getLocationItems :: Location -> STM [Item]
 getLocationItems loc = do
   objs <- readTVar $ locationObjects loc
@@ -120,15 +125,8 @@ getLocationItems loc = do
 
 findItemAtLocation :: Location -> ByteString -> STM (Maybe Item)
 findItemAtLocation loc str = do
-  objs <- readTVar $ locationObjects loc
-  return $ findItem objs
-  where
-    findItem [] = Nothing
-    findItem ((ObjectItem item):rest) =
-      if B.isPrefixOf str (itemName item)
-        then Just item
-        else findItem rest
-    findItem (_:rest) = findItem rest
+  items <- getLocationItems loc
+  return $ find (\item -> B.isPrefixOf str (itemName item)) items
 
 getLocationDirections :: Location -> STM [Direction]
 getLocationDirections loc = do

@@ -4,10 +4,10 @@ module Item where
 
 import Control.Concurrent.STM
 import Data.ByteString (ByteString)
-import Debug.Trace
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.UTF8 as BS
+import qualified Data.ByteString as B
+import qualified Data.ByteString.UTF8 as B
 import Data.List
+import Debug.Trace
 import Scripting.Lua
 
 import LuaHelpers
@@ -27,7 +27,7 @@ instance Tangible Item where
   setContainer self = writeTVar (itemContainer self)
 
   matchesDesc self adjs name =
-    return $ BS.isPrefixOf name (itemName self) && findAdjs adjs (itemAdjs self) []
+    return $ B.isPrefixOf name (itemName self) && findAdjs adjs (itemAdjs self) []
 
   viewShortDesc i c = showVisibleProperty c $ (itemTemplShortDesc . itemTemplate) i
   viewLongDesc i c = showVisibleProperty c $ (itemTemplLongDesc . itemTemplate) i
@@ -47,7 +47,7 @@ findAdjs :: [ByteString] -> [ByteString] -> [ByteString] -> Bool
 findAdjs [] _ _ = True
 findAdjs _ [] _ = False
 findAdjs (prefix:toFind) (adj:toSearch) searched =
-  if BS.isPrefixOf prefix adj
+  if B.isPrefixOf prefix adj
     then findAdjs toFind (putTogether searched toSearch) []
     else findAdjs (prefix:toFind) toSearch (adj:searched)
 
@@ -62,8 +62,8 @@ loadItemTemplate luaState objId = do
   name <- getLuaGlobalString luaState "name"
   shortDescription <- getLuaGlobalVisibleProperty luaState objId "shortDescription"
   longDescription <- getLuaGlobalVisibleProperty luaState objId "longDescription"
-  weaponType <- getLuaGlobalString luaState "weaponType"
-  return $ ItemTemplate itemTemplateId name [] shortDescription longDescription (read (BS.toString weaponType))
+  weaponType <- getLuaGlobalStringWithDefault luaState "weaponType" "none"
+  return $ ItemTemplate itemTemplateId name [] shortDescription longDescription (SkillId (B.toString weaponType))
   
 createItem :: GameState -> String -> Container -> STM (Maybe Item)
 createItem gs templateId container = do
@@ -95,3 +95,9 @@ slotRemoveItem :: ItemSlot -> Item -> STM ()
 slotRemoveItem slot item = do
   contents <- readTVar (slotContents slot)
   writeTVar (slotContents slot) $ filter ((/=) item) contents
+
+itemWeaponType :: Item -> SkillId
+itemWeaponType = itemTemplWeaponType . itemTemplate
+
+isWeapon :: Item -> Bool
+isWeapon item = (itemWeaponType item) /= (SkillId "none")

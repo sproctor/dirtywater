@@ -74,7 +74,7 @@ data ItemTemplate =
     , itemTemplAdjs :: [ByteString]
     , itemTemplShortDesc :: VisibleProperty
     , itemTemplLongDesc :: VisibleProperty
-    , itemTemplWeaponType :: WeaponType
+    , itemTemplWeaponType :: SkillId -- TODO: Add a list somewhere of valid weapon types to avoid typos
     }
 
 newtype ItemId = ItemId Int deriving (Eq, Num)
@@ -115,28 +115,6 @@ data ItemType
   | ItemAnkle -- for ankle sheaths
   | ItemForearm -- for shields
   deriving (Eq, Show, Enum, Bounded)
-
-data WeaponType
-  = WeaponBroadsword
-  | WeaponShortsword
-  | WeaponNone
-  deriving (Eq, Enum, Bounded)
-
-instance Show WeaponType where
-  show WeaponShortsword = "shortsword"
-  show WeaponBroadsword = "broadsword"
-  show WeaponNone = "none"
-
-instance Read WeaponType where
-  readsPrec _ value =
-    tryParse [(minBound :: WeaponType) ..]
-    where
-      tryParse [] = []
-      tryParse (result:xs) =
-        let attempt = show result in
-        if (take (length attempt) value) == attempt
-          then [(result, drop (length attempt) value)]
-          else tryParse xs
 
 data Attribute = Strength | Dexterity | Intelligence | Health deriving (Bounded, Enum, Eq)
 

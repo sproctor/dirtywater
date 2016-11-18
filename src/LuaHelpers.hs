@@ -1,6 +1,7 @@
 module LuaHelpers where
 
 import Control.Monad
+import Control.Monad.Extra
 import Data.ByteString (ByteString)
 import Debug.Trace
 import Scripting.Lua (LuaState)
@@ -26,7 +27,19 @@ getLuaGlobalString :: LuaState -> String -> IO ByteString
 -- getLuaGlobalString _ key | trace ("getLuaGlobalString luaState " ++ key) False = undefined
 getLuaGlobalString luaState key = do
   _ <- Lua.getglobal luaState key
+  -- unlessM (Lua.isstring luaState (-1)) $ throwIO $ InvalidValueError $ "\"" ++ key "\" must be a string."
   result <- Lua.tobytestring luaState (-1)
+  Lua.pop luaState 1
+  -- Set the global to nil so it can't be used accidentally in the future.
+  Lua.pushnil luaState
+  Lua.setglobal luaState key
+  return result
+
+getLuaGlobalStringWithDefault :: LuaState -> String -> ByteString -> IO ByteString
+-- getLuaGlobalString _ key | trace ("getLuaGlobalString luaState " ++ key) False = undefined
+getLuaGlobalStringWithDefault luaState key defaultStr = do
+  _ <- Lua.getglobal luaState key
+  result <- ifM (Lua.isstring luaState (-1)) (Lua.tobytestring luaState (-1)) (return defaultStr)
   Lua.pop luaState 1
   -- Set the global to nil so it can't be used accidentally in the future.
   Lua.pushnil luaState
