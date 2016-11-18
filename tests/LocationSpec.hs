@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module LocationSpec (main, spec) where
 
 import Control.Concurrent.STM
@@ -14,9 +16,13 @@ main = hspec spec
 spec :: Spec
 spec = do
   describe "Location" $ do
-    let portal = Portal 0 1
+    let portal = Portal (LocationId "0") (LocationId "1")
     objs <- runIO $ atomically $ newTVar [ObjectDirection North portal]
-    let loc = Location 0 "test" "test" objs
+    let loc = Location
+                (LocationId "0")
+                (StaticVisibleProperty "test")
+                (StaticVisibleProperty "test")
+                objs
     result <- runIO $ atomically $ getPortalByDirection loc North
     it "returns the portal assiated with the given direction" $ do
       result `shouldBe` (Just portal)
