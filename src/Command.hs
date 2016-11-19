@@ -61,11 +61,11 @@ whitespace =
   skipMany1 space <?> "space"
 
 {-
-cmdGo :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdGo :: GameState -> PlayerConnection -> CommandArgs -> IO ()
 cmdGo gs conn (CmdArgsObjectDesc target) = do
   -}
 
-cmdGoDir :: Direction -> GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdGoDir :: Direction -> GameState -> PlayerConnection -> CommandArgs -> IO ()
 cmdGoDir dir gs conn _ = do
   let char = connectionCharacter conn
   loc <- atomically $ getLocation char
@@ -79,7 +79,7 @@ cmdGoDir dir gs conn _ = do
       cmdLook gs conn CmdArgsNone
     Nothing -> hPutStrLn (connectionHandle conn) $ "You can't go " ++ (show dir) ++ " from here!"
 
-cmdExit :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdExit :: GameState -> PlayerConnection -> CommandArgs -> IO ()
 cmdExit gs conn _ = do
   hPutStrLn (connectionHandle conn) "Good Bye!"
   atomically $ do
@@ -88,25 +88,25 @@ cmdExit gs conn _ = do
   tId <- readMVar (connectionThreadId conn)
   throwTo tId ExitException
 
-cmdLook :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdLook :: GameState -> PlayerConnection -> CommandArgs -> IO ()
 cmdLook gs conn _ = do
   let char = connectionCharacter conn
   loc <- atomically $ getLocation char
   locDesc <- getLocationDesc loc char
   cPutStrLn conn locDesc
 
-cmdSay :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdSay :: GameState -> PlayerConnection -> CommandArgs -> IO ()
 cmdSay gs conn (CmdArgsString str) = do
   let char = connectionCharacter conn
   loc <- atomically $ getLocation char
   sendToRoomExcept loc char "%s says, \"%s\"" [charShortDescription char, \_ -> return str]
   cPutStrLn conn $ "You say, \"" `B.append` str `B.append` "\""
 
-cmdShutdown :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdShutdown :: GameState -> PlayerConnection -> CommandArgs -> IO ()
 cmdShutdown gs _ _ =
   atomically $ writeTVar (gameStatus gs) Stopping
 
-cmdCreate :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdCreate :: GameState -> PlayerConnection -> CommandArgs -> IO ()
 cmdCreate gs conn (CmdArgsString tId) = do
   let char = connectionCharacter conn
   loc <- atomically $ getLocation char
@@ -117,7 +117,7 @@ cmdCreate gs conn (CmdArgsString tId) = do
       cPutStrLn conn $ "A " `B.append` (itemName item) `B.append` " has just fallen from the sky!"
     Nothing -> cPutStrLn conn $ "\"" `B.append` tId `B.append` "\" is not a valid item template ID."
 
-cmdGet :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdGet :: GameState -> PlayerConnection -> CommandArgs -> IO ()
 cmdGet gs conn (CmdArgsString str) = do
   let char = connectionCharacter conn
   loc <- atomically $ getLocation char
@@ -144,7 +144,7 @@ getSlotsContentsDescription slots char = do
     then return Nothing
     else return $ Just $ B.intercalate ", " descriptions
 
-cmdInventory :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdInventory :: GameState -> PlayerConnection -> CommandArgs -> IO ()
 cmdInventory gs conn _ = do
   let char = connectionCharacter conn
   holding <- getSlotsContentsDescription (charHolding char) char
@@ -164,7 +164,7 @@ searchSlots needle (slot:rest) = do
     Just item -> return $ Just (item, slot)
     Nothing -> searchSlots needle rest
 
-cmdDrop :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdDrop :: GameState -> PlayerConnection -> CommandArgs -> IO ()
 cmdDrop gs conn (CmdArgsString str) = do
   let char = connectionCharacter conn
   results <- atomically $ searchSlots str (charHolding char)
@@ -179,7 +179,7 @@ cmdDrop gs conn (CmdArgsString str) = do
       cPutStrLn conn $ "You dropped " `B.append` itemDesc `B.append` "."
     Nothing -> cPutStrLn conn ("You aren't holding that." :: ByteString)
 
-cmdAttack :: GameState -> ClientConnection -> CommandArgs -> IO ()
+cmdAttack :: GameState -> PlayerConnection -> CommandArgs -> IO ()
 cmdAttack gs conn (CmdArgsString str) = do
   let actor = connectionCharacter conn
   loc <- atomically $ getLocation actor

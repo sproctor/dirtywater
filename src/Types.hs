@@ -51,14 +51,14 @@ data CommandArgs
   deriving (Show, Eq)
 
 data Command
-  = Command (String, CommandArgs, GameState -> ClientConnection -> CommandArgs -> IO ())
+  = Command (String, CommandArgs, GameState -> PlayerConnection -> CommandArgs -> IO ())
   | BadCommand ByteString
 
 instance Show Command where
   show (Command (cmd, args, _)) = cmd ++ (show args)
   show (BadCommand s) = "Bad command: " ++ B.toString s
 
-newtype CommandDef = CommandDef (String, [CommandArgsType], GameState -> ClientConnection -> CommandArgs -> IO ())
+newtype CommandDef = CommandDef (String, [CommandArgsType], GameState -> PlayerConnection -> CommandArgs -> IO ())
 
 newtype Volume = Volume Int deriving (Ord, Eq, Show, Read)
 
@@ -272,7 +272,7 @@ data ServerStatus = Running | Stopping
 
 data GameState =
   GameState
-  { gameClients :: ClientConnectionList
+  { gameClients :: PlayerConnectionList
   , gameStatus :: TVar ServerStatus
   , sqlConnection :: Connection
   , commandList :: [CommandDef]
@@ -282,7 +282,7 @@ data GameState =
   , gameSkillDefs :: [SkillDef]
   }
 
-data ClientConnection = ClientConnection
+data PlayerConnection = PlayerConnection
     { connectionHandle :: Handle
     , connectionQueue :: TBQueue Command
     , connectionClosed :: TVar Bool
@@ -290,7 +290,7 @@ data ClientConnection = ClientConnection
     , connectionThreadId :: MVar ThreadId
     } deriving Eq
 
-newtype ClientConnectionList = ClientConnectionList (TVar [ClientConnection])
+newtype PlayerConnectionList = PlayerConnectionList (TVar [PlayerConnection])
 
 data InvalidValueException =
   InvalidValueException String
