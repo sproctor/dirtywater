@@ -87,7 +87,7 @@ clientGameHandler gs h idVar =
         hPutStrLn h $ "ERROR! " ++ show (e :: SomeException)
     )
 
-clientLoop :: GameState -> ClientConnection -> IO ()
+clientLoop :: GameState -> PlayerConnection -> IO ()
 clientLoop gs conn = do
   closed <- atomically $ readTVar (connectionClosed conn)
   unless closed $ do

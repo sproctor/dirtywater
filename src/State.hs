@@ -52,7 +52,7 @@ processCommands gameState =
     conns <- atomically $ getConnections (gameClients gameState)
     processCommand conns
 
-doCommand :: ClientConnection -> Command -> GameState -> IO ()
+doCommand :: PlayerConnection -> Command -> GameState -> IO ()
 doCommand conn command gs =
   do
     let h = connectionHandle conn
@@ -62,7 +62,7 @@ doCommand conn command gs =
       BadCommand str -> do
         hPutStrLn h str
 
-newGameState :: String -> ClientConnectionList -> IO GameState
+newGameState :: String -> PlayerConnectionList -> IO GameState
 newGameState dbfilename connections = do
   dbconn <- connectSqlite3 dbfilename
   initDatabase dbconn
