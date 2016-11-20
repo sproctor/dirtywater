@@ -31,7 +31,7 @@ import Tangible
 import Types
 
 main :: IO ()
-main = withSocketsDo $ do
+main = do
   let port = 4000
   putStrLn $ "Starting server. Listening on port " ++ show port ++ "."
   connections <- atomically $ newConnectionList
