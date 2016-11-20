@@ -3,7 +3,6 @@ module Skill where
 import Control.Exception (throwIO)
 import Control.Monad (fmap)
 import qualified Data.ByteString.UTF8 as UTF8
-import Debug.Trace (trace)
 import Scripting.Lua (LuaState)
 import qualified Scripting.Lua as Lua
 import Text.Read (readMaybe)

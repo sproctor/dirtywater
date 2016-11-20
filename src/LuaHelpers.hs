@@ -3,7 +3,6 @@ module LuaHelpers where
 import Control.Monad
 import Control.Monad.Extra
 import Data.ByteString (ByteString)
-import Debug.Trace
 import Scripting.Lua (LuaState)
 import qualified Scripting.Lua as Lua
 import System.Directory
