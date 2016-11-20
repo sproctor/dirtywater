@@ -5,24 +5,16 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
-import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
-import qualified Data.ByteString.UTF8 as UTF8
 import Data.String.Class
 import Data.Strings hiding (fromString)
 import Database.HDBC
-import Database.HDBC.Sqlite3
-import Network
-import System.Directory
-import System.IO (Handle, hClose, hSetEncoding, stderr, utf8)
-import System.Timeout
 import Data.Conduit.Network.Server
 import Control.Concurrent.Async (concurrently)
 import Data.Attoparsec.ByteString (Parser, takeTill)
 import Data.Attoparsec.ByteString.Char8 (isEndOfLine, endOfLine)
 
 import Login
-import Character
 import Command
 import Connection
 import Location
@@ -34,9 +26,9 @@ main :: IO ()
 main = do
   let port = 4000
   putStrLn $ "Starting server. Listening on port " ++ show port ++ "."
-  connections <- atomically $ newConnectionList
+  connections <- atomically newConnectionList
   gs <- newGameState "mud.db" connections
-  concurrently
+  _ <- concurrently
     (mainServer gs)
     (serve port parseLine id (handleClient gs) reportError)
   putStrLn ("Shutting down server." :: String)
@@ -74,7 +66,7 @@ clientLoop gs pconn = do
     possibleLine <- tryJust (guard . isExitException) $ cGetLine pconn
     case possibleLine of
       Left _ -> saveCharacter (sqlConnection gs) (connectionCharacter pconn)
-      Right line -> do
+      Right line ->
         case parseCommand (commandList gs) (strTrim line) of
           Left e -> cPutStrLn pconn $ "Parse error at " `B.append` fromString (show e)
           Right cmd -> atomically $ queueCommand pconn cmd
