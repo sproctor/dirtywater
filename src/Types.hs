@@ -116,6 +116,8 @@ data ItemType
   | ItemForearm -- for shields
   deriving (Eq, Show, Enum, Bounded)
 
+data AttackType = Thrust | Swing
+
 data Attribute = Strength | Dexterity | Intelligence | Health deriving (Bounded, Enum, Eq)
 
 instance Show Attribute where

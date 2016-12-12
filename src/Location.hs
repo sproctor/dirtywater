@@ -158,7 +158,7 @@ locationRemoveObject loc obj = do
   objs <- readTVar $ locationObjects loc
   writeTVar (locationObjects loc) $ filter ((/=) obj) objs
 
-sendToRoomExcept :: Location -> Character -> ByteString -> [Character -> IO ByteString] -> IO ()
+sendToRoomExcept :: Location -> [Character] -> ByteString -> [Character -> IO ByteString] -> IO ()
 sendToRoomExcept loc excluded msg substitutions = do
   chars <- atomically $ getLocationChars loc
-  mapM_ (\c -> when (c /= excluded) (sendToCharacter c msg substitutions)) chars
+  mapM_ (\c -> when (not (elem c excluded)) (sendToCharacter c msg substitutions)) chars

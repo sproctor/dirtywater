@@ -99,7 +99,7 @@ cmdSay :: GameState -> PlayerConnection -> CommandArgs -> IO ()
 cmdSay gs conn (CmdArgsString str) = do
   let char = connectionCharacter conn
   loc <- atomically $ getLocation char
-  sendToRoomExcept loc char "%s says, \"%s\"" [charShortDescription char, \_ -> return str]
+  sendToRoomExcept loc [char] "%s says, \"%s\"" [charShortDescription char, \_ -> return str]
   cPutStrLn conn $ "You say, \"" `B.append` str `B.append` "\""
 
 cmdShutdown :: GameState -> PlayerConnection -> CommandArgs -> IO ()
