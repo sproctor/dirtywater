@@ -1,14 +1,13 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Types where
 
-import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Exception
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.UTF8 as B
 import Data.Typeable
 import Database.HDBC.Sqlite3
-import System.IO
+import Data.Conduit.Network.Server
 
 data NounOrd
   = NounAny
@@ -141,7 +140,7 @@ instance Read Attribute where
 data Character =
   Character
     { charId :: String
-    , charMessage :: ByteString -> IO ()
+    , charConn :: Conn
     , charShortDescription :: Character -> IO ByteString
     , charLongDescription :: Character -> IO ByteString
     , charContainer :: TVar Container
@@ -284,13 +283,17 @@ data GameState =
   , gameSkillDefs :: [SkillDef]
   }
 
+type Conn = ClientConnection B.ByteString B.ByteString
+
 data PlayerConnection = PlayerConnection
-    { connectionHandle :: Handle
+    { connectionConn :: Conn
     , connectionQueue :: TBQueue Command
     , connectionClosed :: TVar Bool
     , connectionCharacter :: Character
-    , connectionThreadId :: MVar ThreadId
-    } deriving Eq
+    }
+
+instance Eq PlayerConnection where
+  p1 == p2 = connectionConn p1 == connectionConn p2
 
 newtype PlayerConnectionList = PlayerConnectionList (TVar [PlayerConnection])
 

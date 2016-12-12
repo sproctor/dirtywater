@@ -10,6 +10,10 @@ packages:
     git: https://github.com/sproctor/hslua
     commit: 92534c21f3fdc2b367ad9685a77eed606a037094
   extra-dep: true
+- location:
+    git: https://github.com/mmachenry/server-conduit
+    commit: 5627f839c661482dfa4163f80985de83512999f6
+  extra-dep: true
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:

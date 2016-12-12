@@ -5,13 +5,11 @@ module Location where
 import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
-import Control.Monad.Extra
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.UTF8 as UTF8
 import Data.List
 import Data.Maybe
-import Debug.Trace
 
 import Scripting.Lua (LuaState)
 import qualified Scripting.Lua as Lua

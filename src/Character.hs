@@ -3,14 +3,12 @@
 module Character where
 
 import Control.Concurrent.STM
-import Control.Monad.Loops
 import Control.Monad.Extra
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.UTF8 as UTF8
 import Data.List
-import Debug.Trace
-import System.IO.Unsafe
+import Data.Conduit.Network.Server
 
 import Item
 import Tangible
@@ -73,7 +71,7 @@ replaceTokens msg (substitution:rest) = do
 sendToCharacter :: Character -> ByteString -> [Character -> IO ByteString] -> IO ()
 sendToCharacter char msg substitutions = do
   substitutionStrings <- mapM (\f -> f char) substitutions
-  charMessage char (replaceTokens msg substitutionStrings)
+  sendToClient (charConn char) (replaceTokens msg substitutionStrings)
 
 getEffectiveSkillRank :: Character -> SkillId -> STM Int
 getEffectiveSkillRank char skillId = do

@@ -45,6 +45,8 @@ library
                      , strings
                      , transformers
                      , utf8-string
+                     , server-conduit
+                     , safe-exceptions
   --ghc-options:         -Wall
   default-language:    Haskell2010
 
@@ -63,6 +65,9 @@ executable dirtywater
                      , bytestring
                      , HDBC-sqlite3
                      , stm
+                     , server-conduit
+                     , async
+                     , attoparsec
   default-language:    Haskell2010
 
 test-suite dirtywater-test
