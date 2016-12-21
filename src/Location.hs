@@ -5,6 +5,7 @@ module Location where
 import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
+import Control.Monad.Extra (ifM)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.UTF8 as UTF8
@@ -27,18 +28,19 @@ readDirectionPortals luaState locId =
 readDirectionPortal :: LuaState -> LocationId -> Direction -> IO (Maybe Object)
 -- readDirectionPortal _ locId dir | trace ("readDirectionPortal luaState " ++ show locId ++ " " ++ show dir) False = undefined
 readDirectionPortal luaState locId dir = do
-  _ <- Lua.getglobal luaState (show dir)
-  isString <- Lua.isstring luaState (-1)
-  if isString
-    then do
-      destId <- Lua.tostring luaState (-1)
+  Lua.getglobal luaState (show dir)
+  ifM (Lua.isstring luaState (-1))
+    (do
+      destId <- fmap UTF8.toString $ Lua.tostring luaState (-1)
       Lua.pop luaState 1
       Lua.pushnil luaState
       Lua.setglobal luaState (show dir)
       return $ Just $ ObjectDirection dir (Portal locId (LocationId destId))
-    else do
+    )
+    (do
       Lua.pop luaState 1
       return Nothing
+    )
 
 loadLocation :: LuaState -> String -> IO Location
 -- loadLocation _ objId | trace ("loadLocation luaState " ++ objId) False = undefined

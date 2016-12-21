@@ -2,7 +2,9 @@ module Skill where
 
 import Control.Exception (throwIO)
 import Control.Monad (fmap)
+import Control.Monad.Extra (ifM)
 import qualified Data.ByteString.UTF8 as UTF8
+-- import Debug.Trace (trace)
 import Scripting.Lua (LuaState)
 import qualified Scripting.Lua as Lua
 import Text.Read (readMaybe)
@@ -13,21 +15,20 @@ import Types
 getSkillDefaults :: LuaState -> String -> IO [SkillDefault]
 -- getSkillDefaults _ key | trace ("getSkillDefaults luaState " ++ key) False = undefined
 getSkillDefaults luaState key = do
-  t <- Lua.getglobal luaState key
-  case t of
-    Lua.TTABLE -> do
-      Lua.len luaState (-1)
-      n <- fmap fromIntegral $ Lua.tointeger luaState (-1)
-      Lua.pop luaState 1
+  Lua.getglobal luaState key
+  ifM (Lua.istable luaState (-1))
+    (do
+      n <- Lua.objlen luaState (-1)
+      -- putStrLn $ "Table size: " ++ show n
       result <- mapM (getSkillDefault luaState) [1..n]
       Lua.pop luaState 1
-      return result
-    _ -> throwIO $ InvalidValueException $ "Global \"" ++ key ++ "\" must be a table."
+      return result)
+    (throwIO $ InvalidValueException $ "Global \"" ++ key ++ "\" must be a table.")
 
 luaToAttribute :: LuaState -> Int -> IO Attribute
 -- luaToAttribute _ index | trace ("luaToAttribute luaState " ++ show index) False = undefined
 luaToAttribute luaState index = do
-  str <- Lua.tostring luaState index
+  str <- fmap UTF8.toString $ Lua.tostring luaState index
   case readMaybe str of
     Just attribute -> return attribute
     Nothing -> throwIO $ InvalidValueException $ "Invalid attribute string \"" ++ str ++ "\""
@@ -35,11 +36,11 @@ luaToAttribute luaState index = do
 getSkillDefault :: LuaState -> Int -> IO SkillDefault
 -- getSkillDefault _ i | trace ("getSkillDefault luaState " ++ show i) False = undefined
 getSkillDefault luaState i = do
-  _ <- Lua.geti luaState (-1) i
-  _ <- Lua.getfield luaState (-1) "modifier"
+  Lua.rawgeti luaState (-1) i
+  Lua.getfield luaState (-1) "modifier"
   modifier <- fmap fromIntegral $ Lua.tointeger luaState (-1)
   Lua.pop luaState 1
-  _ <- Lua.getfield luaState (-1) "attribute"
+  Lua.getfield luaState (-1) "attribute"
   isAttribute <- fmap not $ Lua.isnil luaState (-1)
   if isAttribute
     then do
@@ -52,7 +53,7 @@ getSkillDefault luaState i = do
       isSkill <- fmap not $ Lua.isnil luaState (-1)
       if isSkill
         then do
-          skill <- Lua.tostring luaState (-1)
+          skill <- fmap UTF8.toString $ Lua.tostring luaState (-1)
           Lua.pop luaState 2
           return $ SkillDefaultBySkill skill modifier
         else do

@@ -7,8 +7,8 @@ resolver: lts-7.9
 packages:
 - '.'
 - location:
-    git: https://github.com/sproctor/hslua
-    commit: 92534c21f3fdc2b367ad9685a77eed606a037094
+    git: https://github.com/osa1/hslua
+    commit: 9c665ed1caa9bea2e6ca8e04c4e05ea503d2e6b8
   extra-dep: true
 - location:
     git: https://github.com/mmachenry/server-conduit
@@ -22,7 +22,11 @@ extra-deps:
 - strings-1.1
 
 # Override default flag values for local packages and extra-deps
-flags: {}
+flags:
+        hslua:
+                luajit: True
+                system-lua: True
+                apicheck: True
 
 # Extra package databases containing global packages
 extra-package-dbs: []
@@ -39,5 +43,5 @@ extra-package-dbs: []
 # arch: x86_64
 
 # Extra directories used by stack for building
-# extra-include-dirs: [/path/to/dir]
+extra-include-dirs: [/usr/include/luajit-2.0]
 # extra-lib-dirs: [/path/to/dir]
