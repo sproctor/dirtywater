@@ -43,5 +43,5 @@ extra-package-dbs: []
 # arch: x86_64
 
 # Extra directories used by stack for building
-extra-include-dirs: [/usr/include/luajit-2.0]
-# extra-lib-dirs: [/path/to/dir]
+extra-include-dirs: [/usr/include/luajit-2.0, /opt/local/include/luajit-2.0, /usr/local/include/luajit-2.0]
+extra-lib-dirs: [/opt/local/lib, /usr/local/lib]
