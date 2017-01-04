@@ -72,6 +72,7 @@ newGameState dbfilename connections = do
       ]
   status <- atomically $ newTVar Running
   nextIdVar <- atomically $ newTVar 1
+  putStrLn ("Loading Lua files..." :: String)
   luaState <- Lua.newstate
   putStrLn ("Loading locations..." :: String)
   locs <- loadFiles luaState (dataDirectory ++ "/locations") loadLocation
