@@ -53,6 +53,10 @@ data Command
   = Command (String, CommandArgs, GameState -> PlayerConnection -> CommandArgs -> IO ())
   | BadCommand ByteString
 
+instance Eq Command where
+  (Command (cmd1, args1, _)) == (Command (cmd2, args2, _)) =
+    cmd1 == cmd2 && args1 == args2
+
 instance Show Command where
   show (Command (cmd, args, _)) = cmd ++ (show args)
   show (BadCommand s) = "Bad command: " ++ B.toString s

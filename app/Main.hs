@@ -15,6 +15,7 @@ import Data.Attoparsec.ByteString (Parser, takeTill)
 import Data.Attoparsec.ByteString.Char8 (isEndOfLine, endOfLine)
 
 import Login
+import ParseCommand
 import Command
 import Connection
 import Location
