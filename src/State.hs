@@ -47,7 +47,7 @@ processCommands gameState =
 doCommand :: PlayerConnection -> Command -> GameState -> IO ()
 doCommand pconn command gs =
     case command of
-      Command (_, args, f) -> f gs pconn args
+      Command _ args f -> f gs pconn args
       BadCommand str -> do
         cPutStrLn pconn str
 
@@ -57,18 +57,18 @@ newGameState dbfilename connections = do
   initDatabase dbconn
   let
     commandList =
-      (map (\d -> CommandDef (show d, [CmdTypeNone], cmdGoDir d)) [(minBound :: Direction) ..]) ++
-      [ CommandDef ("look", [CmdTypeNone], cmdLook)
-      , CommandDef ("exit", [CmdTypeNone], cmdExit)
-      , CommandDef ("quit", [CmdTypeNone], cmdExit)
-      , CommandDef ("say", [CmdTypeString], cmdSay)
-      , CommandDef ("shutdown", [CmdTypeNone], cmdShutdown)
-      , CommandDef ("create", [CmdTypeString], cmdCreate)
-      , CommandDef ("get", [CmdTypeString], cmdGet)
-      , CommandDef ("take", [CmdTypeString], cmdGet)
-      , CommandDef ("pickup", [CmdTypeString], cmdGet)
-      , CommandDef ("inventory", [CmdTypeNone], cmdInventory)
-      , CommandDef ("drop", [CmdTypeString], cmdDrop)
+      (map (\d -> CommandDef (show d) [CmdTypeNone] (cmdGoDir d)) [(minBound :: Direction) ..]) ++
+      [ CommandDef "look" [CmdTypeNone] cmdLook
+      , CommandDef "exit" [CmdTypeNone] cmdExit
+      , CommandDef "quit" [CmdTypeNone] cmdExit
+      , CommandDef "say" [CmdTypeString] cmdSay
+      , CommandDef "shutdown" [CmdTypeNone] cmdShutdown
+      , CommandDef "create" [CmdTypeString] cmdCreate
+      , CommandDef "get" [CmdTypeString] cmdGet
+      , CommandDef "take" [CmdTypeString] cmdGet
+      , CommandDef "pickup" [CmdTypeString] cmdGet
+      , CommandDef "inventory" [CmdTypeNone] cmdInventory
+      , CommandDef "drop" [CmdTypeString] cmdDrop
       ]
   status <- atomically $ newTVar Running
   nextIdVar <- atomically $ newTVar 1

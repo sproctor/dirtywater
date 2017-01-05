@@ -50,18 +50,18 @@ data CommandArgs
   deriving (Show, Eq)
 
 data Command
-  = Command (String, CommandArgs, GameState -> PlayerConnection -> CommandArgs -> IO ())
+  = Command String CommandArgs (GameState -> PlayerConnection -> CommandArgs -> IO ())
   | BadCommand ByteString
 
 instance Eq Command where
-  (Command (cmd1, args1, _)) == (Command (cmd2, args2, _)) =
+  (Command cmd1 args1 _) == (Command cmd2 args2 _) =
     cmd1 == cmd2 && args1 == args2
 
 instance Show Command where
-  show (Command (cmd, args, _)) = cmd ++ (show args)
+  show (Command cmd args _) = cmd ++ (show args)
   show (BadCommand s) = "Bad command: " ++ B.toString s
 
-newtype CommandDef = CommandDef (String, [CommandArgsType], GameState -> PlayerConnection -> CommandArgs -> IO ())
+data CommandDef = CommandDef String [CommandArgsType] (GameState -> PlayerConnection -> CommandArgs -> IO ())
 
 newtype Volume = Volume Int deriving (Ord, Eq, Show, Read)
 
