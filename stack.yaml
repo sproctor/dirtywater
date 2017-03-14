@@ -1,15 +1,11 @@
 # For more information, see: https://github.com/commercialhaskell/stack/blob/release/doc/yaml_configuration.md
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
-resolver: lts-7.9
+resolver: lts-8.5
 
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
-- location:
-    git: https://github.com/osa1/hslua
-    commit: 9c665ed1caa9bea2e6ca8e04c4e05ea503d2e6b8
-  extra-dep: true
 - location:
     git: https://github.com/mmachenry/server-conduit
     commit: 5627f839c661482dfa4163f80985de83512999f6
@@ -20,6 +16,7 @@ extra-deps:
 - HDBC-sqlite3-2.3.3.1
 - HDBC-2.4.0.1
 - strings-1.1
+- hslua-0.4.1
 
 # Override default flag values for local packages and extra-deps
 flags:
@@ -43,5 +40,5 @@ extra-package-dbs: []
 # arch: x86_64
 
 # Extra directories used by stack for building
-extra-include-dirs: [/usr/include/luajit-2.0, /opt/local/include/luajit-2.0, /usr/local/include/luajit-2.0]
-extra-lib-dirs: [/opt/local/lib, /usr/local/lib]
+#extra-include-dirs: [/usr/include/luajit-2.0, /opt/local/include/luajit-2.0, /usr/local/include/luajit-2.0]
+#extra-lib-dirs: [/opt/local/lib, /usr/local/lib]
