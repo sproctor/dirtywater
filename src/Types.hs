@@ -6,7 +6,7 @@ import Control.Exception
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.UTF8 as B
 import Data.Typeable
-import Database.HDBC.Sqlite3
+import Database.HDBC.Sqlite3 as SQL
 import Data.Conduit.Network.Server
 
 data NounOrd
@@ -40,17 +40,19 @@ data ExitDesc
 data CommandArgsType
   = CmdTypeObjectDesc
   | CmdTypeString
+  | CmdTypeList [CommandArgsType]
   | CmdTypeNone
   deriving (Show, Eq)
 
 data CommandArgs
   = CmdArgsObjectDesc ObjectDesc
   | CmdArgsString ByteString
+  | CmdArgsList [CommandArgs]
   | CmdArgsNone
   deriving (Show, Eq)
 
 data Command
-  = Command String CommandArgs (GameState -> PlayerConnection -> CommandArgs -> IO ())
+  = Command String CommandArgs (GameState -> Character -> CommandArgs -> IO ())
   | BadCommand ByteString
 
 instance Eq Command where
@@ -61,14 +63,14 @@ instance Show Command where
   show (Command cmd args _) = cmd ++ (show args)
   show (BadCommand s) = "Bad command: " ++ B.toString s
 
-data CommandDef = CommandDef String [CommandArgsType] (GameState -> PlayerConnection -> CommandArgs -> IO ())
+data CommandDef = CommandDef String [CommandArgsType] (GameState -> Character -> CommandArgs -> IO ())
 
 newtype Volume = Volume Int deriving (Ord, Eq, Show, Read)
 
 newtype ItemTemplateId = ItemTemplateId String deriving Eq
 
 instance Show ItemTemplateId where
-  show (ItemTemplateId str) = "tpl:" ++ str
+  show (ItemTemplateId str) = "itp:" ++ str
 
 data ItemTemplate =
   ItemTemplate
@@ -144,7 +146,7 @@ instance Read Attribute where
 data Character =
   Character
     { charId :: String
-    , charConn :: Conn
+    , charConnection :: TVar CharacterConnection
     , charShortDescription :: Character -> IO ByteString
     , charLongDescription :: Character -> IO ByteString
     , charContainer :: TVar Container
@@ -161,6 +163,23 @@ instance Eq Character where
 
 instance Show Character where
   show c = "chr:" ++ (show . charId) c
+
+newtype MobId = MobId Int deriving (Eq, Num)
+
+instance Show MobId where
+  show (MobId n) = "mob:" ++ show n
+
+newtype MobTemplateId = MobTemplateId String deriving Eq
+
+instance Show MobTemplateId where
+  show (MobTemplateId str) = "mtp:" ++ str
+
+data MobTemplate =
+  MobTemplate
+    { mobTemplateId :: MobTemplateId
+    , mobTemplateName :: String
+    , mobTemplateAdjs :: [String]
+    }
 
 newtype SkillId = SkillId String deriving Eq
 
@@ -277,29 +296,36 @@ data ServerStatus = Running | Stopping
 
 data GameState =
   GameState
-  { gameClients :: PlayerConnectionList
+  { gameUsers :: UserConnectionList
   , gameStatus :: TVar ServerStatus
   , sqlConnection :: Connection
-  , commandList :: [CommandDef]
+  , gameCommandList :: [CommandDef]
   , gameLocations :: [Location]
   , gameNextItemId :: TVar ItemId
+  , gameNextMobId :: TVar MobId
   , gameItemTemplates :: [ItemTemplate]
+  --, gameMobTemplates :: [MobTemplate]
   , gameSkillDefs :: [SkillDef]
   }
 
+data CharacterConnection
+    = PlayerConnection UserConnection
+    | NoCharacterConnection
+
+-- TODO: Can we find a better name for this one?
 type Conn = ClientConnection B.ByteString B.ByteString
 
-data PlayerConnection = PlayerConnection
-    { connectionConn :: Conn
-    , connectionQueue :: TBQueue Command
-    , connectionClosed :: TVar Bool
-    , connectionCharacter :: Character
+data UserConnection = UserConnection
+    { userConnection :: Conn
+    , userCommandQueue :: TBQueue Command
+    , userDisconnected :: TVar Bool
+    , userCharacter :: Character
     }
 
-instance Eq PlayerConnection where
-  p1 == p2 = connectionConn p1 == connectionConn p2
+instance Eq UserConnection where
+  p1 == p2 = userCharacter p1 == userCharacter p2
 
-newtype PlayerConnectionList = PlayerConnectionList (TVar [PlayerConnection])
+type UserConnectionList = TVar [UserConnection]
 
 data InvalidValueException =
   InvalidValueException String

@@ -47,6 +47,18 @@ getLuaGlobalStringWithDefault luaState key defaultStr = do
   Lua.setglobal luaState key
   return result
 
+getLuaGlobalStringList :: LuaState -> String -> IO [ByteString]
+getLuaGlobalStringList luaState key = do
+  Lua.getglobal luaState key
+  ret <- Lua.tolist luaState (-1)
+  Lua.pop luaState 1
+  -- Set the global to nil so it can't be used accidentally in the future.
+  Lua.pushnil luaState
+  Lua.setglobal luaState key
+  case ret of
+    Nothing -> return []
+    Just val -> return val
+
 loadFiles :: LuaState -> FilePath -> (LuaState -> String -> IO a) -> IO [a]
 loadFiles luaState path loadFun = do
   files <- getDirectoryContents path

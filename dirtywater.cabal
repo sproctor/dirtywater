@@ -18,18 +18,18 @@ library
   exposed-modules:     Character
                      , Combat
                      , Command
-                     , Connection
                      , Item
                      , Location
+                     , Login
                      , LuaHelpers
                      , ParseCommand
                      , Roll
+                     , Server
                      , Skill
                      , State
                      , Tangible
                      , Types
-                     , Login
-                     , Server
+                     , UserConnection
   build-depends:       base
                      , attoparsec
                      , async

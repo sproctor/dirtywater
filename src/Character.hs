@@ -68,10 +68,26 @@ replaceTokens msg (substitution:rest) = do
       | B.null tail -> msg -- TODO: this is wrong, there are too many subs in the list
       | otherwise -> B.append (B.append head substitution) (replaceTokens (UTF8.drop 2 tail) rest)
 
+-- Send msg to char, replacing "%s" in msg with substitutions rendered for char
 sendToCharacter :: Character -> ByteString -> [Character -> IO ByteString] -> IO ()
 sendToCharacter char msg substitutions = do
   substitutionStrings <- mapM (\f -> f char) substitutions
-  sendToClient (charConn char) (replaceTokens msg substitutionStrings)
+  cPutStr char (replaceTokens msg substitutionStrings)
+
+--cPutStr :: (ConvString s, StringRWIO s) => UserConnection -> s -> IO ()
+cPutStr :: Character -> B.ByteString -> IO ()
+cPutStr char str = do
+  conn <- atomically $ readTVar (charConnection char)
+  sendToCharacterConnection conn str
+
+--cPutStrLn :: (ConvString s, StringRWIO s) => PlayerConnection -> s -> IO ()
+cPutStrLn :: Character -> B.ByteString -> IO ()
+cPutStrLn user str = do
+  cPutStr user (B.append str "\n")
+
+sendToCharacterConnection :: CharacterConnection -> ByteString -> IO ()
+sendToCharacterConnection (PlayerConnection user) str = sendToClient (userConnection user) str
+sendToCharacterConnection NoCharacterConnection _ = return ()
 
 getEffectiveSkillRank :: Character -> SkillId -> STM Int
 getEffectiveSkillRank char skillId = do
@@ -82,3 +98,7 @@ getEffectiveSkillRank char skillId = do
 
 getDefaultSkillRank :: Character -> SkillId -> STM Int
 getDefaultSkillRank char skillName = return 5
+
+characterConnectionSet :: Character -> CharacterConnection -> STM ()
+characterConnectionSet char charConn = do
+  writeTVar (charConnection char) charConn

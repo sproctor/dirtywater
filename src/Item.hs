@@ -67,7 +67,7 @@ loadItemTemplate luaState objId = do
   
 createItem :: GameState -> String -> Container -> STM (Maybe Item)
 createItem gs templateId container = do
-  case lookupTemplate gs templateId of
+  case lookupItemTemplate gs templateId of
     Just template -> do
       itemId <- takeItemId gs
       containerVar <- newTVar container
@@ -81,8 +81,8 @@ takeItemId gs = do
   writeTVar idState (currId + 1)
   return currId
 
-lookupTemplate :: GameState -> String -> Maybe ItemTemplate
-lookupTemplate gs templateId = do
+lookupItemTemplate :: GameState -> String -> Maybe ItemTemplate
+lookupItemTemplate gs templateId = do
   find (\t -> (ItemTemplateId templateId) == itemTemplId t) (gameItemTemplates gs)
   --  Nothing -> throwSTM $ "Invalid item template id: " ++ templateId
 

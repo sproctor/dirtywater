@@ -18,14 +18,15 @@ import Control.Concurrent.Async (concurrently)
 import Data.Attoparsec.ByteString (Parser, takeTill)
 import Data.Attoparsec.ByteString.Char8 (isEndOfLine, endOfLine)
 
+import Character
+import Command
+import Location
 import Login
 import ParseCommand
-import Command
-import Connection
-import Location
 import State
 import Tangible
 import Types
+import UserConnection
 
 runDirtywaterServer :: Int -> IO ()
 runDirtywaterServer port = do
@@ -47,13 +48,13 @@ reportError _conn exn = putStrLn $ "Caught exception: " ++ show exn
 handleClient :: GameState -> Conn -> IO ()
 handleClient gs conn = do
   putStrLn ("Got a new connection." :: String)
-  charecter <- clientHandshakeChar gs conn
-  pconn <- atomically $ newConnection gs conn charecter
-  cmdLook gs pconn CmdArgsNone
-  cPutStr pconn ">"
-  clientLoop gs pconn
-  loc <- atomically $ getLocation charecter
-  atomically $ locationRemoveObject loc (ObjectCharacter charecter)
+  character <- clientHandshakeChar gs conn
+  user <- atomically $ newUserConnection gs conn character
+  cmdLook gs character CmdArgsNone
+  cPutStr character ">"
+  clientLoop gs user
+  loc <- atomically $ getLocation character
+  atomically $ locationRemoveObject loc (ObjectCharacter character)
 
 mainServer :: GameState -> IO ()
 mainServer gs =
@@ -63,16 +64,17 @@ mainServer gs =
     -- commit dbconn
     threadDelay 100000
 
-clientLoop :: GameState -> PlayerConnection -> IO ()
-clientLoop gs pconn = do
-  closed <- atomically $ readTVar (connectionClosed pconn)
-  unless closed $ do
-    possibleLine <- tryJust (guard . isExitException) $ cGetLine pconn
-    case possibleLine of
-      Left _ -> saveCharacter (sqlConnection gs) (connectionCharacter pconn)
-      Right line ->
-        case parseCommand (commandList gs) (strTrim line) of
-          Left e -> cPutStrLn pconn $ "Parse error at " `B.append` fromString (show e)
-          Right cmd -> atomically $ queueCommand pconn cmd
-    clientLoop gs pconn
+clientLoop :: GameState -> UserConnection -> IO ()
+clientLoop gs user = do
+  disconnected <- atomically $ readTVar (userDisconnected user)
+  let conn = userConnection user
+  unless disconnected $ do
+    maybeLine <- getFromClient conn
+    case maybeLine of
+      Nothing -> saveCharacter (sqlConnection gs) (userCharacter user)
+      Just line ->
+        case parseCommand (gameCommandList gs) (strTrim line) of
+          Left e -> sendToClient conn $ "Parse error at " `B.append` fromString (show e)
+          Right cmd -> atomically $ queueCommand user cmd
+    clientLoop gs user
 

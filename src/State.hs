@@ -15,8 +15,9 @@ import Database.HDBC
 import Database.HDBC.Sqlite3
 import qualified Scripting.Lua as Lua
 
+import Character
 import Command
-import Connection
+import UserConnection
 import Item
 import Location
 import LuaHelpers
@@ -29,30 +30,31 @@ processCommands :: GameState -> IO ()
 processCommands gameState =
   let
     processCommand [] = return ()
-    processCommand (conn : remainingConnections) = do
-      mcmd <- atomically $ getCommand conn
-      case mcmd of
-        Just cmd -> do
+    processCommand (user : remainingUsers) = do
+      maybeCommand <- atomically $ getCommand user
+      case maybeCommand of
+        Just command -> do
+          let char = userCharacter user
           -- print ((connectionCharacter conn), cmd)
-          catch (doCommand conn cmd gameState)
-            (\e -> cPutStrLn conn $ "BUG! You've encountered an internal server error: " `B.append` (fromString (show (e :: InvalidValueException))))
-          prompt <- atomically $ isEmptyCommandQueue conn
-          when prompt $ cPutStr conn ">"
+          catch (doCommand char command gameState)
+            (\e -> cPutStrLn char $ "BUG! You've encountered an internal server error: " `B.append` (fromString (show (e :: InvalidValueException))))
+          prompt <- atomically $ isEmptyCommandQueue user
+          when prompt $ cPutStr char ">"
         Nothing -> return ()
-      processCommand remainingConnections
+      processCommand remainingUsers
   in do
-    conns <- atomically $ getConnections (gameClients gameState)
-    processCommand conns
+    users <- atomically $ readTVar $ (gameUsers gameState)
+    processCommand users
 
-doCommand :: PlayerConnection -> Command -> GameState -> IO ()
-doCommand pconn command gs =
+doCommand :: Character -> Command -> GameState -> IO ()
+doCommand char command gs =
     case command of
-      Command _ args f -> f gs pconn args
+      Command _ args f -> f gs char args
       BadCommand str -> do
-        cPutStrLn pconn str
+        cPutStrLn char str
 
-newGameState :: String -> PlayerConnectionList -> IO GameState
-newGameState dbfilename connections = do
+newGameState :: String -> UserConnectionList -> IO GameState
+newGameState dbfilename users = do
   dbconn <- connectSqlite3 dbfilename
   initDatabase dbconn
   let
@@ -63,7 +65,7 @@ newGameState dbfilename connections = do
       , CommandDef "quit" [CmdTypeNone] cmdExit
       , CommandDef "say" [CmdTypeString] cmdSay
       , CommandDef "shutdown" [CmdTypeNone] cmdShutdown
-      , CommandDef "create" [CmdTypeString] cmdCreate
+      , CommandDef "create" [CmdTypeList [CmdTypeString, CmdTypeString]] cmdCreate
       , CommandDef "get" [CmdTypeString] cmdGet
       , CommandDef "take" [CmdTypeString] cmdGet
       , CommandDef "pickup" [CmdTypeString] cmdGet
@@ -72,6 +74,7 @@ newGameState dbfilename connections = do
       ]
   status <- atomically $ newTVar Running
   nextIdVar <- atomically $ newTVar 1
+  nextMobIdVar <- atomically $ newTVar 1
   putStrLn ("Loading Lua files..." :: String)
   luaState <- Lua.newstate
   putStrLn ("Loading locations..." :: String)
@@ -80,7 +83,7 @@ newGameState dbfilename connections = do
   itemTemplates <- loadFiles luaState (dataDirectory ++ "/items") loadItemTemplate
   putStrLn ("Loading skill definitions..." :: String)
   skillDefs <- loadFiles luaState (dataDirectory ++ "/skills") loadSkillDefinition
-  return $ GameState connections status dbconn commandList locs nextIdVar itemTemplates skillDefs
+  return $ GameState users status dbconn commandList locs nextIdVar nextMobIdVar itemTemplates skillDefs
 
 initDatabase :: Connection -> IO ()
 initDatabase dbconn = do
@@ -90,15 +93,16 @@ initDatabase dbconn = do
     commit dbconn
     putStrLn ("Created characters table" ::String)
 
-newCharacter :: GameState -> Conn -> ByteString -> ByteString -> STM Character
+newCharacter :: GameState -> ByteString -> ByteString -> STM Character
 -- newCharacter _ name password | trace ("newCharacter " ++ name ++ " " ++ password) False = undefined
-newCharacter gs conn name password = do
+newCharacter gs name password = do
   let startLoc = lookupLocation (LocationId "start") gs
-  createCharacter conn (ContainerLocation startLoc) name password
+  createCharacter (ContainerLocation startLoc) name password
 
-createCharacter :: Conn -> Container -> ByteString -> ByteString -> STM Character
+createCharacter :: Container -> ByteString -> ByteString -> STM Character
 -- createCharacter container name password | trace ("createCharacter " ++ show container ++ " " ++ name ++ " " ++ password) False = undefined
-createCharacter conn (ContainerLocation loc) name password = do
+createCharacter (ContainerLocation loc) name password = do
+  conn <- newTVar NoCharacterConnection
   passwordVar <- newTVar password
   containerVar <- newTVar (ContainerLocation loc)
   rContents <- newTVar []
@@ -133,8 +137,8 @@ addSqlCharacter = writeSqlCharacter "INSERT"
 saveCharacter :: Connection -> Character -> IO ()
 saveCharacter = writeSqlCharacter "REPLACE"
 
-loadCharacter :: GameState -> Conn -> String -> IO (Maybe Character)
-loadCharacter gs conn name = do
+loadCharacter :: GameState -> String -> IO (Maybe Character)
+loadCharacter gs name = do
   let dbconn = sqlConnection gs
   stmt <- prepare dbconn "SELECT containerId, name, password FROM characters WHERE name = ?"
   execute stmt [toSql name]
@@ -152,7 +156,7 @@ loadCharacter gs conn name = do
         container = case conId of
           'l':'o':'c':':' : locId -> ContainerLocation $ lookupLocation (LocationId locId) gs
           _ -> throw $ InvalidValueException $ "DB column `containerId` must be a location. Value: " ++ conId
-      atomically $ createCharacter conn container name password
+      atomically $ createCharacter container name password
       --  Nothing -> fail $ "Non-existant location (" ++ (show conId) ++ ") for character: " ++ name
     loadSqlCharacter x = do
       print x
